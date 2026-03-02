@@ -11,25 +11,72 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Check, AlertTriangle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import type { Database } from '@/integrations/supabase/types';
 
-const disciplines = [
-  'Run', 'Bike', 'Row', 'SkiErg', 'Stairs',
-  'Sled Push', 'Sled Pull', 'Burpee Broad Jumps', 'Farmers Carry',
-  'Sandbag Lunges', 'Wall Balls', 'Strength', 'Mobility', 'Custom',
+type Discipline = Database['public']['Enums']['discipline'];
+
+const disciplineOptions: { value: Discipline; label: string }[] = [
+  { value: 'run', label: 'Run' },
+  { value: 'bike', label: 'Bike' },
+  { value: 'rowing', label: 'Row' },
+  { value: 'skierg', label: 'SkiErg' },
+  { value: 'stairs', label: 'Stairs' },
+  { value: 'hyrox_station', label: 'HYROX Station' },
+  { value: 'strength', label: 'Strength' },
+  { value: 'mobility', label: 'Mobility' },
+  { value: 'prehab', label: 'Prehab' },
+  { value: 'accessories', label: 'Accessories' },
+  { value: 'custom', label: 'Custom' },
 ];
 
 export default function LogSession() {
-  const [discipline, setDiscipline] = useState('');
+  const { user } = useAuth();
+  const [discipline, setDiscipline] = useState<Discipline>('run');
   const [duration, setDuration] = useState('');
   const [distance, setDistance] = useState('');
+  const [avgHr, setAvgHr] = useState('');
+  const [avgPace, setAvgPace] = useState('');
   const [rpe, setRpe] = useState([6]);
   const [painFlag, setPainFlag] = useState(false);
   const [painNotes, setPainNotes] = useState('');
   const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success('Session logged! Great work 💪');
+    if (!user) { toast.error('Not logged in'); return; }
+    setSaving(true);
+
+    const { error } = await supabase.from('completed_sessions').insert({
+      athlete_id: user.id,
+      discipline,
+      actual_duration_min: duration ? parseFloat(duration) : null,
+      actual_distance_km: distance ? parseFloat(distance) : null,
+      avg_hr: avgHr ? parseInt(avgHr) : null,
+      avg_pace: avgPace || null,
+      rpe: rpe[0],
+      pain_flag: painFlag,
+      pain_notes: painFlag ? painNotes : null,
+      notes: notes || null,
+    });
+
+    setSaving(false);
+    if (error) {
+      toast.error('Failed to log session: ' + error.message);
+    } else {
+      toast.success('Session logged! Great work 💪');
+      // Reset form
+      setDuration('');
+      setDistance('');
+      setAvgHr('');
+      setAvgPace('');
+      setRpe([6]);
+      setPainFlag(false);
+      setPainNotes('');
+      setNotes('');
+    }
   };
 
   return (
@@ -49,10 +96,10 @@ export default function LogSession() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Discipline</Label>
-              <Select value={discipline} onValueChange={setDiscipline}>
+              <Select value={discipline} onValueChange={(v) => setDiscipline(v as Discipline)}>
                 <SelectTrigger><SelectValue placeholder="Select discipline" /></SelectTrigger>
                 <SelectContent>
-                  {disciplines.map(d => <SelectItem key={d} value={d.toLowerCase().replace(/ /g, '_')}>{d}</SelectItem>)}
+                  {disciplineOptions.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -64,6 +111,16 @@ export default function LogSession() {
               <div className="space-y-2">
                 <Label>Distance (km)</Label>
                 <Input type="number" step="0.1" value={distance} onChange={e => setDistance(e.target.value)} placeholder="8.0" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Avg HR (bpm)</Label>
+                <Input type="number" value={avgHr} onChange={e => setAvgHr(e.target.value)} placeholder="155" />
+              </div>
+              <div className="space-y-2">
+                <Label>Avg Pace (min/km)</Label>
+                <Input value={avgPace} onChange={e => setAvgPace(e.target.value)} placeholder="5:15" />
               </div>
             </div>
           </CardContent>
@@ -108,8 +165,8 @@ export default function LogSession() {
           </CardContent>
         </Card>
 
-        <Button type="submit" className="w-full gradient-hyrox" size="lg">
-          <Check className="h-4 w-4 mr-2" /> Log Session
+        <Button type="submit" className="w-full gradient-hyrox" size="lg" disabled={saving}>
+          <Check className="h-4 w-4 mr-2" /> {saving ? 'Saving…' : 'Log Session'}
         </Button>
       </motion.form>
     </div>

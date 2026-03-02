@@ -5,19 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, Dumbbell, Clock, Target, TrendingUp, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-
-const mockTodaySession = {
-  discipline: 'Run + SkiErg',
-  name: 'Tempo Run + Station Work',
-  duration: 65,
-  intensity: 'Hard',
-  details: '8km tempo run @ 5:00/km → 1000m SkiErg @ 1:55/500m',
-  blocks: [
-    { name: '8km Tempo Run', target: '5:00/km', type: 'run' },
-    { name: 'SkiErg 1000m', target: '1:55/500m', type: 'skierg' },
-    { name: 'Wall Balls x30', target: '6kg', type: 'station' },
-  ],
-};
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const container = {
   hidden: { opacity: 0 },
@@ -33,6 +22,32 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 'Athlete';
 
+  // Fetch completed sessions this week
+  const startOfWeek = new Date();
+  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1);
+  const weekStart = startOfWeek.toISOString().split('T')[0];
+
+  const { data: completedSessions } = useQuery({
+    queryKey: ['completed-sessions-week', user?.id, weekStart],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('completed_sessions')
+        .select('*')
+        .eq('athlete_id', user.id)
+        .gte('date', weekStart)
+        .order('date', { ascending: true });
+      return error ? [] : data || [];
+    },
+    enabled: !!user,
+  });
+
+  const totalKm = completedSessions?.reduce((sum, s) => sum + (Number(s.actual_distance_km) || 0), 0) || 0;
+  const avgRpe = completedSessions?.length
+    ? (completedSessions.reduce((sum, s) => sum + (s.rpe || 0), 0) / completedSessions.length).toFixed(1)
+    : '—';
+  const sessionCount = completedSessions?.length || 0;
+
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">
       <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
@@ -46,52 +61,43 @@ export default function Dashboard() {
           </h1>
         </motion.div>
 
-        {/* Today's Session Card */}
+        {/* Today's Session CTA */}
         <motion.div variants={item}>
           <Card className="glass overflow-hidden border-primary/20">
             <div className="h-1 gradient-hyrox" />
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg font-display">{mockTodaySession.name}</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-0.5">{mockTodaySession.discipline}</p>
+                  <CardTitle className="text-lg font-display">Today's Training</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-0.5">Ready to get after it?</p>
                 </div>
                 <Badge variant="secondary" className="bg-primary/10 text-primary border-0">
-                  {mockTodaySession.intensity}
+                  Active
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{mockTodaySession.duration} min</span>
-                <span className="flex items-center gap-1"><Target className="h-3.5 w-3.5" />3 blocks</span>
+              <p className="text-sm text-muted-foreground">
+                Check your schedule for today's prescribed session, or log a completed workout.
+              </p>
+              <div className="flex gap-2">
+                <Button className="flex-1 gradient-hyrox" onClick={() => navigate('/schedule')}>
+                  <Calendar className="h-4 w-4 mr-2" /> View Schedule
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => navigate('/log')}>
+                  <Dumbbell className="h-4 w-4 mr-2" /> Log Session
+                </Button>
               </div>
-
-              <div className="space-y-2">
-                {mockTodaySession.blocks.map((block, i) => (
-                  <div key={i} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full gradient-hyrox" />
-                      <span className="text-sm font-medium">{block.name}</span>
-                    </div>
-                    <span className="text-xs text-muted-foreground">{block.target}</span>
-                  </div>
-                ))}
-              </div>
-
-              <Button className="w-full gradient-hyrox mt-2" onClick={() => navigate('/log')}>
-                <Dumbbell className="h-4 w-4 mr-2" /> Start Session
-              </Button>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Quick Stats */}
+        {/* Quick Stats — live from DB */}
         <motion.div variants={item} className="grid grid-cols-3 gap-3">
           {[
-            { label: 'Week Volume', value: '32 km', icon: TrendingUp },
-            { label: 'Sessions', value: '4/6', icon: Calendar },
-            { label: 'Avg RPE', value: '6.5', icon: Target },
+            { label: 'Week Volume', value: `${totalKm.toFixed(1)} km`, icon: TrendingUp },
+            { label: 'Sessions', value: `${sessionCount}`, icon: Calendar },
+            { label: 'Avg RPE', value: avgRpe, icon: Target },
           ].map((stat) => (
             <Card key={stat.label} className="glass">
               <CardContent className="p-3 text-center">
@@ -117,9 +123,12 @@ export default function Dashboard() {
             <CardContent>
               <div className="flex gap-2">
                 {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => {
-                  const isToday = i === new Date().getDay() - 1;
-                  const isCompleted = i < 2;
-                  const hasSession = i < 6;
+                  const isToday = i === ((new Date().getDay() + 6) % 7);
+                  const dayDate = new Date(startOfWeek);
+                  dayDate.setDate(dayDate.getDate() + i);
+                  const dateStr = dayDate.toISOString().split('T')[0];
+                  const hasCompleted = completedSessions?.some(s => s.date === dateStr);
+
                   return (
                     <div
                       key={i}
@@ -129,12 +138,28 @@ export default function Dashboard() {
                     >
                       <span className="text-muted-foreground">{day}</span>
                       <div className={`h-2.5 w-2.5 rounded-full ${
-                        isCompleted ? 'bg-success' : hasSession ? 'bg-muted-foreground/30' : 'bg-transparent'
+                        hasCompleted ? 'bg-success' : 'bg-muted-foreground/20'
                       }`} />
                     </div>
                   );
                 })}
               </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* AI Coach CTA */}
+        <motion.div variants={item}>
+          <Card className="glass border-accent/20 overflow-hidden cursor-pointer hover:border-accent/40 transition-colors" onClick={() => navigate('/ai')}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl gradient-hyrox flex items-center justify-center flex-shrink-0">
+                <span className="text-lg">🤖</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-display font-bold">AI Coach</p>
+                <p className="text-xs text-muted-foreground">Get personalized training advice and session adjustments</p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </CardContent>
           </Card>
         </motion.div>
