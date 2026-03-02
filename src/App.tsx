@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/layouts/AppLayout";
 import Auth from "@/pages/Auth";
+import Onboarding from "@/pages/Onboarding";
 import Dashboard from "@/pages/Dashboard";
 import Schedule from "@/pages/Schedule";
 import LogSession from "@/pages/LogSession";
@@ -28,6 +29,13 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function RequireOrg({ children }: { children: React.ReactNode }) {
+  const { memberships, loading } = useAuth();
+  if (loading) return null;
+  if (memberships.length === 0) return <Navigate to="/onboarding" replace />;
+  return <>{children}</>;
+}
+
 function RoleDashboard() {
   const { currentRole } = useAuth();
   if (currentRole === 'coach' || currentRole === 'master_admin') {
@@ -45,7 +53,8 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+            <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+            <Route path="/" element={<ProtectedRoute><RequireOrg><AppLayout /></RequireOrg></ProtectedRoute>}>
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<RoleDashboard />} />
               <Route path="schedule" element={<Schedule />} />

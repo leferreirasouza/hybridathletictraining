@@ -1,1 +1,7 @@
 project_id = "cdrpypapdqbwwiuqvqti"
+
+[functions.hyrox-ai-coach]
+verify_jwt = false
+
+[functions.import-plan]
+verify_jwt = false
