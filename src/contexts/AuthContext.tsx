@@ -27,6 +27,7 @@ interface OrgMembership {
 
 interface AuthState {
   user: User | null;
+  membershipsLoading: boolean;
   session: Session | null;
   loading: boolean;
   memberships: OrgMembership[];
@@ -45,6 +46,7 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState>({
   user: null,
+  membershipsLoading: true,
   session: null,
   loading: true,
   memberships: [],
@@ -64,6 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [membershipsLoading, setMembershipsLoading] = useState(true);
   const [memberships, setMemberships] = useState<OrgMembership[]>([]);
   const [currentOrg, setCurrentOrg] = useState<{ id: string; name: string } | null>(null);
   const [currentRole, setCurrentRole] = useState<AppRole | null>(null);
@@ -79,6 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const fetchMemberships = useCallback(async (userId: string) => {
+    setMembershipsLoading(true);
     const { data, error } = await supabase
       .from('user_roles')
       .select('id, organization_id, role, organizations(id, name, logo_url)')
@@ -101,6 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setViewAsRoleState(null); // reset view-as on fresh load
       }
     }
+    setMembershipsLoading(false);
   }, [currentOrg]);
 
   useEffect(() => {
@@ -111,6 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setTimeout(() => fetchMemberships(session.user.id), 0);
       } else {
         setMemberships([]);
+        setMembershipsLoading(false);
         setCurrentOrg(null);
         setCurrentRole(null);
         setViewAsRoleState(null);
@@ -123,6 +129,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchMemberships(session.user.id);
+      } else {
+        setMembershipsLoading(false);
       }
       setLoading(false);
     });
@@ -152,7 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider value={{
-      user, session, loading, memberships, currentOrg, currentRole,
+      user, session, loading, membershipsLoading, memberships, currentOrg, currentRole,
       viewAsRole, effectiveRole,
       setCurrentOrg, setViewAsRole, signOut, refreshMemberships,
     }}>
