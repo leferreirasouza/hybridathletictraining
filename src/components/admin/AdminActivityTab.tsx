@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Search, ScrollText, CalendarIcon, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Search, ScrollText, CalendarIcon, ChevronLeft, ChevronRight, X, Download } from 'lucide-react';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -73,13 +73,37 @@ export default function AdminActivityTab() {
   const clearDates = () => { setDateFrom(undefined); setDateTo(undefined); };
   const hasDateFilter = dateFrom || dateTo;
 
+  const exportCsv = () => {
+    const header = 'Time,User,Action,Entity Type,Entity ID,Details';
+    const rows = filtered.map(l => [
+      format(new Date(l.created_at), 'yyyy-MM-dd HH:mm:ss'),
+      (l.profiles?.full_name || l.user_id || 'system').replace(/,/g, ' '),
+      l.action.replace(/,/g, ' '),
+      l.entity_type ?? '',
+      l.entity_id ?? '',
+      l.details ? JSON.stringify(l.details).replace(/,/g, ';') : '',
+    ].join(','));
+    const blob = new Blob([header + '\n' + rows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `activity-log-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
         <CardTitle className="flex items-center gap-2 text-lg">
           <ScrollText className="h-5 w-5 text-primary" /> Activity Log
         </CardTitle>
-        <span className="text-sm text-muted-foreground">{filtered.length} entries</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">{filtered.length} entries</span>
+          <Button variant="outline" size="sm" className="gap-1.5 h-8" onClick={exportCsv} disabled={filtered.length === 0}>
+            <Download className="h-3.5 w-3.5" /> Export CSV
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Filters row */}
