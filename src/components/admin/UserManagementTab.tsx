@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { UserPlus, Users, Trash2, ShieldCheck } from 'lucide-react';
+import { UserPlus, Users, Trash2, ShieldCheck, Search, X } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -37,6 +37,10 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
   const [bulkRole, setBulkRole] = useState<AppRole>('athlete');
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
+  // Search & filter
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
+
   const assignableRoles: AppRole[] = isMasterAdmin
     ? ['admin', 'coach', 'athlete']
     : ['coach', 'athlete'];
@@ -52,7 +56,7 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
   const fetchMembers = async () => {
     setLoadingMembers(true);
     let query = supabase.from('user_roles')
-      .select('id, user_id, role, organization_id, organizations(name)');
+      .select('id, user_id, role, organization_id, organizations(name), profiles:user_id(full_name)');
     if (!isMasterAdmin && currentOrgId) {
       query = query.eq('organization_id', currentOrgId);
     }
@@ -104,12 +108,24 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === members.length) {
+    const filtered = filteredMembers;
+    if (selectedIds.size === filtered.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(members.map(m => m.id)));
+      setSelectedIds(new Set(filtered.map(m => m.id)));
     }
   };
+
+  // Filtering
+  const filteredMembers = members.filter((m: any) => {
+    const name = (m.profiles?.full_name ?? '').toLowerCase();
+    const userId = (m.user_id ?? '').toLowerCase();
+    const orgName = (m.organizations?.name ?? '').toLowerCase();
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = !q || name.includes(q) || userId.includes(q) || orgName.includes(q);
+    const matchesRole = roleFilter === 'all' || m.role === roleFilter;
+    return matchesSearch && matchesRole;
+  });
 
   const handleBulkChangeRole = async () => {
     if (selectedIds.size === 0) return;
@@ -257,22 +273,54 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
           </Dialog>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        {/* Search & Filter Bar */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search by name, user ID, or org..."
+              className="pl-9 h-9"
+            />
+            {searchQuery && (
+              <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6" onClick={() => setSearchQuery('')}>
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="w-[140px] h-9">
+              <SelectValue placeholder="All roles" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Roles</SelectItem>
+              {assignableRoles.map(r => (
+                <SelectItem key={r} value={r} className="capitalize">{r.replace('_', ' ')}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         {loadingMembers ? (
           <div className="flex justify-center py-8"><div className="h-6 w-6 rounded-lg gradient-hyrox animate-pulse" /></div>
-        ) : members.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">No members found.</p>
+        ) : filteredMembers.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">
+            {members.length === 0 ? 'No members found.' : 'No members match your filters.'}
+          </p>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-10">
                   <Checkbox
-                    checked={selectedIds.size === members.length && members.length > 0}
+                    checked={selectedIds.size === filteredMembers.length && filteredMembers.length > 0}
                     onCheckedChange={toggleSelectAll}
                     aria-label="Select all"
                   />
                 </TableHead>
+                <TableHead>Name</TableHead>
                 <TableHead>User ID</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Organization</TableHead>
@@ -280,7 +328,7 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
               </TableRow>
             </TableHeader>
             <TableBody>
-              {members.map((m: any) => (
+              {filteredMembers.map((m: any) => (
                 <TableRow key={m.id} data-state={selectedIds.has(m.id) ? 'selected' : undefined}>
                   <TableCell>
                     <Checkbox
@@ -289,6 +337,7 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
                       aria-label={`Select ${m.user_id}`}
                     />
                   </TableCell>
+                  <TableCell className="text-sm">{m.profiles?.full_name || <span className="text-muted-foreground italic">—</span>}</TableCell>
                   <TableCell className="font-mono text-xs">{m.user_id?.slice(0, 8)}...</TableCell>
                   <TableCell>
                     <Select value={m.role} onValueChange={(v) => handleChangeRole(m.id, v as AppRole)}>
