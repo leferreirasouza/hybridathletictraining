@@ -1,11 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Settings as SettingsIcon, Calendar, Upload, Pencil, Check, X, Activity, Flag, Heart, User, TrendingUp, Flame, Route } from 'lucide-react';
+import { LogOut, Settings as SettingsIcon, Calendar, Upload, Pencil, Check, X, Activity, Flag, Heart, User, TrendingUp, Flame, Route, Camera } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -32,6 +32,8 @@ export default function Profile() {
   const [editing, setEditing] = useState(false);
   const [fullName, setFullName] = useState(name);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch profile data
   const { data: profile } = useQuery({
@@ -172,14 +174,83 @@ export default function Profile() {
     setSaving(false);
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image must be under 2MB');
+      return;
+    }
+
+    setUploadingAvatar(true);
+    const ext = file.name.split('.').pop();
+    const filePath = `${user.id}/avatar.${ext}`;
+
+    // Remove old avatar if exists
+    await supabase.storage.from('avatars').remove([filePath]);
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      toast.error('Upload failed: ' + uploadError.message);
+      setUploadingAvatar(false);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+    const avatarUrl = urlData.publicUrl + '?t=' + Date.now(); // cache bust
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ avatar_url: avatarUrl } as any)
+      .eq('id', user.id);
+
+    setUploadingAvatar(false);
+    if (updateError) {
+      toast.error('Failed to save avatar');
+      return;
+    }
+    toast.success('Avatar updated!');
+    queryClient.invalidateQueries({ queryKey: ['profile-full'] });
+    queryClient.invalidateQueries({ queryKey: ['profile-completion'] });
+  };
+
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-5">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
         {/* Profile Header */}
         <div className="flex items-center gap-4">
-          <Avatar className="h-16 w-16 border-2 border-primary/30">
-            <AvatarFallback className="gradient-hyrox text-primary-foreground text-lg font-display">{initials}</AvatarFallback>
-          </Avatar>
+          <div className="relative group">
+            <Avatar className="h-16 w-16 border-2 border-primary/30">
+              {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={name} />}
+              <AvatarFallback className="gradient-hyrox text-primary-foreground text-lg font-display">{initials}</AvatarFallback>
+            </Avatar>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingAvatar}
+              className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+            >
+              {uploadingAvatar ? (
+                <div className="h-5 w-5 border-2 border-white/80 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Camera className="h-5 w-5 text-white" />
+              )}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
+          </div>
           <div className="flex-1">
             {editing ? (
               <div className="space-y-2">
