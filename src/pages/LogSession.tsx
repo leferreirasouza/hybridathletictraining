@@ -10,7 +10,7 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { Check, AlertTriangle, Link2 } from 'lucide-react';
+import { Check, AlertTriangle, Link2, Share2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { logAudit } from '@/lib/auditLog';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,6 +18,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useScheduleData } from '@/hooks/useScheduleData';
 import { getDiscipline, dayLabelsFull } from '@/components/schedule/config';
 import type { Database } from '@/integrations/supabase/types';
+import ShareWorkoutDialog from '@/components/share/ShareWorkoutDialog';
+import type { ShareSessionData } from '@/components/share/types';
 
 type Discipline = Database['public']['Enums']['discipline'];
 
@@ -50,6 +52,7 @@ export default function LogSession() {
   const [painNotes, setPainNotes] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [shareData, setShareData] = useState<ShareSessionData | null>(null);
 
   // Build set of already-completed planned session IDs
   const completedPlanIds = new Set(
@@ -99,6 +102,15 @@ export default function LogSession() {
         linked: plannedSessionId !== 'none',
       });
       toast.success('Session logged! Great work 💪');
+      setShareData({
+        discipline,
+        date: new Date().toISOString().split('T')[0],
+        durationMin: duration ? parseFloat(duration) : null,
+        distanceKm: distance ? parseFloat(distance) : null,
+        avgHr: avgHr ? parseInt(avgHr) : null,
+        avgPace: avgPace || null,
+        rpe: rpe[0],
+      });
       setPlannedSessionId('none');
       setDuration('');
       setDistance('');
@@ -242,6 +254,14 @@ export default function LogSession() {
           <Check className="h-4 w-4 mr-2" /> {saving ? 'Saving…' : 'Log Session'}
         </Button>
       </motion.form>
+
+      {shareData && (
+        <ShareWorkoutDialog
+          open={!!shareData}
+          onOpenChange={(open) => !open && setShareData(null)}
+          session={shareData}
+        />
+      )}
     </div>
   );
 }
