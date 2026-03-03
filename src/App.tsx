@@ -44,8 +44,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function RequireOrg({ children }: { children: React.ReactNode }) {
-  const { memberships, loading } = useAuth();
-  if (loading) return null;
+  const { memberships, loading, membershipsLoading } = useAuth();
+  if (loading || membershipsLoading) return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="h-8 w-8 rounded-xl gradient-hyrox animate-pulse-glow" />
+    </div>
+  );
   if (memberships.length === 0) return <Navigate to="/onboarding" replace />;
   return <>{children}</>;
 }
