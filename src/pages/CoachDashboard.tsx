@@ -2,9 +2,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Users, AlertTriangle, CheckCircle, TrendingUp, ChevronRight, Plus } from 'lucide-react';
+import { Users, AlertTriangle, CheckCircle, TrendingUp, ChevronRight, Plus, ArrowLeftRight, Check, X, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 const mockAthletes = [
   { id: '1', name: 'Sarah Mitchell', compliance: 92, sessions: '5/6', flag: false, lastActive: '2h ago' },
@@ -21,6 +29,171 @@ const item = {
   hidden: { opacity: 0, y: 8 },
   show: { opacity: 1, y: 0 },
 };
+
+const reasonLabels: Record<string, string> = {
+  no_equipment: 'No equipment',
+  less_time: 'Less time',
+  other: 'Other',
+};
+
+function SwapRequestsPanel() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [approveDialog, setApproveDialog] = useState<any | null>(null);
+  const [workoutDetails, setWorkoutDetails] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const { data: pendingSwaps, isLoading } = useQuery({
+    queryKey: ['coach-pending-swaps', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data: assignments } = await supabase
+        .from('coach_athlete_assignments')
+        .select('athlete_id')
+        .eq('coach_id', user.id);
+      if (!assignments?.length) return [];
+
+      const athleteIds = assignments.map(a => a.athlete_id);
+      const { data, error } = await supabase
+        .from('session_substitutions' as any)
+        .select('*')
+        .in('athlete_id', athleteIds)
+        .eq('status', 'pending_coach')
+        .order('created_at', { ascending: false });
+      if (error) return [];
+
+      const enriched = await Promise.all((data as any[]).map(async (swap) => {
+        const [profileRes, sessionRes] = await Promise.all([
+          supabase.from('profiles').select('full_name').eq('id', swap.athlete_id).single(),
+          supabase.from('planned_sessions').select('session_name, discipline, duration_min, workout_details').eq('id', swap.original_session_id).single(),
+        ]);
+        return {
+          ...swap,
+          athlete_name: profileRes.data?.full_name || 'Unknown',
+          original_session: sessionRes.data,
+        };
+      }));
+      return enriched;
+    },
+    enabled: !!user?.id,
+  });
+
+  const handleApprove = async (swap: any) => {
+    setSaving(true);
+    const { error } = await supabase
+      .from('session_substitutions' as any)
+      .update({
+        status: 'active',
+        substitute_session_name: swap.substitute_session_name?.replace('[Pending] ', '') || swap.original_session?.session_name,
+        substitute_workout_details: workoutDetails || swap.original_session?.workout_details || '',
+        substitute_notes: 'Approved by coach',
+      })
+      .eq('id', swap.id);
+    setSaving(false);
+    if (error) {
+      toast.error('Failed to approve: ' + error.message);
+    } else {
+      toast.success('Swap approved! ✅');
+      setApproveDialog(null);
+      setWorkoutDetails('');
+      queryClient.invalidateQueries({ queryKey: ['coach-pending-swaps'] });
+    }
+  };
+
+  const handleReject = async (swapId: string) => {
+    const { error } = await supabase
+      .from('session_substitutions' as any)
+      .update({ status: 'cancelled' })
+      .eq('id', swapId);
+    if (error) {
+      toast.error('Failed to reject');
+    } else {
+      toast.success('Swap rejected');
+      queryClient.invalidateQueries({ queryKey: ['coach-pending-swaps'] });
+    }
+  };
+
+  if (isLoading) return null;
+  if (!pendingSwaps?.length) return null;
+
+  return (
+    <>
+      <Card className="glass border-amber-500/20">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <ArrowLeftRight className="h-4 w-4 text-amber-500" /> Swap Requests
+            </CardTitle>
+            <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 text-xs">
+              {pendingSwaps.length} pending
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {pendingSwaps.map((swap: any) => (
+            <div key={swap.id} className="p-3 rounded-lg border bg-card space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">{swap.athlete_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    wants to swap <span className="font-medium text-foreground">{swap.original_session?.session_name || 'session'}</span>
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-500">
+                  {reasonLabels[swap.reason] || swap.reason}
+                </Badge>
+              </div>
+              {swap.reason_details && (
+                <p className="text-xs text-muted-foreground italic">"{swap.reason_details}"</p>
+              )}
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" className="flex-1 text-destructive" onClick={() => handleReject(swap.id)}>
+                  <X className="h-3.5 w-3.5 mr-1" /> Reject
+                </Button>
+                <Button size="sm" className="flex-1 gradient-hyrox" onClick={() => {
+                  setApproveDialog(swap);
+                  setWorkoutDetails(swap.original_session?.workout_details || '');
+                }}>
+                  <Check className="h-3.5 w-3.5 mr-1" /> Approve
+                </Button>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Dialog open={!!approveDialog} onOpenChange={v => { if (!v) { setApproveDialog(null); setWorkoutDetails(''); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display">Approve Swap</DialogTitle>
+          </DialogHeader>
+          {approveDialog && (
+            <div className="space-y-4 pt-2">
+              <div className="p-3 rounded-lg bg-muted/40 border text-sm space-y-1">
+                <p><span className="text-muted-foreground">Athlete:</span> {approveDialog.athlete_name}</p>
+                <p><span className="text-muted-foreground">Original:</span> {approveDialog.original_session?.session_name}</p>
+                <p><span className="text-muted-foreground">Reason:</span> {reasonLabels[approveDialog.reason] || approveDialog.reason}</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Substitute workout details</Label>
+                <Textarea
+                  value={workoutDetails}
+                  onChange={e => setWorkoutDetails(e.target.value)}
+                  placeholder="Write the substitute workout here..."
+                  rows={4}
+                />
+                <p className="text-[10px] text-muted-foreground">Modify the workout to suit the athlete's constraints, or keep the original.</p>
+              </div>
+              <Button className="w-full gradient-hyrox" onClick={() => handleApprove(approveDialog)} disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Approve & Send'}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
 
 export default function CoachDashboard() {
   const navigate = useNavigate();
@@ -61,6 +234,11 @@ export default function CoachDashboard() {
               <p className="text-[10px] text-muted-foreground">Sessions/Week</p>
             </CardContent>
           </Card>
+        </motion.div>
+
+        {/* Swap Requests */}
+        <motion.div variants={item}>
+          <SwapRequestsPanel />
         </motion.div>
 
         {/* Athletes List */}
