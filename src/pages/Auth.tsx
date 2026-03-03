@@ -61,7 +61,7 @@ export default function AuthPage() {
           <div className="h-16 w-16 rounded-2xl gradient-hyrox flex items-center justify-center mb-4 shadow-lg">
             <Dumbbell className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-display font-bold tracking-tight">HYROX Coach OS</h1>
+          <h1 className="text-2xl font-display font-bold tracking-tight">Hybrid Athletics</h1>
           <p className="text-sm text-muted-foreground mt-1">Train smarter. Race faster.</p>
         </div>
 
