@@ -282,8 +282,8 @@ function CoachAthleteRow({ athlete, weekNumber, planVersionId, onClick }: {
 
 /* ─── Main Reports Page ─── */
 export default function Reports() {
-  const { user, currentOrg, currentRole } = useAuth();
-  const isCoach = currentRole === 'coach' || currentRole === 'master_admin';
+  const { user, currentOrg, effectiveRole } = useAuth();
+  const isCoach = effectiveRole === 'coach' || effectiveRole === 'admin' || effectiveRole === 'master_admin';
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
 

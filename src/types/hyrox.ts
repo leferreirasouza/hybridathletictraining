@@ -1,6 +1,6 @@
 // HYROX Coach OS — Core Types
 
-export type AppRole = 'master_admin' | 'coach' | 'athlete';
+export type AppRole = 'master_admin' | 'admin' | 'coach' | 'athlete';
 
 export type HyroxStation =
   | 'skierg' | 'sled_push' | 'sled_pull' | 'burpee_broad_jump'

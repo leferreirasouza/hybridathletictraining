@@ -51,8 +51,8 @@ function RequireOrg({ children }: { children: React.ReactNode }) {
 }
 
 function RoleDashboard() {
-  const { currentRole } = useAuth();
-  if (currentRole === 'coach' || currentRole === 'master_admin') {
+  const { effectiveRole } = useAuth();
+  if (effectiveRole === 'coach' || effectiveRole === 'admin' || effectiveRole === 'master_admin') {
     return <CoachDashboard />;
   }
   return <Dashboard />;

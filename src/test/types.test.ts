@@ -20,8 +20,8 @@ import type {
 
 describe('HYROX Type System', () => {
   it('AppRole should have correct values', () => {
-    const roles: AppRole[] = ['master_admin', 'coach', 'athlete'];
-    expect(roles).toHaveLength(3);
+    const roles: AppRole[] = ['master_admin', 'admin', 'coach', 'athlete'];
+    expect(roles).toHaveLength(4);
   });
 
   it('HyroxStation should cover all 8 stations', () => {

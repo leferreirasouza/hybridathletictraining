@@ -28,8 +28,8 @@ const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { st
 const item = { hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } };
 
 export default function ActivityLog() {
-  const { user, currentRole } = useAuth();
-  const isCoachOrAdmin = currentRole === 'coach' || currentRole === 'master_admin';
+  const { user, effectiveRole } = useAuth();
+  const isCoachOrAdmin = effectiveRole === 'coach' || effectiveRole === 'admin' || effectiveRole === 'master_admin';
 
   const { data: logs, isLoading } = useQuery({
     queryKey: ['activity-logs', user?.id, isCoachOrAdmin],

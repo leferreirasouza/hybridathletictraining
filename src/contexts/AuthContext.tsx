@@ -5,6 +5,19 @@ import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
+// Role hierarchy: master_admin > admin > coach > athlete
+const ROLE_HIERARCHY: AppRole[] = ['master_admin', 'admin', 'coach', 'athlete'];
+
+function getRoleLevel(role: AppRole): number {
+  return ROLE_HIERARCHY.indexOf(role);
+}
+
+/** Returns all roles at or below the given role in the hierarchy */
+export function getAccessibleRoles(role: AppRole): AppRole[] {
+  const level = getRoleLevel(role);
+  return ROLE_HIERARCHY.filter((_, i) => i >= level);
+}
+
 interface OrgMembership {
   id: string;
   organization_id: string;
@@ -18,8 +31,14 @@ interface AuthState {
   loading: boolean;
   memberships: OrgMembership[];
   currentOrg: { id: string; name: string } | null;
+  /** The actual assigned role for the current org */
   currentRole: AppRole | null;
+  /** The role the user is currently viewing as (can be their role or lower) */
+  viewAsRole: AppRole | null;
+  /** The effective role used for UI rendering */
+  effectiveRole: AppRole | null;
   setCurrentOrg: (org: { id: string; name: string } | null) => void;
+  setViewAsRole: (role: AppRole) => void;
   signOut: () => Promise<void>;
   refreshMemberships: () => Promise<void>;
 }
@@ -31,7 +50,10 @@ const AuthContext = createContext<AuthState>({
   memberships: [],
   currentOrg: null,
   currentRole: null,
+  viewAsRole: null,
+  effectiveRole: null,
   setCurrentOrg: () => {},
+  setViewAsRole: () => {},
   signOut: async () => {},
   refreshMemberships: async () => {},
 });
@@ -45,6 +67,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [memberships, setMemberships] = useState<OrgMembership[]>([]);
   const [currentOrg, setCurrentOrg] = useState<{ id: string; name: string } | null>(null);
   const [currentRole, setCurrentRole] = useState<AppRole | null>(null);
+  const [viewAsRole, setViewAsRoleState] = useState<AppRole | null>(null);
+
+  const effectiveRole = viewAsRole ?? currentRole;
+
+  const setViewAsRole = (role: AppRole) => {
+    // Only allow switching to same or lower role
+    if (currentRole && getRoleLevel(role) >= getRoleLevel(currentRole)) {
+      setViewAsRoleState(role);
+    }
+  };
 
   const fetchMemberships = useCallback(async (userId: string) => {
     const { data, error } = await supabase
@@ -61,10 +93,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }));
       setMemberships(mapped);
 
-      // Auto-select first org if none selected
       if (!currentOrg && mapped.length > 0) {
-        setCurrentOrg({ id: mapped[0].organization.id, name: mapped[0].organization.name });
-        setCurrentRole(mapped[0].role);
+        // Pick highest role membership first
+        const sorted = [...mapped].sort((a, b) => getRoleLevel(a.role) - getRoleLevel(b.role));
+        setCurrentOrg({ id: sorted[0].organization.id, name: sorted[0].organization.name });
+        setCurrentRole(sorted[0].role);
+        setViewAsRoleState(null); // reset view-as on fresh load
       }
     }
   }, [currentOrg]);
@@ -74,12 +108,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        // Defer to avoid Supabase deadlock
         setTimeout(() => fetchMemberships(session.user.id), 0);
       } else {
         setMemberships([]);
         setCurrentOrg(null);
         setCurrentRole(null);
+        setViewAsRoleState(null);
       }
       setLoading(false);
     });
@@ -100,6 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (currentOrg && memberships.length > 0) {
       const m = memberships.find(m => m.organization_id === currentOrg.id);
       setCurrentRole(m?.role ?? null);
+      setViewAsRoleState(null); // reset view-as when org changes
     }
   }, [currentOrg, memberships]);
 
@@ -108,6 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMemberships([]);
     setCurrentOrg(null);
     setCurrentRole(null);
+    setViewAsRoleState(null);
   };
 
   const refreshMemberships = async () => {
@@ -117,7 +153,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <AuthContext.Provider value={{
       user, session, loading, memberships, currentOrg, currentRole,
-      setCurrentOrg, signOut, refreshMemberships,
+      viewAsRole, effectiveRole,
+      setCurrentOrg, setViewAsRole, signOut, refreshMemberships,
     }}>
       {children}
     </AuthContext.Provider>

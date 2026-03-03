@@ -65,8 +65,8 @@ const emptyRow = (): SessionRow => ({
 });
 
 export default function PlanBuilder() {
-  const { user, currentOrg, currentRole } = useAuth();
-  const isCoach = currentRole === 'coach' || currentRole === 'master_admin';
+  const { user, currentOrg, effectiveRole } = useAuth();
+  const isCoach = effectiveRole === 'coach' || effectiveRole === 'admin' || effectiveRole === 'master_admin';
 
   const [planName, setPlanName] = useState('');
   const [weekCount, setWeekCount] = useState(1);
