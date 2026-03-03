@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Check, AlertTriangle, Link2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { logAudit } from '@/lib/auditLog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { useScheduleData } from '@/hooks/useScheduleData';
@@ -91,6 +92,12 @@ export default function LogSession() {
     if (error) {
       toast.error('Failed to log session: ' + error.message);
     } else {
+      logAudit('session.completed', 'completed_session', undefined, {
+        discipline,
+        duration: duration ? parseFloat(duration) : null,
+        distance: distance ? parseFloat(distance) : null,
+        linked: plannedSessionId !== 'none',
+      });
       toast.success('Session logged! Great work 💪');
       setPlannedSessionId('none');
       setDuration('');

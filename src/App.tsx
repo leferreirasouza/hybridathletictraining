@@ -27,6 +27,7 @@ import PlanBuilder from "@/pages/PlanBuilder";
 import AdminPanel from "@/pages/AdminPanel";
 import Analytics from "@/pages/Analytics";
 import Settings from "@/pages/Settings";
+import ActivityLog from "@/pages/ActivityLog";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -89,6 +90,7 @@ const App = () => (
               <Route path="analytics" element={<Analytics />} />
               <Route path="admin" element={<AdminPanel />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="activity" element={<ActivityLog />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
