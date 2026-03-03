@@ -163,25 +163,41 @@ export default function PlanBuilder() {
       setImporting(true);
       try {
         const data = await file.arrayBuffer();
-        const workbook = XLSX.read(data, { type: 'array' });
-
-        const sheetName = workbook.SheetNames.find(s =>
-          s.toLowerCase().includes('plan') || s.toLowerCase().includes('daily')
-        ) || workbook.SheetNames[0];
-
-        const sheet = workbook.Sheets[sheetName];
-        const csvData = XLSX.utils.sheet_to_csv(sheet);
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
         const importName = planName.trim() || file.name.replace(/\.(xlsx|xls|csv)$/i, '');
 
+        // Extract all sheets as JSON arrays (array of arrays)
+        const sheets: Record<string, any[][]> = {};
+        for (const sheetName of workbook.SheetNames) {
+          const sheet = workbook.Sheets[sheetName];
+          // Use sheet_to_json with header:1 to get array of arrays
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false }) as any[][];
+          // Skip empty sheets
+          if (rows.length > 1) {
+            sheets[sheetName] = rows;
+          }
+        }
+
+        if (Object.keys(sheets).length === 0) {
+          throw new Error('No data found in the spreadsheet');
+        }
+
         const { data: result, error } = await supabase.functions.invoke('import-plan', {
-          body: { csvData, organizationId: currentOrg.id, planName: importName },
+          body: { sheets, organizationId: currentOrg.id, planName: importName },
         });
 
         if (error) throw error;
         if (result?.error) throw new Error(result.error);
 
-        toast.success(`Imported "${importName}" — ${result.sessionsCreated} sessions created`);
+        const parts = [];
+        if (result.sessionsCreated) parts.push(`${result.sessionsCreated} sessions`);
+        if (result.targetsCreated) parts.push(`${result.targetsCreated} targets`);
+        if (result.weeklySummariesCreated) parts.push(`${result.weeklySummariesCreated} weekly summaries`);
+        if (result.garminWorkoutsCreated) parts.push(`${result.garminWorkoutsCreated} Garmin workouts`);
+
+        toast.success(`Imported "${importName}" — ${parts.join(', ')}`);
         if (result.errors?.length > 0) {
+          console.warn('Import warnings:', result.errors);
           toast.warning(`${result.errors.length} rows had parsing issues`);
         }
       } catch (e: any) {
@@ -355,7 +371,7 @@ export default function PlanBuilder() {
                 {importing ? 'Importing…' : 'Choose File'}
               </Button>
               <p className="text-xs text-muted-foreground">
-                Supports: Plan (Daily), Weekly Summary, Targets, Garmin Workouts sheets
+                Imports all sheets: Plan (Daily), Targets (HR zones, paces), Weekly Summary, Garmin Workouts
               </p>
             </CardContent>
           </Card>

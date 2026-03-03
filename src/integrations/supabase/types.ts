@@ -553,6 +553,53 @@ export type Database = {
           },
         ]
       }
+      weekly_summaries: {
+        Row: {
+          bike_z2_min_target: number | null
+          created_at: string
+          id: string
+          notes: string | null
+          plan_version_id: string
+          run_days: string | null
+          run_km_target: number | null
+          week_end: string | null
+          week_number: number
+          week_start: string | null
+        }
+        Insert: {
+          bike_z2_min_target?: number | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          plan_version_id: string
+          run_days?: string | null
+          run_km_target?: number | null
+          week_end?: string | null
+          week_number?: number
+          week_start?: string | null
+        }
+        Update: {
+          bike_z2_min_target?: number | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          plan_version_id?: string
+          run_days?: string | null
+          run_km_target?: number | null
+          week_end?: string | null
+          week_number?: number
+          week_start?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_summaries_plan_version_id_fkey"
+            columns: ["plan_version_id"]
+            isOneToOne: false
+            referencedRelation: "plan_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
