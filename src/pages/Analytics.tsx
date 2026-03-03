@@ -1,13 +1,14 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, TrendingUp, Clock, MapPin, Flame } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2, TrendingUp, Clock, MapPin, Flame, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-  AreaChart, Area,
+  AreaChart, Area, LineChart, Line, Legend,
 } from 'recharts';
 import { disciplineConfig } from '@/components/schedule/config';
 
@@ -34,8 +35,23 @@ const item = {
   show: { opacity: 1, y: 0 },
 };
 
+const tooltipStyle = {
+  backgroundColor: 'hsl(var(--card))',
+  border: '1px solid hsl(var(--border))',
+  borderRadius: 8,
+  fontSize: 12,
+};
+
+function getISOWeekLabel(dateStr: string): string {
+  const d = new Date(dateStr);
+  const jan1 = new Date(d.getFullYear(), 0, 1);
+  const weekNum = Math.ceil(((d.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7);
+  return `W${weekNum}`;
+}
+
 export default function Analytics() {
   const { user } = useAuth();
+  const [volumeMetric, setVolumeMetric] = useState<'duration' | 'distance'>('duration');
 
   const { data: completedSessions, isLoading } = useQuery({
     queryKey: ['analytics-completed', user?.id],
@@ -51,25 +67,23 @@ export default function Analytics() {
     enabled: !!user,
   });
 
-  // Group sessions by ISO week
-  const { weeklyData, disciplineBreakdown, totals } = useMemo(() => {
-    if (!completedSessions?.length) return { weeklyData: [], disciplineBreakdown: [], totals: { sessions: 0, duration: 0, distance: 0, avgRpe: 0 } };
+  const { weeklyData, disciplineBreakdown, totals, rpeData, stackedDisciplineData, activeDisciplines } = useMemo(() => {
+    if (!completedSessions?.length)
+      return { weeklyData: [], disciplineBreakdown: [], totals: { sessions: 0, duration: 0, distance: 0, avgRpe: 0 }, rpeData: [], stackedDisciplineData: [], activeDisciplines: [] };
 
     const weekMap = new Map<string, { week: string; duration: number; distance: number; sessions: number; rpeSum: number; rpeCount: number }>();
     const discMap = new Map<string, { discipline: string; duration: number; distance: number; sessions: number }>();
+    // For stacked discipline chart: week → { discipline: duration }
+    const stackedMap = new Map<string, Record<string, string | number>>();
+    const allDiscs = new Set<string>();
     let totalDuration = 0, totalDistance = 0, totalRpe = 0, rpeCount = 0;
 
     for (const s of completedSessions) {
-      const d = new Date(s.date);
-      // Get ISO week label (e.g. "W12")
-      const jan1 = new Date(d.getFullYear(), 0, 1);
-      const weekNum = Math.ceil(((d.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7);
-      const weekKey = `W${weekNum}`;
-
+      const weekKey = getISOWeekLabel(s.date);
       const dur = Number(s.actual_duration_min) || 0;
       const dist = Number(s.actual_distance_km) || 0;
 
-      // Weekly
+      // Weekly volume
       const existing = weekMap.get(weekKey) || { week: weekKey, duration: 0, distance: 0, sessions: 0, rpeSum: 0, rpeCount: 0 };
       existing.duration += dur;
       existing.distance += dist;
@@ -77,17 +91,28 @@ export default function Analytics() {
       if (s.rpe) { existing.rpeSum += s.rpe; existing.rpeCount += 1; }
       weekMap.set(weekKey, existing);
 
-      // Discipline
+      // Discipline totals
       const disc = discMap.get(s.discipline) || { discipline: s.discipline, duration: 0, distance: 0, sessions: 0 };
       disc.duration += dur;
       disc.distance += dist;
       disc.sessions += 1;
       discMap.set(s.discipline, disc);
 
+      // Stacked discipline per week
+      const stackRow = stackedMap.get(weekKey) || { week: weekKey };
+      stackRow[s.discipline] = (stackRow[s.discipline] as number || 0) + dur;
+      stackedMap.set(weekKey, stackRow);
+      allDiscs.add(s.discipline);
+
       totalDuration += dur;
       totalDistance += dist;
       if (s.rpe) { totalRpe += s.rpe; rpeCount += 1; }
     }
+
+    // RPE trend: avg RPE per week
+    const rpeData = Array.from(weekMap.values())
+      .filter(w => w.rpeCount > 0)
+      .map(w => ({ week: w.week, avgRpe: Math.round((w.rpeSum / w.rpeCount) * 10) / 10, sessions: w.sessions }));
 
     return {
       weeklyData: Array.from(weekMap.values()),
@@ -98,6 +123,9 @@ export default function Analytics() {
         distance: totalDistance,
         avgRpe: rpeCount > 0 ? totalRpe / rpeCount : 0,
       },
+      rpeData,
+      stackedDisciplineData: Array.from(stackedMap.values()),
+      activeDisciplines: Array.from(allDiscs).sort(),
     };
   }, [completedSessions]);
 
@@ -114,7 +142,7 @@ export default function Analytics() {
       <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
         <motion.div variants={item}>
           <h1 className="text-xl font-display font-bold">Analytics</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Your training volume overview</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Your training volume &amp; intensity trends</p>
         </motion.div>
 
         {/* Summary cards */}
@@ -139,18 +167,24 @@ export default function Analytics() {
           ))}
         </motion.div>
 
-        {/* Weekly Duration Chart */}
+        {/* Weekly Volume Chart with toggle */}
         {weeklyData.length > 0 && (
           <motion.div variants={item}>
             <Card className="glass">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-display">Weekly Duration (min)</CardTitle>
+              <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-sm font-display">Weekly Volume</CardTitle>
+                <Tabs value={volumeMetric} onValueChange={(v) => setVolumeMetric(v as 'duration' | 'distance')}>
+                  <TabsList className="h-7">
+                    <TabsTrigger value="duration" className="text-[10px] px-2 h-5">Minutes</TabsTrigger>
+                    <TabsTrigger value="distance" className="text-[10px] px-2 h-5">Distance</TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </CardHeader>
               <CardContent className="pb-3">
                 <ResponsiveContainer width="100%" height={180}>
                   <AreaChart data={weeklyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                     <defs>
-                      <linearGradient id="durationGrad" x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="hsl(15, 100%, 55%)" stopOpacity={0.3} />
                         <stop offset="100%" stopColor="hsl(15, 100%, 55%)" stopOpacity={0} />
                       </linearGradient>
@@ -158,11 +192,15 @@ export default function Analytics() {
                     <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                     <XAxis dataKey="week" tick={{ fontSize: 10 }} className="fill-muted-foreground" />
                     <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
-                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: 'hsl(var(--foreground))' }} />
+                    <Area
+                      type="monotone"
+                      dataKey={volumeMetric}
+                      stroke="hsl(15, 100%, 55%)"
+                      fill="url(#volGrad)"
+                      strokeWidth={2}
+                      name={volumeMetric === 'duration' ? 'Duration (min)' : 'Distance (km)'}
                     />
-                    <Area type="monotone" dataKey="duration" stroke="hsl(15, 100%, 55%)" fill="url(#durationGrad)" strokeWidth={2} name="Duration (min)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -170,24 +208,78 @@ export default function Analytics() {
           </motion.div>
         )}
 
-        {/* Weekly Distance Chart */}
-        {weeklyData.length > 0 && (
+        {/* RPE Trend Chart */}
+        {rpeData.length > 0 && (
           <motion.div variants={item}>
             <Card className="glass">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-display">Weekly Distance (km)</CardTitle>
+                <CardTitle className="text-sm font-display flex items-center gap-1.5">
+                  <Activity className="h-3.5 w-3.5 text-destructive" />
+                  RPE Trend (Weekly Avg)
+                </CardTitle>
               </CardHeader>
               <CardContent className="pb-3">
                 <ResponsiveContainer width="100%" height={180}>
-                  <BarChart data={weeklyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                  <LineChart data={rpeData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis dataKey="week" tick={{ fontSize: 10 }} className="fill-muted-foreground" />
+                    <YAxis domain={[1, 10]} tick={{ fontSize: 10 }} className="fill-muted-foreground" />
+                    <Tooltip
+                      contentStyle={tooltipStyle}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                      formatter={(value: number) => [value, 'Avg RPE']}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="avgRpe"
+                      stroke="hsl(0, 72%, 51%)"
+                      strokeWidth={2}
+                      dot={{ r: 3, fill: 'hsl(0, 72%, 51%)' }}
+                      activeDot={{ r: 5 }}
+                      name="Avg RPE"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Stacked Discipline Over Time */}
+        {stackedDisciplineData.length > 0 && (
+          <motion.div variants={item}>
+            <Card className="glass">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-display">Discipline Breakdown Over Time</CardTitle>
+              </CardHeader>
+              <CardContent className="pb-3">
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={stackedDisciplineData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                     <XAxis dataKey="week" tick={{ fontSize: 10 }} className="fill-muted-foreground" />
                     <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" />
                     <Tooltip
-                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
+                      contentStyle={tooltipStyle}
                       labelStyle={{ color: 'hsl(var(--foreground))' }}
+                      formatter={(value: number, name: string) => [
+                        `${Math.round(value)} min`,
+                        disciplineConfig[name]?.label || name,
+                      ]}
                     />
-                    <Bar dataKey="distance" fill="hsl(200, 90%, 48%)" radius={[4, 4, 0, 0]} name="Distance (km)" />
+                    <Legend
+                      wrapperStyle={{ fontSize: 10 }}
+                      formatter={(value: string) => disciplineConfig[value]?.label || value}
+                    />
+                    {activeDisciplines.map(disc => (
+                      <Bar
+                        key={disc}
+                        dataKey={disc}
+                        stackId="disciplines"
+                        fill={DISCIPLINE_COLORS[disc] || 'hsl(220, 10%, 50%)'}
+                        radius={0}
+                        name={disc}
+                      />
+                    ))}
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -195,12 +287,12 @@ export default function Analytics() {
           </motion.div>
         )}
 
-        {/* Discipline Breakdown */}
+        {/* Discipline Totals */}
         {disciplineBreakdown.length > 0 && (
           <motion.div variants={item}>
             <Card className="glass">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-display">Volume by Discipline</CardTitle>
+                <CardTitle className="text-sm font-display">Total Volume by Discipline</CardTitle>
               </CardHeader>
               <CardContent className="pb-3">
                 <ResponsiveContainer width="100%" height={Math.max(120, disciplineBreakdown.length * 36)}>
@@ -216,15 +308,18 @@ export default function Analytics() {
                       tickFormatter={(v: string) => disciplineConfig[v]?.label || v}
                     />
                     <Tooltip
-                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
+                      contentStyle={tooltipStyle}
                       labelFormatter={(v: string) => disciplineConfig[v]?.label || v}
                     />
                     <Bar
                       dataKey="duration"
                       name="Duration (min)"
                       radius={[0, 4, 4, 0]}
-                      fill="hsl(15, 100%, 55%)"
-                    />
+                    >
+                      {disciplineBreakdown.map((entry) => (
+                        <rect key={entry.discipline} fill={DISCIPLINE_COLORS[entry.discipline] || 'hsl(15, 100%, 55%)'} />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
