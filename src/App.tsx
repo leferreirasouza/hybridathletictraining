@@ -21,6 +21,7 @@ import LogSession from "@/pages/LogSession";
 import AIChat from "@/pages/AIChat";
 import Messages from "@/pages/Messages";
 import Profile from "@/pages/Profile";
+import Reports from "@/pages/Reports";
 import CoachDashboard from "@/pages/CoachDashboard";
 import PlanBuilder from "@/pages/PlanBuilder";
 import AdminPanel from "@/pages/AdminPanel";
@@ -81,6 +82,7 @@ const App = () => (
               <Route path="history" element={<History />} />
               <Route path="ai" element={<AIChat />} />
               <Route path="messages" element={<Messages />} />
+              <Route path="reports" element={<Reports />} />
               <Route path="profile" element={<Profile />} />
               <Route path="athletes" element={<CoachDashboard />} />
               <Route path="plans" element={<PlanBuilder />} />
