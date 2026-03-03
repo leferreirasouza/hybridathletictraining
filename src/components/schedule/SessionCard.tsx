@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { getDiscipline, intensityConfig, dayLabelsFull } from './config';
-import { Clock, MapPin, ChevronRight, Flame, Check, CheckCircle2, CalendarPlus } from 'lucide-react';
+import { Clock, MapPin, ChevronRight, Flame, Check, CheckCircle2, CalendarPlus, ArrowLeftRight } from 'lucide-react';
+import { SwapSessionDialog } from './SwapSessionDialog';
 import { buildGoogleCalendarUrl } from '@/lib/googleCalendar';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
@@ -31,7 +32,19 @@ interface Session {
   date?: string | null;
 }
 
-export function SessionCard({ session, showDay = true, isCompleted = false }: { session: Session; showDay?: boolean; isCompleted?: boolean }) {
+interface Substitution {
+  id: string;
+  substitute_session_name: string;
+  substitute_discipline: string;
+  substitute_duration_min?: number | null;
+  substitute_workout_details?: string | null;
+  substitute_notes?: string | null;
+  status: string;
+  reason: string;
+  source: string;
+}
+
+export function SessionCard({ session, showDay = true, isCompleted = false, substitution }: { session: Session; showDay?: boolean; isCompleted?: boolean; substitution?: Substitution | null }) {
   const disc = getDiscipline(session.discipline);
   const IntIcon = disc.icon;
   const intConf = session.intensity ? intensityConfig[session.intensity] : null;
@@ -44,7 +57,7 @@ export function SessionCard({ session, showDay = true, isCompleted = false }: { 
           animate={{ opacity: 1, y: 0 }}
           className="cursor-pointer"
         >
-          <Card className={`glass hover:border-primary/30 transition-all group ${isCompleted ? 'border-success/30 bg-success/5' : ''}`}>
+          <Card className={`glass hover:border-primary/30 transition-all group ${isCompleted ? 'border-success/30 bg-success/5' : ''} ${substitution?.status === 'active' ? 'border-primary/30 bg-primary/5' : ''} ${substitution?.status === 'pending_coach' ? 'border-amber-500/30 bg-amber-500/5' : ''}`}>
             <CardContent className="p-3.5">
               <div className="flex items-start gap-3">
                 <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${isCompleted ? 'bg-success/15 text-success' : disc.color}`}>
@@ -53,7 +66,9 @@ export function SessionCard({ session, showDay = true, isCompleted = false }: { 
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <p className={`text-sm font-medium truncate ${isCompleted ? 'line-through text-muted-foreground' : ''}`}>{session.session_name}</p>
+                    <p className={`text-sm font-medium truncate ${isCompleted ? 'line-through text-muted-foreground' : ''} ${substitution?.status === 'active' ? 'line-through text-muted-foreground' : ''}`}>
+                      {substitution?.status === 'active' ? substitution.substitute_session_name : session.session_name}
+                    </p>
                     <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                   </div>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -76,6 +91,12 @@ export function SessionCard({ session, showDay = true, isCompleted = false }: { 
                     {isCompleted && (
                       <Badge variant="outline" className="text-[9px] px-1 py-0 border-success/30 text-success">Done</Badge>
                     )}
+                    {substitution?.status === 'active' && (
+                      <Badge variant="outline" className="text-[9px] px-1 py-0 border-primary/30 text-primary">Swapped</Badge>
+                    )}
+                    {substitution?.status === 'pending_coach' && (
+                      <Badge variant="outline" className="text-[9px] px-1 py-0 border-amber-500/30 text-amber-500">Pending</Badge>
+                    )}
                   </div>
                 </div>
 
@@ -97,7 +118,7 @@ export function SessionCard({ session, showDay = true, isCompleted = false }: { 
       </SheetTrigger>
 
       <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh] overflow-y-auto">
-        <SessionDetailSheet session={session} isCompleted={isCompleted} />
+        <SessionDetailSheet session={session} isCompleted={isCompleted} substitution={substitution} />
       </SheetContent>
     </Sheet>
   );
@@ -178,7 +199,7 @@ function QuickLogButton({ session }: { session: Session }) {
   );
 }
 
-function SessionDetailSheet({ session, isCompleted }: { session: Session; isCompleted?: boolean }) {
+function SessionDetailSheet({ session, isCompleted, substitution }: { session: Session; isCompleted?: boolean; substitution?: Substitution | null }) {
   const disc = getDiscipline(session.discipline);
   const IntIcon = disc.icon;
   const intConf = session.intensity ? intensityConfig[session.intensity] : null;
@@ -231,6 +252,30 @@ function SessionDetailSheet({ session, isCompleted }: { session: Session; isComp
         </div>
       )}
 
+      {/* Substitution info */}
+      {substitution?.status === 'active' && (
+        <div className="space-y-1.5">
+          <h3 className="text-xs font-semibold text-primary uppercase tracking-wider flex items-center gap-1">
+            <ArrowLeftRight className="h-3 w-3" /> Swapped Session
+          </h3>
+          <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/20">
+            <p className="text-sm font-medium">{substitution.substitute_session_name}</p>
+            {substitution.substitute_workout_details && (
+              <p className="text-sm whitespace-pre-wrap leading-relaxed mt-2">{substitution.substitute_workout_details}</p>
+            )}
+            {substitution.substitute_notes && (
+              <p className="text-xs text-muted-foreground italic mt-2">💡 {substitution.substitute_notes}</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {substitution?.status === 'pending_coach' && (
+        <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-center">
+          <p className="text-sm text-amber-500 font-medium">⏳ Swap pending coach approval</p>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="space-y-2">
         {!isCompleted && <QuickLogButton session={session} />}
@@ -240,6 +285,7 @@ function SessionDetailSheet({ session, isCompleted }: { session: Session; isComp
             <span className="font-medium">Completed</span>
           </div>
         )}
+        {!isCompleted && !substitution && <SwapSessionDialog session={session} />}
         <Button
           variant="outline"
           className="w-full"

@@ -8,9 +8,10 @@ interface DailyViewProps {
   weekNumber: number;
   dayOfWeek: number;
   completedSessions?: any[];
+  substitutionMap?: Record<string, any>;
 }
 
-export default function DailyView({ sessions, weekNumber, dayOfWeek, completedSessions = [] }: DailyViewProps) {
+export default function DailyView({ sessions, weekNumber, dayOfWeek, completedSessions = [], substitutionMap = {} }: DailyViewProps) {
   const daySessions = sessions.filter(
     s => s.week_number === weekNumber && s.day_of_week === dayOfWeek
   );
@@ -42,7 +43,7 @@ export default function DailyView({ sessions, weekNumber, dayOfWeek, completedSe
       ) : (
         <div className="space-y-2">
           {daySessions.map(session => (
-            <SessionCard key={session.id} session={session} showDay={false} isCompleted={completedPlanIds.has(session.id)} />
+            <SessionCard key={session.id} session={session} showDay={false} isCompleted={completedPlanIds.has(session.id)} substitution={substitutionMap[session.id] || null} />
           ))}
         </div>
       )}

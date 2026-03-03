@@ -11,9 +11,10 @@ interface WeeklyViewProps {
   weekNumber: number;
   weeklySummary?: any;
   completedSessions?: any[];
+  substitutionMap?: Record<string, any>;
 }
 
-export default function WeeklyView({ sessions, weekNumber, weeklySummary, completedSessions = [] }: WeeklyViewProps) {
+export default function WeeklyView({ sessions, weekNumber, weeklySummary, completedSessions = [], substitutionMap = {} }: WeeklyViewProps) {
   const weekSessions = sessions.filter(s => s.week_number === weekNumber);
 
   const completedPlanIds = useMemo(
@@ -82,7 +83,7 @@ export default function WeeklyView({ sessions, weekNumber, weeklySummary, comple
               {day}
             </span>
             {daySessions.map(session => (
-              <SessionCard key={session.id} session={session} showDay={false} isCompleted={completedPlanIds.has(session.id)} />
+              <SessionCard key={session.id} session={session} showDay={false} isCompleted={completedPlanIds.has(session.id)} substitution={substitutionMap[session.id] || null} />
             ))}
           </div>
         );
