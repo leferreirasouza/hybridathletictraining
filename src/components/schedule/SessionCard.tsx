@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { getDiscipline, intensityConfig, dayLabelsFull } from './config';
-import { Clock, MapPin, ChevronRight, Flame, Check, CheckCircle2 } from 'lucide-react';
+import { Clock, MapPin, ChevronRight, Flame, Check, CheckCircle2, CalendarPlus } from 'lucide-react';
+import { buildGoogleCalendarUrl } from '@/lib/googleCalendar';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -230,14 +231,26 @@ function SessionDetailSheet({ session, isCompleted }: { session: Session; isComp
         </div>
       )}
 
-      {/* Quick log button */}
-      {!isCompleted && <QuickLogButton session={session} />}
-      {isCompleted && (
-        <div className="flex items-center justify-center gap-2 text-success text-sm py-2">
-          <CheckCircle2 className="h-4 w-4" />
-          <span className="font-medium">Completed</span>
-        </div>
-      )}
+      {/* Actions */}
+      <div className="space-y-2">
+        {!isCompleted && <QuickLogButton session={session} />}
+        {isCompleted && (
+          <div className="flex items-center justify-center gap-2 text-success text-sm py-2">
+            <CheckCircle2 className="h-4 w-4" />
+            <span className="font-medium">Completed</span>
+          </div>
+        )}
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => {
+            const url = buildGoogleCalendarUrl(session);
+            window.open(url, '_blank', 'noopener');
+          }}
+        >
+          <CalendarPlus className="h-4 w-4 mr-2" /> Add to Google Calendar
+        </Button>
+      </div>
     </div>
   );
 }

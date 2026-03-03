@@ -90,7 +90,7 @@ export default function Profile() {
             {[
               { icon: Upload, label: 'Import Plan (CSV/XLSX)', action: () => {} },
               { icon: Download, label: 'Export Plan', action: () => {} },
-              { icon: Calendar, label: 'Google Calendar Sync', action: () => {} },
+              { icon: Calendar, label: 'Google Calendar Sync', action: () => navigate('/schedule') },
               { icon: Shield, label: 'Health Data Permissions', action: () => {} },
               { icon: SettingsIcon, label: 'Settings', action: () => navigate('/settings') },
             ].map((item) => (
