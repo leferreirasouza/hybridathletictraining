@@ -5,11 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Moon, Sun, Ruler, Bell, Globe, ShieldCheck, Trash2 } from 'lucide-react';
+import { ArrowLeft, Moon, Sun, Ruler, Bell, ShieldCheck, Trash2, BellRing, BellOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import {
+  getNotifPrefs, setNotifPref,
+  requestNotificationPermission, getNotificationPermission,
+} from '@/hooks/useSessionReminders';
 
 type Units = 'metric' | 'imperial';
 type ThemeMode = 'light' | 'dark' | 'system';
@@ -19,9 +24,6 @@ function getStoredTheme(): ThemeMode {
 }
 function getStoredUnits(): Units {
   return (localStorage.getItem('ha-units') as Units) || 'metric';
-}
-function getStoredNotifs(): boolean {
-  return localStorage.getItem('ha-notifs') !== 'false';
 }
 
 function applyTheme(mode: ThemeMode) {
@@ -39,8 +41,27 @@ export default function Settings() {
 
   const [theme, setTheme] = useState<ThemeMode>(getStoredTheme);
   const [units, setUnits] = useState<Units>(getStoredUnits);
-  const [notifications, setNotifications] = useState(getStoredNotifs);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Notification prefs
+  const [notifPrefs, setNotifPrefs] = useState(getNotifPrefs);
+  const [permStatus, setPermStatus] = useState(getNotificationPermission);
+
+  const updateNotifPref = (key: 'enabled' | 'nightBefore' | 'hourBefore', value: boolean) => {
+    setNotifPref(key, value);
+    setNotifPrefs(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleEnableNotifications = async () => {
+    const granted = await requestNotificationPermission();
+    setPermStatus(getNotificationPermission());
+    if (granted) {
+      updateNotifPref('enabled', true);
+      toast.success('Notifications enabled!');
+    } else {
+      toast.error('Notification permission denied. Check your browser settings.');
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem('ha-theme', theme);
@@ -50,10 +71,6 @@ export default function Settings() {
   useEffect(() => {
     localStorage.setItem('ha-units', units);
   }, [units]);
-
-  useEffect(() => {
-    localStorage.setItem('ha-notifs', String(notifications));
-  }, [notifications]);
 
   const handleDeleteAccount = () => {
     if (!confirmDelete) {
@@ -136,14 +153,70 @@ export default function Settings() {
             <CardDescription>Training reminders and updates</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="notif-toggle">Session Reminders</Label>
-              <Switch
-                id="notif-toggle"
-                checked={notifications}
-                onCheckedChange={setNotifications}
-              />
-            </div>
+            {permStatus === 'unsupported' ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <BellOff className="h-4 w-4" />
+                Notifications not supported in this browser
+              </div>
+            ) : permStatus === 'denied' ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-destructive">
+                  <BellOff className="h-4 w-4" />
+                  Notifications blocked
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Enable notifications in your browser settings to receive training reminders.
+                </p>
+              </div>
+            ) : permStatus !== 'granted' ? (
+              <Button variant="outline" className="w-full" onClick={handleEnableNotifications}>
+                <BellRing className="h-4 w-4 mr-2" /> Enable Notifications
+              </Button>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="notif-master">Session Reminders</Label>
+                    <p className="text-[11px] text-muted-foreground">Master toggle for all reminders</p>
+                  </div>
+                  <Switch
+                    id="notif-master"
+                    checked={notifPrefs.enabled}
+                    onCheckedChange={(v) => updateNotifPref('enabled', v)}
+                  />
+                </div>
+                {notifPrefs.enabled && (
+                  <>
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="notif-night" className="text-sm">Night Before</Label>
+                        <p className="text-[11px] text-muted-foreground">Reminder at 8 PM</p>
+                      </div>
+                      <Switch
+                        id="notif-night"
+                        checked={notifPrefs.nightBefore}
+                        onCheckedChange={(v) => updateNotifPref('nightBefore', v)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="notif-hour" className="text-sm">Morning of Session</Label>
+                        <p className="text-[11px] text-muted-foreground">Reminder at 6–7 AM</p>
+                      </div>
+                      <Switch
+                        id="notif-hour"
+                        checked={notifPrefs.hourBefore}
+                        onCheckedChange={(v) => updateNotifPref('hourBefore', v)}
+                      />
+                    </div>
+                  </>
+                )}
+                <Badge variant="secondary" className="text-[10px]">
+                  ✓ Browser notifications enabled
+                </Badge>
+              </>
+            )}
           </CardContent>
         </Card>
 

@@ -3,6 +3,7 @@ import { Home, Calendar, Dumbbell, MessageSquare, User, BarChart3, Shield, Clipb
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSessionReminders } from '@/hooks/useSessionReminders';
 
 const athleteTabs = [
   { path: '/dashboard', icon: Home, label: 'Today' },
@@ -31,7 +32,10 @@ const adminTabs = [
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentRole } = useAuth();
+  const { currentRole, user } = useAuth();
+
+  // Fire browser notification reminders while app is open
+  useSessionReminders(user?.id);
 
   const tabs = currentRole === 'master_admin' ? adminTabs : currentRole === 'coach' ? coachTabs : athleteTabs;
 
