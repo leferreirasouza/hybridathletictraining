@@ -12,7 +12,7 @@ import { ArrowLeft, Moon, Sun, Ruler, Bell, ShieldCheck, Trash2, BellRing, BellO
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import {
-  getNotifPrefs, setNotifPref,
+  getNotifPrefs, setNotifPref, setTrainingTime,
   requestNotificationPermission, getNotificationPermission,
 } from '@/hooks/useSessionReminders';
 
@@ -50,6 +50,13 @@ export default function Settings() {
   const updateNotifPref = (key: 'enabled' | 'nightBefore' | 'hourBefore', value: boolean) => {
     setNotifPref(key, value);
     setNotifPrefs(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleTrainingTimeChange = (time: string) => {
+    setTrainingTime(time);
+    const hourBefore = !!time;
+    if (!time) setNotifPref('hourBefore', false);
+    setNotifPrefs(prev => ({ ...prev, trainingTime: time, hourBefore: time ? prev.hourBefore : false }));
   };
 
   const handleEnableNotifications = async () => {
@@ -199,16 +206,38 @@ export default function Settings() {
                         onCheckedChange={(v) => updateNotifPref('nightBefore', v)}
                       />
                     </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label htmlFor="notif-hour" className="text-sm">Morning of Session</Label>
-                        <p className="text-[11px] text-muted-foreground">Reminder at 6–7 AM</p>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label htmlFor="notif-hour" className="text-sm">1 Hour Before</Label>
+                          <p className="text-[11px] text-muted-foreground">
+                            {notifPrefs.trainingTime
+                              ? `Reminder at ${(() => { const [h,m] = notifPrefs.trainingTime.split(':').map(Number); const rh = h-1 < 0 ? 23 : h-1; return `${String(rh).padStart(2,'0')}:${String(m).padStart(2,'0')}`; })()}`
+                              : 'Set your training time to enable'}
+                          </p>
+                        </div>
+                        <Switch
+                          id="notif-hour"
+                          checked={notifPrefs.hourBefore}
+                          onCheckedChange={(v) => updateNotifPref('hourBefore', v)}
+                          disabled={!notifPrefs.trainingTime}
+                        />
                       </div>
-                      <Switch
-                        id="notif-hour"
-                        checked={notifPrefs.hourBefore}
-                        onCheckedChange={(v) => updateNotifPref('hourBefore', v)}
-                      />
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="training-time" className="text-xs text-muted-foreground whitespace-nowrap">Training time</Label>
+                        <input
+                          id="training-time"
+                          type="time"
+                          value={notifPrefs.trainingTime}
+                          onChange={(e) => handleTrainingTimeChange(e.target.value)}
+                          className="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
+                        />
+                        {notifPrefs.trainingTime && (
+                          <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-muted-foreground" onClick={() => handleTrainingTimeChange('')}>
+                            Clear
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </>
                 )}
