@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Upload, Plus, Trophy, Clock, TrendingUp, Loader2, Camera, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import RaceComparisonChart from '@/components/races/RaceComparisonChart';
 
 const STATIONS = [
   'SkiErg', 'Sled Push', 'Sled Pull', 'Burpee Broad Jumps',
@@ -116,6 +117,9 @@ export default function RaceResults() {
         </Card>
       ) : (
         <motion.div variants={container} initial="hidden" animate="show" className="space-y-3">
+          {/* Comparison Chart */}
+          <RaceComparisonChart races={races} />
+
           {races.map((race: any) => (
             <RaceCard key={race.id} race={race} onDelete={() => queryClient.invalidateQueries({ queryKey: ['race-results'] })} />
           ))}
