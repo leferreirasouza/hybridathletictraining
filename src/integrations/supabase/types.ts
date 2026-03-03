@@ -385,25 +385,49 @@ export type Database = {
       }
       profiles: {
         Row: {
+          age: number | null
           avatar_url: string | null
           created_at: string
+          fitness_level: string | null
           full_name: string
+          goal_race_date: string | null
+          goal_race_location: string | null
+          goal_race_name: string | null
           id: string
+          max_hr: number | null
+          onboarding_completed: boolean | null
           updated_at: string
+          weight_kg: number | null
         }
         Insert: {
+          age?: number | null
           avatar_url?: string | null
           created_at?: string
+          fitness_level?: string | null
           full_name?: string
+          goal_race_date?: string | null
+          goal_race_location?: string | null
+          goal_race_name?: string | null
           id: string
+          max_hr?: number | null
+          onboarding_completed?: boolean | null
           updated_at?: string
+          weight_kg?: number | null
         }
         Update: {
+          age?: number | null
           avatar_url?: string | null
           created_at?: string
+          fitness_level?: string | null
           full_name?: string
+          goal_race_date?: string | null
+          goal_race_location?: string | null
+          goal_race_name?: string | null
           id?: string
+          max_hr?: number | null
+          onboarding_completed?: boolean | null
           updated_at?: string
+          weight_kg?: number | null
         }
         Relationships: []
       }

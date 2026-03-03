@@ -106,13 +106,17 @@ export default function RaceResults() {
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : !races?.length ? (
-        <Card className="glass">
+        <Card className="glass border-primary/20 overflow-hidden">
+          <div className="h-1 gradient-hyrox" />
           <CardContent className="p-8 text-center space-y-3">
             <Trophy className="h-10 w-10 mx-auto text-muted-foreground" />
             <p className="font-display font-bold">No Race Results Yet</p>
             <p className="text-sm text-muted-foreground">
               Add your past HYROX results to get a personalized training plan based on your strengths and weaknesses.
             </p>
+            <Button className="gradient-hyrox" onClick={() => setAddDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" /> Add Your First Race
+            </Button>
           </CardContent>
         </Card>
       ) : (

@@ -1,19 +1,30 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Settings as SettingsIcon, Calendar, Upload, Pencil, Check, X, Activity } from 'lucide-react';
+import { LogOut, Settings as SettingsIcon, Calendar, Upload, Pencil, Check, X, Activity, Flag, Heart, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import CoachInfoCard from '@/components/dashboard/CoachInfoCard';
+
+const FITNESS_LEVELS = [
+  { value: 'beginner', label: 'Beginner' },
+  { value: 'intermediate', label: 'Intermediate' },
+  { value: 'advanced', label: 'Advanced' },
+  { value: 'elite', label: 'Elite' },
+];
 
 export default function Profile() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user, currentRole, effectiveRole, signOut } = useAuth();
   const name = user?.user_metadata?.full_name || 'User';
   const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
@@ -22,12 +33,88 @@ export default function Profile() {
   const [fullName, setFullName] = useState(name);
   const [saving, setSaving] = useState(false);
 
-  const handleSave = async () => {
+  // Fetch profile data
+  const { data: profile } = useQuery({
+    queryKey: ['profile-full', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      return data as any;
+    },
+    enabled: !!user,
+  });
+
+  // Biometric editing
+  const [editingBio, setEditingBio] = useState(false);
+  const [bioForm, setBioForm] = useState({
+    age: '',
+    weight_kg: '',
+    max_hr: '',
+    fitness_level: 'intermediate',
+  });
+
+  const [editingGoal, setEditingGoal] = useState(false);
+  const [goalForm, setGoalForm] = useState({
+    goal_race_name: '',
+    goal_race_date: '',
+    goal_race_location: '',
+  });
+
+  const startEditBio = () => {
+    setBioForm({
+      age: profile?.age?.toString() || '',
+      weight_kg: profile?.weight_kg?.toString() || '',
+      max_hr: profile?.max_hr?.toString() || '',
+      fitness_level: profile?.fitness_level || 'intermediate',
+    });
+    setEditingBio(true);
+  };
+
+  const saveBio = async () => {
+    setSaving(true);
+    const { error } = await supabase.from('profiles').update({
+      age: bioForm.age ? parseInt(bioForm.age) : null,
+      weight_kg: bioForm.weight_kg ? parseFloat(bioForm.weight_kg) : null,
+      max_hr: bioForm.max_hr ? parseInt(bioForm.max_hr) : null,
+      fitness_level: bioForm.fitness_level,
+    } as any).eq('id', user!.id);
+    setSaving(false);
+    if (error) { toast.error('Failed to save'); return; }
+    toast.success('Profile updated');
+    setEditingBio(false);
+    queryClient.invalidateQueries({ queryKey: ['profile-full'] });
+    queryClient.invalidateQueries({ queryKey: ['profile-completion'] });
+  };
+
+  const startEditGoal = () => {
+    setGoalForm({
+      goal_race_name: profile?.goal_race_name || '',
+      goal_race_date: profile?.goal_race_date || '',
+      goal_race_location: profile?.goal_race_location || '',
+    });
+    setEditingGoal(true);
+  };
+
+  const saveGoal = async () => {
+    setSaving(true);
+    const { error } = await supabase.from('profiles').update({
+      goal_race_name: goalForm.goal_race_name.trim() || null,
+      goal_race_date: goalForm.goal_race_date || null,
+      goal_race_location: goalForm.goal_race_location.trim() || null,
+    } as any).eq('id', user!.id);
+    setSaving(false);
+    if (error) { toast.error('Failed to save'); return; }
+    toast.success('Goal race updated');
+    setEditingGoal(false);
+    queryClient.invalidateQueries({ queryKey: ['profile-full'] });
+    queryClient.invalidateQueries({ queryKey: ['profile-goal-race'] });
+    queryClient.invalidateQueries({ queryKey: ['profile-completion'] });
+  };
+
+  const handleSaveName = async () => {
     if (!fullName.trim()) { toast.error('Name cannot be empty'); return; }
     setSaving(true);
-    const { error: authError } = await supabase.auth.updateUser({
-      data: { full_name: fullName.trim() },
-    });
+    const { error: authError } = await supabase.auth.updateUser({ data: { full_name: fullName.trim() } });
     if (!authError) {
       await supabase.from('profiles').update({ full_name: fullName.trim() }).eq('id', user!.id);
       toast.success('Profile updated');
@@ -51,14 +138,8 @@ export default function Profile() {
               <div className="space-y-2">
                 <Label className="text-xs">Full Name</Label>
                 <div className="flex gap-2">
-                  <Input
-                    value={fullName}
-                    onChange={e => setFullName(e.target.value)}
-                    className="h-9"
-                    maxLength={100}
-                    autoFocus
-                  />
-                  <Button size="icon" variant="ghost" className="h-9 w-9 shrink-0 text-success" onClick={handleSave} disabled={saving}>
+                  <Input value={fullName} onChange={e => setFullName(e.target.value)} className="h-9" maxLength={100} autoFocus />
+                  <Button size="icon" variant="ghost" className="h-9 w-9 shrink-0 text-success" onClick={handleSaveName} disabled={saving}>
                     <Check className="h-4 w-4" />
                   </Button>
                   <Button size="icon" variant="ghost" className="h-9 w-9 shrink-0" onClick={() => { setEditing(false); setFullName(name); }}>
@@ -81,7 +162,116 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Quick Actions — only functional ones */}
+        {/* Biometrics Card */}
+        <Card className="glass">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <Heart className="h-4 w-4 text-primary" /> Biometrics
+            </CardTitle>
+            {!editingBio && (
+              <Button variant="ghost" size="sm" onClick={startEditBio}>
+                <Pencil className="h-3 w-3 mr-1" /> Edit
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent>
+            {editingBio ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Age</Label>
+                    <Input type="number" value={bioForm.age} onChange={e => setBioForm(f => ({ ...f, age: e.target.value }))} className="h-8" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Weight (kg)</Label>
+                    <Input type="number" step="0.1" value={bioForm.weight_kg} onChange={e => setBioForm(f => ({ ...f, weight_kg: e.target.value }))} className="h-8" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Max HR</Label>
+                    <Input type="number" value={bioForm.max_hr} onChange={e => setBioForm(f => ({ ...f, max_hr: e.target.value }))} className="h-8" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Fitness Level</Label>
+                  <Select value={bioForm.fitness_level} onValueChange={v => setBioForm(f => ({ ...f, fitness_level: v }))}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {FITNESS_LEVELS.map(fl => <SelectItem key={fl.value} value={fl.value}>{fl.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setEditingBio(false)}>Cancel</Button>
+                  <Button size="sm" className="gradient-hyrox" onClick={saveBio} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
+                <div><span className="text-muted-foreground text-xs">Age</span><p className="font-medium">{profile?.age || '—'}</p></div>
+                <div><span className="text-muted-foreground text-xs">Weight</span><p className="font-medium">{profile?.weight_kg ? `${profile.weight_kg} kg` : '—'}</p></div>
+                <div><span className="text-muted-foreground text-xs">Max HR</span><p className="font-medium">{profile?.max_hr ? `${profile.max_hr} bpm` : '—'}</p></div>
+                <div><span className="text-muted-foreground text-xs">Fitness Level</span><p className="font-medium capitalize">{profile?.fitness_level || '—'}</p></div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Goal Race Card */}
+        <Card className="glass">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <Flag className="h-4 w-4 text-primary" /> Goal Race
+            </CardTitle>
+            {!editingGoal && (
+              <Button variant="ghost" size="sm" onClick={startEditGoal}>
+                <Pencil className="h-3 w-3 mr-1" /> Edit
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent>
+            {editingGoal ? (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Race Name</Label>
+                  <Input value={goalForm.goal_race_name} onChange={e => setGoalForm(f => ({ ...f, goal_race_name: e.target.value }))} className="h-8" placeholder="HYROX Munich 2025" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Date</Label>
+                    <Input type="date" value={goalForm.goal_race_date} onChange={e => setGoalForm(f => ({ ...f, goal_race_date: e.target.value }))} className="h-8" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Location</Label>
+                    <Input value={goalForm.goal_race_location} onChange={e => setGoalForm(f => ({ ...f, goal_race_location: e.target.value }))} className="h-8" placeholder="Munich, DE" />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setEditingGoal(false)}>Cancel</Button>
+                  <Button size="sm" className="gradient-hyrox" onClick={saveGoal} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm">
+                {profile?.goal_race_date ? (
+                  <div className="space-y-1">
+                    <p className="font-medium">{profile.goal_race_name || 'Goal Race'}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(profile.goal_race_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      {profile.goal_race_location && ` · ${profile.goal_race_location}`}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">No goal race set. Tap Edit to add one.</p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Coach Info */}
+        <CoachInfoCard />
+
+        {/* Quick Actions */}
         <Card className="glass">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-display">Quick Actions</CardTitle>
