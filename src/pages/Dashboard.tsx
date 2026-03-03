@@ -280,6 +280,22 @@ export default function Dashboard() {
           </Card>
         </motion.div>
 
+        {/* Weekly Report CTA */}
+        <motion.div variants={item}>
+          <Card className="glass border-accent/20 overflow-hidden cursor-pointer hover:border-accent/40 transition-colors" onClick={() => navigate('/reports')}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-display font-bold">Weekly Report</p>
+                <p className="text-xs text-muted-foreground">Review your training stats and AI coaching insights</p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </motion.div>
+
         {/* AI Coach CTA */}
         <motion.div variants={item}>
           <Card className="glass border-accent/20 overflow-hidden cursor-pointer hover:border-accent/40 transition-colors" onClick={() => navigate('/ai')}>

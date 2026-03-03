@@ -288,6 +288,23 @@ export default function CoachDashboard() {
           </Card>
         </motion.div>
 
+        {/* Weekly Reports CTA */}
+        <motion.div variants={item}>
+          <Card className="glass border-primary/20 overflow-hidden cursor-pointer hover:border-primary/40 transition-colors" onClick={() => navigate('/reports')}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-display font-bold text-sm">Weekly Reports</p>
+                  <p className="text-xs text-muted-foreground">Review athlete stats, compliance & AI insights</p>
+                </div>
+                <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); navigate('/reports'); }}>
+                  View <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
         {/* Plan Builder CTA */}
         <motion.div variants={item}>
           <Card className="glass border-primary/20 overflow-hidden">
