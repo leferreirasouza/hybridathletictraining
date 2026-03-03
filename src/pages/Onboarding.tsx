@@ -11,11 +11,6 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Dumbbell, Users, Trophy } from 'lucide-react';
 
-const MASTER_EMAILS = [
-  'le.ferreira.souza@gmail.com',
-  'k.sanches.azevedo@gmail.com',
-];
-
 type Role = 'athlete' | 'coach';
 
 interface Org {
@@ -31,16 +26,27 @@ export default function Onboarding() {
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [selectedOrgId, setSelectedOrgId] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isMaster, setIsMaster] = useState(false);
+  const [checkingMaster, setCheckingMaster] = useState(true);
 
-  // Check if master user & auto-setup
+  // Check if user already has master_admin role (set via DB, not hardcoded emails)
   useEffect(() => {
     if (!user) return;
-    const email = user.email?.toLowerCase() ?? '';
-    if (MASTER_EMAILS.includes(email)) {
-      setIsMaster(true);
-      autoSetupMaster();
-    }
+    const checkMasterRole = async () => {
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'master_admin')
+        .limit(1);
+
+      if (data && data.length > 0) {
+        // Already a master admin, refresh and go to dashboard
+        await refreshMemberships();
+        navigate('/dashboard');
+      }
+      setCheckingMaster(false);
+    };
+    checkMasterRole();
   }, [user]);
 
   // Fetch available orgs when reaching org selection step
@@ -49,51 +55,11 @@ export default function Onboarding() {
   }, [step]);
 
   const fetchOrgs = async () => {
-    // Use service-level query via edge function or just fetch all orgs
-    // Since new users can't see orgs (no membership yet), we use a public listing approach
-    // We'll use supabase rpc or a workaround - let's fetch via the client
-    // Note: RLS prevents non-members from seeing orgs. We need to handle this differently.
-    // Solution: fetch orgs list from a simpler approach - use supabase functions
-    const { data, error } = await supabase.from('organizations').select('id, name');
+    const { data, error } = await supabase.from('organizations').select('id, name').eq('is_active', true);
     if (!error && data) {
       setOrgs(data);
     } else {
-      // If RLS blocks, we show a message
       setOrgs([]);
-    }
-  };
-
-  const autoSetupMaster = async () => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      // Fetch all orgs (master may not have membership yet, so this might fail)
-      // We'll create roles for all existing orgs
-      const { data: allOrgs } = await supabase.from('organizations').select('id, name');
-
-      if (!allOrgs || allOrgs.length === 0) {
-        // Master user but no orgs exist yet - they need to wait or we create via migration
-        toast.error('No organizations found. Please contact support.');
-        setLoading(false);
-        return;
-      }
-
-      // Create master_admin role for each org
-      for (const org of allOrgs) {
-        await supabase.from('user_roles').insert({
-          user_id: user.id,
-          organization_id: org.id,
-          role: 'master_admin',
-        });
-      }
-
-      await refreshMemberships();
-      toast.success('Welcome, Master Admin! 🎉');
-      navigate('/dashboard');
-    } catch (e: any) {
-      toast.error(e.message || 'Setup failed');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -112,7 +78,7 @@ export default function Onboarding() {
       if (error) throw error;
 
       await refreshMemberships();
-      toast.success('Welcome to HYROX Coach OS! 🎉');
+      toast.success('Welcome to Hybrid Athletics! 🎉');
       navigate('/dashboard');
     } catch (e: any) {
       toast.error(e.message || 'Setup failed');
@@ -121,16 +87,10 @@ export default function Onboarding() {
     }
   };
 
-  // Master users get auto-setup, show loading
-  if (isMaster) {
+  if (checkingMaster) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <div className="h-14 w-14 rounded-2xl gradient-hyrox flex items-center justify-center mx-auto animate-pulse">
-            <Dumbbell className="h-7 w-7 text-primary-foreground" />
-          </div>
-          <p className="text-muted-foreground">Setting up master account…</p>
-        </div>
+        <div className="h-8 w-8 rounded-xl gradient-hyrox animate-pulse-glow" />
       </div>
     );
   }
@@ -156,7 +116,7 @@ export default function Onboarding() {
           <Card className="glass">
             <CardHeader>
               <CardTitle className="text-lg font-display">Your Role</CardTitle>
-              <CardDescription>How will you use HYROX Coach OS?</CardDescription>
+              <CardDescription>How will you use Hybrid Athletics?</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <RadioGroup value={role} onValueChange={(v) => setRole(v as Role)} className="space-y-3">
