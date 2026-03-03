@@ -18,7 +18,7 @@ export default function GoalRaceCard() {
       if (!user) return null;
       const { data } = await supabase
         .from('profiles')
-        .select('goal_race_name, goal_race_date, goal_race_location')
+        .select('*')
         .eq('id', user.id)
         .single();
       return data as any;
