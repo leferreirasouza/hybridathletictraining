@@ -11,11 +11,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Loader2, Calendar, Clock, MapPin, Flame, Target, Pencil, Trash2, Dumbbell } from 'lucide-react';
+import { Loader2, Calendar, Clock, MapPin, Flame, Target, Pencil, Trash2, Dumbbell, Share2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { getDiscipline } from '@/components/schedule/config';
+import ShareWorkoutDialog from '@/components/share/ShareWorkoutDialog';
+import type { ShareSessionData } from '@/components/share/types';
 
 const container = {
   hidden: { opacity: 0 },
@@ -46,6 +48,7 @@ export default function History() {
   const [editSession, setEditSession] = useState<CompletedSession | null>(null);
   const [editForm, setEditForm] = useState({ duration: '', distance: '', avgHr: '', avgPace: '', rpe: [6], notes: '' });
   const [saving, setSaving] = useState(false);
+  const [shareData, setShareData] = useState<ShareSessionData | null>(null);
   const navigate = useNavigate();
 
   const { data: sessions, isLoading } = useQuery({
@@ -190,6 +193,17 @@ export default function History() {
                         {s.pain_flag && (
                           <Badge variant="destructive" className="text-[9px] px-1.5 py-0.5">Pain</Badge>
                         )}
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShareData({
+                          discipline: s.discipline,
+                          date: s.date,
+                          durationMin: s.actual_duration_min,
+                          distanceKm: s.actual_distance_km,
+                          avgHr: s.avg_hr,
+                          avgPace: s.avg_pace,
+                          rpe: s.rpe,
+                        })}>
+                          <Share2 className="h-3 w-3 text-muted-foreground" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)}>
                           <Pencil className="h-3 w-3 text-muted-foreground" />
                         </Button>
@@ -267,6 +281,14 @@ export default function History() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {shareData && (
+        <ShareWorkoutDialog
+          open={!!shareData}
+          onOpenChange={(open) => !open && setShareData(null)}
+          session={shareData}
+        />
+      )}
     </div>
   );
 }
