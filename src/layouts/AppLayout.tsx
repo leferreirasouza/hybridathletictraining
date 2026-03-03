@@ -4,6 +4,9 @@ import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSessionReminders } from '@/hooks/useSessionReminders';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useEffect } from 'react';
 
 const athleteTabs = [
   { path: '/dashboard', icon: Home, label: 'Today' },
@@ -24,7 +27,7 @@ const coachTabs = [
 const adminTabs = [
   { path: '/dashboard', icon: Home, label: 'Dashboard' },
   { path: '/admin', icon: Shield, label: 'Admin' },
-  { path: '/athletes', icon: User, label: 'Athletes' },
+  { path: '/messages', icon: Mail, label: 'Chat' },
   { path: '/plans', icon: Calendar, label: 'Plans' },
   { path: '/profile', icon: User, label: 'Profile' },
 ];
@@ -33,9 +36,53 @@ export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { currentRole, user } = useAuth();
+  const queryClient = useQueryClient();
 
   // Fire browser notification reminders while app is open
   useSessionReminders(user?.id);
+
+  // Unread message count
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['unread-message-count', user?.id],
+    queryFn: async () => {
+      if (!user) return 0;
+      const { count, error } = await supabase
+        .from('direct_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('recipient_id', user.id)
+        .is('read_at', null);
+      return error ? 0 : (count ?? 0);
+    },
+    enabled: !!user,
+    refetchInterval: 30000,
+  });
+
+  // Realtime refresh for unread count
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel('nav-unread-badge')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'direct_messages',
+      }, (payload) => {
+        const msg = payload.new as any;
+        if (msg.recipient_id === user.id) {
+          queryClient.invalidateQueries({ queryKey: ['unread-message-count'] });
+        }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'direct_messages',
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['unread-message-count'] });
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
 
   const tabs = currentRole === 'master_admin' ? adminTabs : currentRole === 'coach' ? coachTabs : athleteTabs;
 
@@ -51,6 +98,7 @@ export default function AppLayout() {
           {tabs.map((tab) => {
             const isActive = location.pathname === tab.path ||
               (tab.path !== '/dashboard' && location.pathname.startsWith(tab.path));
+            const showBadge = tab.path === '/messages' && unreadCount > 0;
             return (
               <button
                 key={tab.path}
@@ -67,7 +115,14 @@ export default function AppLayout() {
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   />
                 )}
-                <tab.icon className="h-5 w-5" />
+                <div className="relative">
+                  <tab.icon className="h-5 w-5" />
+                  {showBadge && (
+                    <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold leading-none">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </div>
                 <span className="text-[10px] font-medium">{tab.label}</span>
               </button>
             );
