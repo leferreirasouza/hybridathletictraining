@@ -10,14 +10,19 @@ const PLAN_GEN_PROMPT = `You are a HYROX training plan generator. Given an athle
 
 HYROX race format: 8 × 1km runs alternating with 8 stations (SkiErg 1000m, Sled Push 50m, Sled Pull 50m, Burpee Broad Jumps 80m, Row 1000m, Farmers Carry 200m, Sandbag Lunges 100m, Wall Balls 100 reps).
 
-RULES:
-- Plan length: 4-16 weeks depending on experience and time to race.
-- Each week should have the number of training days the athlete specified.
+CRITICAL STRUCTURE RULES:
+- The plan MUST have exactly the number of weeks specified (e.g. 8 weeks = week_number 1 through 8).
+- Each week MUST have exactly the number of training days specified, spread across DIFFERENT days of the week (e.g. 4 days/week → use day_of_week values like 1,3,5,6).
+- NEVER put all sessions in week 1. Distribute sessions evenly: if 4 days/week for 8 weeks = 32 total sessions.
+- Each session object represents ONE session on ONE specific day of ONE specific week.
+
+TRAINING RULES:
 - Include a mix of: running (easy, tempo, intervals), strength, HYROX station practice, mobility/prehab.
 - Apply progressive overload (max 10% weekly volume increase).
-- Include a taper week before race date if applicable.
-- Prioritize the athlete's weak stations.
+- Include a taper week as the final week if a race date is specified.
+- Prioritize the athlete's weak stations with extra practice sessions.
 - Keep sessions realistic (30-90 min).
+- Vary session names and content across weeks — avoid repeating identical sessions.
 
 VALID discipline values: "run", "bike", "stairs", "rowing", "skierg", "mobility", "strength", "accessories", "hyrox_station", "prehab", "custom"
 VALID intensity values: "easy", "moderate", "hard", "race_pace", "max_effort"
@@ -28,14 +33,14 @@ Respond with ONLY valid JSON (no markdown, no backticks) in this exact format:
   "total_weeks": number,
   "sessions": [
     {
-      "week_number": number,
-      "day_of_week": number (1=Mon, 7=Sun),
+      "week_number": number (1 to total_weeks, MUST distribute across ALL weeks),
+      "day_of_week": number (1=Mon to 7=Sun, MUST vary within each week),
       "discipline": "valid_discipline",
       "session_name": "string",
       "duration_min": number | null,
       "distance_km": number | null,
       "intensity": "valid_intensity" | null,
-      "workout_details": "string describing the session",
+      "workout_details": "string describing the session with exercises, sets, reps, paces etc.",
       "notes": "string" | null
     }
   ]
