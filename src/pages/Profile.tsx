@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Settings as SettingsIcon, Shield, Calendar, Upload, Download, Pencil, Check, X } from 'lucide-react';
+import { LogOut, Settings as SettingsIcon, Calendar, Upload, Pencil, Check, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -81,24 +81,24 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions — only functional ones */}
         <Card className="glass">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-display">Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            {[
-              { icon: Upload, label: 'Import Plan (CSV/XLSX)', action: () => {} },
-              { icon: Download, label: 'Export Plan', action: () => {} },
-              { icon: Calendar, label: 'Google Calendar Sync', action: () => navigate('/schedule') },
-              { icon: Shield, label: 'Health Data Permissions', action: () => {} },
-              { icon: SettingsIcon, label: 'Settings', action: () => navigate('/settings') },
-            ].map((item) => (
-              <Button key={item.label} variant="ghost" className="w-full justify-start h-11" onClick={item.action}>
-                <item.icon className="h-4 w-4 mr-3 text-muted-foreground" />
-                {item.label}
-              </Button>
-            ))}
+            <Button variant="ghost" className="w-full justify-start h-11" onClick={() => navigate('/plans')}>
+              <Upload className="h-4 w-4 mr-3 text-muted-foreground" />
+              Import / Build Plan
+            </Button>
+            <Button variant="ghost" className="w-full justify-start h-11" onClick={() => navigate('/schedule')}>
+              <Calendar className="h-4 w-4 mr-3 text-muted-foreground" />
+              Google Calendar Sync
+            </Button>
+            <Button variant="ghost" className="w-full justify-start h-11" onClick={() => navigate('/settings')}>
+              <SettingsIcon className="h-4 w-4 mr-3 text-muted-foreground" />
+              Settings
+            </Button>
           </CardContent>
         </Card>
 

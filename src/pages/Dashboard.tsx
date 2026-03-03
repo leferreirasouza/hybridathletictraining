@@ -8,6 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { differenceInDays, differenceInWeeks, format } from 'date-fns';
+import { useScheduleData } from '@/hooks/useScheduleData';
+import { getDiscipline } from '@/components/schedule/config';
 
 const container = {
   hidden: { opacity: 0 },
@@ -22,6 +24,22 @@ export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 'Athlete';
+
+  const { sessions: plannedSessions, completedSessions: completedPlanned } = useScheduleData();
+
+  // Today's planned sessions
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const todayDow = today.getDay() === 0 ? 7 : today.getDay(); // 1=Mon..7=Sun
+
+  const completedPlanIds = new Set(completedPlanned.filter(c => c.planned_session_id).map(c => c.planned_session_id));
+
+  const todaySessions = plannedSessions.filter(s => {
+    // Match by explicit date or day_of_week
+    if (s.date === todayStr) return true;
+    if (!s.date && s.day_of_week === todayDow) return true;
+    return false;
+  });
 
   // Fetch completed sessions this week
   const startOfWeek = new Date();
@@ -48,12 +66,11 @@ export default function Dashboard() {
     queryKey: ['next-race', user?.id],
     queryFn: async () => {
       if (!user) return null;
-      const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
         .from('race_results')
         .select('race_date, race_name, race_location')
         .eq('athlete_id', user.id)
-        .gte('race_date', today)
+        .gte('race_date', todayStr)
         .order('race_date', { ascending: true })
         .limit(1)
         .maybeSingle();
@@ -133,7 +150,7 @@ export default function Dashboard() {
           </motion.div>
         )}
 
-        {/* Today's Session CTA */}
+        {/* Today's Sessions — actual plan data */}
         <motion.div variants={item}>
           <Card className="glass overflow-hidden border-primary/20">
             <div className="h-1 gradient-hyrox" />
@@ -141,30 +158,73 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-lg font-display">Today's Training</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-0.5">Ready to get after it?</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    {todaySessions.length > 0
+                      ? `${todaySessions.length} session${todaySessions.length > 1 ? 's' : ''} planned`
+                      : 'Rest day — no sessions planned'}
+                  </p>
                 </div>
-                <Badge variant="secondary" className="bg-primary/10 text-primary border-0">
-                  Active
-                </Badge>
+                {todaySessions.length > 0 && (
+                  <Badge variant="secondary" className="bg-primary/10 text-primary border-0">
+                    Active
+                  </Badge>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Check your schedule for today's prescribed session, or log a completed workout.
-              </p>
-              <div className="flex gap-2">
-                <Button className="flex-1 gradient-hyrox" onClick={() => navigate('/schedule')}>
-                  <Calendar className="h-4 w-4 mr-2" /> View Schedule
-                </Button>
-                <Button variant="outline" className="flex-1" onClick={() => navigate('/log')}>
-                  <Dumbbell className="h-4 w-4 mr-2" /> Log Session
-                </Button>
-              </div>
+              {todaySessions.length > 0 ? (
+                <>
+                  {todaySessions.map(session => {
+                    const disc = getDiscipline(session.discipline);
+                    const DiscIcon = disc.icon;
+                    const isDone = completedPlanIds.has(session.id);
+                    return (
+                      <div key={session.id} className={`flex items-center gap-3 p-2.5 rounded-lg border ${isDone ? 'bg-success/5 border-success/20' : 'bg-muted/30 border-border/50'}`}>
+                        <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${disc.color}`}>
+                          <DiscIcon className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{session.session_name}</p>
+                          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                            <span>{disc.label}</span>
+                            {session.duration_min && <span>· {session.duration_min} min</span>}
+                            {session.intensity && <span>· {session.intensity.replace('_', ' ')}</span>}
+                          </div>
+                        </div>
+                        {isDone ? (
+                          <Badge variant="secondary" className="text-[10px] bg-success/10 text-success border-0 shrink-0">Done</Badge>
+                        ) : (
+                          <Button size="sm" variant="ghost" className="shrink-0 text-xs" onClick={() => navigate('/log')}>
+                            Log
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <div className="flex gap-2">
+                    <Button className="flex-1 gradient-hyrox" onClick={() => navigate('/schedule')}>
+                      <Calendar className="h-4 w-4 mr-2" /> View Schedule
+                    </Button>
+                    <Button variant="outline" className="flex-1" onClick={() => navigate('/log')}>
+                      <Dumbbell className="h-4 w-4 mr-2" /> Log Session
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex gap-2">
+                  <Button className="flex-1 gradient-hyrox" onClick={() => navigate('/schedule')}>
+                    <Calendar className="h-4 w-4 mr-2" /> View Schedule
+                  </Button>
+                  <Button variant="outline" className="flex-1" onClick={() => navigate('/log')}>
+                    <Dumbbell className="h-4 w-4 mr-2" /> Log Session
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Quick Stats — live from DB */}
+        {/* Quick Stats */}
         <motion.div variants={item} className="grid grid-cols-3 gap-3">
           {[
             { label: 'Week Volume', value: `${totalKm.toFixed(1)} km`, icon: TrendingUp },

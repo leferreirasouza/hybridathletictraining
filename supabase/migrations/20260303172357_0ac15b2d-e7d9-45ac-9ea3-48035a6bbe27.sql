@@ -1,0 +1,1 @@
+CREATE POLICY "Athletes delete own completed" ON public.completed_sessions FOR DELETE TO authenticated USING (athlete_id = auth.uid());
