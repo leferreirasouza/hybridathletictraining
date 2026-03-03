@@ -12,8 +12,9 @@ import { ArrowLeft, Moon, Sun, Ruler, Bell, ShieldCheck, Trash2, BellRing, BellO
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import {
-  getNotifPrefs, setNotifPref, setTrainingTime,
+  getNotifPrefs, setNotifPref, getTrainingTimes, setTrainingTimes,
   requestNotificationPermission, getNotificationPermission,
+  DAY_LABELS, type DayTrainingTimes,
 } from '@/hooks/useSessionReminders';
 
 type Units = 'metric' | 'imperial';
@@ -47,16 +48,21 @@ export default function Settings() {
   const [notifPrefs, setNotifPrefs] = useState(getNotifPrefs);
   const [permStatus, setPermStatus] = useState(getNotificationPermission);
 
+  const [trainingTimes, setLocalTrainingTimes] = useState<DayTrainingTimes>(getTrainingTimes);
+
   const updateNotifPref = (key: 'enabled' | 'nightBefore' | 'hourBefore', value: boolean) => {
     setNotifPref(key, value);
     setNotifPrefs(prev => ({ ...prev, [key]: value }));
   };
 
-  const handleTrainingTimeChange = (time: string) => {
-    setTrainingTime(time);
-    const hourBefore = !!time;
-    if (!time) setNotifPref('hourBefore', false);
-    setNotifPrefs(prev => ({ ...prev, trainingTime: time, hourBefore: time ? prev.hourBefore : false }));
+  const handleDayTimeChange = (day: number, time: string) => {
+    const updated = { ...trainingTimes, [day]: time };
+    if (!time) delete updated[day];
+    setTrainingTimes(updated);
+    setLocalTrainingTimes(updated);
+    // Re-evaluate hourBefore availability
+    const hasAny = Object.values(updated).some(t => !!t);
+    if (!hasAny) setNotifPrefs(prev => ({ ...prev, hourBefore: false }));
   };
 
   const handleEnableNotifications = async () => {
@@ -206,37 +212,43 @@ export default function Settings() {
                         onCheckedChange={(v) => updateNotifPref('nightBefore', v)}
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <div>
                           <Label htmlFor="notif-hour" className="text-sm">1 Hour Before</Label>
                           <p className="text-[11px] text-muted-foreground">
-                            {notifPrefs.trainingTime
-                              ? `Reminder at ${(() => { const [h,m] = notifPrefs.trainingTime.split(':').map(Number); const rh = h-1 < 0 ? 23 : h-1; return `${String(rh).padStart(2,'0')}:${String(m).padStart(2,'0')}`; })()}`
-                              : 'Set your training time to enable'}
+                            {Object.values(trainingTimes).some(t => !!t)
+                              ? 'Based on your training schedule below'
+                              : 'Set training times to enable'}
                           </p>
                         </div>
                         <Switch
                           id="notif-hour"
                           checked={notifPrefs.hourBefore}
                           onCheckedChange={(v) => updateNotifPref('hourBefore', v)}
-                          disabled={!notifPrefs.trainingTime}
+                          disabled={!Object.values(trainingTimes).some(t => !!t)}
                         />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="training-time" className="text-xs text-muted-foreground whitespace-nowrap">Training time</Label>
-                        <input
-                          id="training-time"
-                          type="time"
-                          value={notifPrefs.trainingTime}
-                          onChange={(e) => handleTrainingTimeChange(e.target.value)}
-                          className="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
-                        />
-                        {notifPrefs.trainingTime && (
-                          <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-muted-foreground" onClick={() => handleTrainingTimeChange('')}>
-                            Clear
-                          </Button>
-                        )}
+                      <div className="space-y-1.5 pl-1">
+                        <p className="text-[11px] font-medium text-muted-foreground">Training times per day</p>
+                        {[1, 2, 3, 4, 5, 6, 0].map(day => (
+                          <div key={day} className="flex items-center justify-between gap-2">
+                            <span className="text-xs w-20">{DAY_LABELS[day].slice(0, 3)}</span>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="time"
+                                value={trainingTimes[day] || ''}
+                                onChange={(e) => handleDayTimeChange(day, e.target.value)}
+                                className="h-7 rounded-md border border-input bg-background px-2 text-xs text-foreground w-24"
+                              />
+                              {trainingTimes[day] && (
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => handleDayTimeChange(day, '')}>
+                                  ×
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </>
