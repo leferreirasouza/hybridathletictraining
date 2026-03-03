@@ -16,7 +16,7 @@ export default function Schedule() {
   const navigate = useNavigate();
   const {
     plans, activePlanId, setSelectedPlanId,
-    sessions, weeklySummaries, targets,
+    sessions, weeklySummaries, targets, completedSessions,
     maxWeek, isLoading, noPlan,
   } = useScheduleData();
 
@@ -156,6 +156,7 @@ export default function Schedule() {
                 <TabsContent value="month" className="mt-3">
                   <MonthlyView
                     sessions={sessions}
+                    completedSessions={completedSessions}
                     maxWeek={maxWeek}
                     currentWeek={displayWeek}
                     onSelectWeek={(w) => {
