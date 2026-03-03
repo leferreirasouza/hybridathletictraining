@@ -2,9 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useMemo } from 'react';
+import type { User } from '@supabase/supabase-js';
 
 export function useScheduleData() {
-  const { currentOrg } = useAuth();
+  const { currentOrg, user } = useAuth();
   const [selectedPlanId, setSelectedPlanId] = useState<string>('');
 
   const { data: plans, isLoading: plansLoading } = useQuery({
@@ -81,6 +82,19 @@ export function useScheduleData() {
     enabled: !!version?.id,
   });
 
+  const { data: completedSessions } = useQuery({
+    queryKey: ['completed-sessions', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('completed_sessions')
+        .select('id, planned_session_id, date, discipline')
+        .eq('athlete_id', user.id);
+      return error ? [] : data || [];
+    },
+    enabled: !!user?.id,
+  });
+
   const maxWeek = useMemo(() => {
     if (!sessions?.length) return 1;
     return Math.max(...sessions.map(s => s.week_number));
@@ -96,6 +110,7 @@ export function useScheduleData() {
     sessionsLoading,
     weeklySummaries: weeklySummaries || [],
     targets: targets || [],
+    completedSessions: completedSessions || [],
     maxWeek,
     isLoading: plansLoading || sessionsLoading,
     noPlan: !plansLoading && (!plans || plans.length === 0),

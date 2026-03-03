@@ -1,25 +1,36 @@
 import { useMemo } from 'react';
 import { getDiscipline, intensityConfig, dayLabels } from './config';
 import { motion } from 'framer-motion';
+import ProgressRing from './ProgressRing';
 
 interface MonthlyViewProps {
   sessions: any[];
+  completedSessions: any[];
   maxWeek: number;
   onSelectWeek: (week: number) => void;
   currentWeek: number;
 }
 
-export default function MonthlyView({ sessions, maxWeek, onSelectWeek, currentWeek }: MonthlyViewProps) {
+export default function MonthlyView({ sessions, completedSessions, maxWeek, onSelectWeek, currentWeek }: MonthlyViewProps) {
   const weeks = useMemo(() => {
+    // Build a set of completed planned_session_ids for fast lookup
+    const completedPlanIds = new Set(
+      completedSessions
+        .filter(c => c.planned_session_id)
+        .map(c => c.planned_session_id)
+    );
+
     return Array.from({ length: maxWeek }, (_, i) => {
       const weekNum = i + 1;
       const weekSessions = sessions.filter(s => s.week_number === weekNum);
       const days = dayLabels.map((_, di) => {
         return weekSessions.filter(s => s.day_of_week === di + 1);
       });
-      return { weekNum, days, totalSessions: weekSessions.length };
+      const totalPlanned = weekSessions.length;
+      const totalCompleted = weekSessions.filter(s => completedPlanIds.has(s.id)).length;
+      return { weekNum, days, totalPlanned, totalCompleted };
     });
-  }, [sessions, maxWeek]);
+  }, [sessions, completedSessions, maxWeek]);
 
   return (
     <motion.div
@@ -28,21 +39,22 @@ export default function MonthlyView({ sessions, maxWeek, onSelectWeek, currentWe
       className="space-y-1"
     >
       {/* Day headers */}
-      <div className="grid grid-cols-[40px_repeat(7,1fr)] gap-1 px-1">
+      <div className="grid grid-cols-[40px_repeat(7,1fr)_36px] gap-1 px-1">
         <div />
         {dayLabels.map(d => (
           <div key={d} className="text-center text-[10px] font-medium text-muted-foreground py-1">
             {d}
           </div>
         ))}
+        <div />
       </div>
 
       {/* Week rows */}
-      {weeks.map(({ weekNum, days, totalSessions }) => (
+      {weeks.map(({ weekNum, days, totalPlanned, totalCompleted }) => (
         <button
           key={weekNum}
           onClick={() => onSelectWeek(weekNum)}
-          className={`grid grid-cols-[40px_repeat(7,1fr)] gap-1 px-1 py-1.5 rounded-lg transition-colors w-full ${
+          className={`grid grid-cols-[40px_repeat(7,1fr)_36px] gap-1 px-1 py-1.5 rounded-lg transition-colors w-full ${
             currentWeek === weekNum
               ? 'bg-primary/5 ring-1 ring-primary/20'
               : 'hover:bg-muted/40'
@@ -75,6 +87,10 @@ export default function MonthlyView({ sessions, maxWeek, onSelectWeek, currentWe
               )}
             </div>
           ))}
+          {/* Progress ring */}
+          <div className="flex items-center justify-center">
+            <ProgressRing completed={totalCompleted} total={totalPlanned} />
+          </div>
         </button>
       ))}
 
