@@ -1,8 +1,10 @@
+import { useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Dumbbell, Clock, Target, TrendingUp, ChevronRight, Flag, MapPin } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Calendar, Dumbbell, Clock, Target, TrendingUp, ChevronRight, Flag, MapPin, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -25,7 +27,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 'Athlete';
 
-  const { sessions: plannedSessions, completedSessions: completedPlanned } = useScheduleData();
+  const { sessions: plannedSessions, completedSessions: completedPlanned, targets, maxWeek } = useScheduleData();
 
   // Today's planned sessions
   const today = new Date();
@@ -89,6 +91,22 @@ export default function Dashboard() {
   const daysUntilRace = raceDateObj ? differenceInDays(raceDateObj, new Date()) : null;
   const weeksUntilRace = raceDateObj ? differenceInWeeks(raceDateObj, new Date()) : null;
 
+  // Plan completion stats
+  const planStats = useMemo(() => {
+    const totalPlanned = plannedSessions.length;
+    const totalCompleted = completedPlanned.filter(c => c.planned_session_id).length;
+    const completionPct = totalPlanned > 0 ? Math.round((totalCompleted / totalPlanned) * 100) : 0;
+    // Current week progress
+    const currentWeekSessions = plannedSessions.filter(s => {
+      if (s.date === todayStr) return true;
+      if (!s.date && s.day_of_week <= todayDow) return true;
+      return false;
+    });
+    const currentWeekCompleted = currentWeekSessions.filter(s => completedPlanIds.has(s.id)).length;
+    const weekPct = currentWeekSessions.length > 0 ? Math.round((currentWeekCompleted / currentWeekSessions.length) * 100) : 0;
+    return { totalPlanned, totalCompleted, completionPct, currentWeekCompleted, currentWeekTotal: currentWeekSessions.length, weekPct };
+  }, [plannedSessions, completedPlanned, completedPlanIds, todayStr, todayDow]);
+
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">
       <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
@@ -102,49 +120,88 @@ export default function Dashboard() {
           </h1>
         </motion.div>
 
-        {/* Race Countdown */}
+        {/* Race Countdown with Objectives & Plan Progress */}
         {raceDateObj && daysUntilRace !== null && daysUntilRace >= 0 && (
           <motion.div variants={item}>
             <Card className="glass overflow-hidden border-primary/20">
               <div className="h-1 gradient-hyrox" />
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className="relative h-16 w-16 shrink-0">
-                  <svg className="h-16 w-16 -rotate-90" viewBox="0 0 64 64">
-                    <circle cx="32" cy="32" r="28" fill="none" stroke="hsl(var(--muted))" strokeWidth="4" />
-                    <circle
-                      cx="32" cy="32" r="28"
-                      fill="none"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth="4"
-                      strokeLinecap="round"
-                      strokeDasharray={`${2 * Math.PI * 28}`}
-                      strokeDashoffset={`${2 * Math.PI * 28 * (1 - Math.min(1, (daysUntilRace || 0) / 120))}`}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-lg font-display font-bold leading-none">{daysUntilRace}</span>
-                    <span className="text-[8px] text-muted-foreground uppercase tracking-wider">days</span>
+              <CardContent className="p-4 space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="relative h-16 w-16 shrink-0">
+                    <svg className="h-16 w-16 -rotate-90" viewBox="0 0 64 64">
+                      <circle cx="32" cy="32" r="28" fill="none" stroke="hsl(var(--muted))" strokeWidth="4" />
+                      <circle
+                        cx="32" cy="32" r="28"
+                        fill="none"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                        strokeDasharray={`${2 * Math.PI * 28}`}
+                        strokeDashoffset={`${2 * Math.PI * 28 * (1 - Math.min(1, (daysUntilRace || 0) / 120))}`}
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-lg font-display font-bold leading-none">{daysUntilRace}</span>
+                      <span className="text-[8px] text-muted-foreground uppercase tracking-wider">days</span>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <Flag className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <p className="text-sm font-display font-bold truncate">
+                        {nextRace?.race_name || 'Next Race'}
+                      </p>
+                    </div>
+                    {nextRace?.race_location && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <MapPin className="h-3 w-3" /> {nextRace.race_location}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {format(raceDateObj, 'EEEE, MMMM d, yyyy')}
+                    </p>
+                    <Badge variant="secondary" className="mt-1.5 text-[10px] bg-primary/10 text-primary border-0">
+                      {weeksUntilRace} weeks to go
+                    </Badge>
                   </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <Flag className="h-3.5 w-3.5 text-primary shrink-0" />
-                    <p className="text-sm font-display font-bold truncate">
-                      {nextRace?.race_name || 'Next Race'}
+
+                {/* Plan Completion Status */}
+                <div className="space-y-2 pt-1 border-t border-border/50">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium flex items-center gap-1.5">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                      Plan Completion
                     </p>
+                    <span className="text-xs font-mono font-bold text-primary">{planStats.completionPct}%</span>
                   </div>
-                  {nextRace?.race_location && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                      <MapPin className="h-3 w-3" /> {nextRace.race_location}
-                    </p>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {format(raceDateObj, 'EEEE, MMMM d, yyyy')}
-                  </p>
-                  <Badge variant="secondary" className="mt-1.5 text-[10px] bg-primary/10 text-primary border-0">
-                    {weeksUntilRace} weeks to go
-                  </Badge>
+                  <Progress value={planStats.completionPct} className="h-2" />
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <span>{planStats.totalCompleted} / {planStats.totalPlanned} sessions done</span>
+                    <span>This week: {planStats.currentWeekCompleted}/{planStats.currentWeekTotal}</span>
+                  </div>
                 </div>
+
+                {/* Training Objectives from targets */}
+                {targets.length > 0 && (
+                  <div className="space-y-1.5 pt-1 border-t border-border/50">
+                    <p className="text-xs font-medium flex items-center gap-1.5">
+                      <Target className="h-3.5 w-3.5 text-primary" />
+                      Objectives
+                    </p>
+                    <div className="space-y-1">
+                      {targets.slice(0, 3).map(t => (
+                        <div key={t.id} className="flex items-start gap-2 text-[11px] bg-muted/30 rounded-md px-2.5 py-1.5">
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary mt-1 shrink-0" />
+                          <div className="min-w-0">
+                            <span className="font-medium">{t.type}</span>
+                            <span className="text-muted-foreground ml-1">— {t.primary_target}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
