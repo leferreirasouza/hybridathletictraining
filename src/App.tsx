@@ -9,6 +9,9 @@ import Auth from "@/pages/Auth";
 import ResetPassword from "@/pages/ResetPassword";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
+import About from "@/pages/About";
+import FAQ from "@/pages/FAQ";
+import Contact from "@/pages/Contact";
 import Onboarding from "@/pages/Onboarding";
 import Dashboard from "@/pages/Dashboard";
 import Schedule from "@/pages/Schedule";
@@ -64,6 +67,9 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/faq" element={<FAQ />} />
+            <Route path="/contact" element={<Contact />} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/" element={<ProtectedRoute><RequireOrg><AppLayout /></RequireOrg></ProtectedRoute>}>
               <Route index element={<Navigate to="/dashboard" replace />} />
