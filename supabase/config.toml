@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.import-plan]
 verify_jwt = false
+
+[functions.parse-race-screenshot]
+verify_jwt = false
