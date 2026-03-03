@@ -127,6 +127,15 @@ Plan Duration (weeks): ${profile.planWeeks || "8"}
       if (profile.totalTarget) athleteDesc += `\nTotal Race Target: ${profile.totalTarget}`;
       if (profile.runKmTarget) athleteDesc += `\nRun Split Target: ${profile.runKmTarget}/km`;
       athleteDesc += `\nAge Group: ${profile.ageGroup || "30-34"}`;
+
+      // Per-station targets
+      if (profile.stationTargets && Object.keys(profile.stationTargets).length > 0) {
+        athleteDesc += `\n\nINDIVIDUAL STATION TIME TARGETS:`;
+        for (const [station, target] of Object.entries(profile.stationTargets)) {
+          athleteDesc += `\n  - ${station}: ${target}`;
+        }
+        athleteDesc += `\nThe training plan MUST include dedicated practice sessions for stations with set targets. Prioritize stations where the target represents the largest improvement from current performance. Include progressive drills to build toward these specific times.`;
+      }
     }
 
     // Append race history
