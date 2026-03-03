@@ -7,6 +7,8 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/layouts/AppLayout";
 import Auth from "@/pages/Auth";
 import ResetPassword from "@/pages/ResetPassword";
+import Terms from "@/pages/Terms";
+import Privacy from "@/pages/Privacy";
 import Onboarding from "@/pages/Onboarding";
 import Dashboard from "@/pages/Dashboard";
 import Schedule from "@/pages/Schedule";
@@ -60,6 +62,8 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/" element={<ProtectedRoute><RequireOrg><AppLayout /></RequireOrg></ProtectedRoute>}>
               <Route index element={<Navigate to="/dashboard" replace />} />

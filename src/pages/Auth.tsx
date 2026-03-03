@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -223,6 +224,12 @@ export default function AuthPage() {
             </TabsContent>
           </Tabs>
         </Card>
+        <p className="text-xs text-center text-muted-foreground mt-4">
+          By continuing, you agree to our{' '}
+          <Link to="/terms" className="underline hover:text-foreground">Terms of Service</Link>{' '}
+          and{' '}
+          <Link to="/privacy" className="underline hover:text-foreground">Privacy Policy</Link>.
+        </p>
       </motion.div>
     </div>
   );
