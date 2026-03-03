@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,24 +6,47 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Upload, FileSpreadsheet, Trash2 } from 'lucide-react';
+import { Plus, Upload, FileSpreadsheet, Trash2, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import type { Database } from '@/integrations/supabase/types';
+import * as XLSX from 'xlsx';
 
-const disciplines = [
-  'Run', 'Bike', 'Row', 'SkiErg', 'Stairs', 'Strength',
-  'Sled Push', 'Sled Pull', 'Burpee Broad Jumps', 'Farmers Carry',
-  'Sandbag Lunges', 'Wall Balls', 'Mobility', 'Custom',
+type Discipline = Database['public']['Enums']['discipline'];
+type Intensity = Database['public']['Enums']['intensity_level'];
+
+const disciplineOptions: { value: Discipline; label: string }[] = [
+  { value: 'run', label: 'Run' },
+  { value: 'bike', label: 'Bike' },
+  { value: 'rowing', label: 'Row' },
+  { value: 'skierg', label: 'SkiErg' },
+  { value: 'stairs', label: 'Stairs' },
+  { value: 'hyrox_station', label: 'HYROX Station' },
+  { value: 'strength', label: 'Strength' },
+  { value: 'mobility', label: 'Mobility' },
+  { value: 'prehab', label: 'Prehab' },
+  { value: 'accessories', label: 'Accessories' },
+  { value: 'custom', label: 'Custom' },
+];
+
+const intensityOptions: { value: Intensity; label: string }[] = [
+  { value: 'easy', label: 'Easy' },
+  { value: 'moderate', label: 'Moderate' },
+  { value: 'hard', label: 'Hard' },
+  { value: 'race_pace', label: 'Race Pace' },
+  { value: 'max_effort', label: 'Max Effort' },
 ];
 
 interface SessionRow {
   id: string;
   day: number;
-  discipline: string;
+  discipline: Discipline;
   name: string;
   duration: string;
   distance: string;
-  intensity: string;
+  intensity: Intensity | '';
   details: string;
   notes: string;
 }
@@ -31,7 +54,7 @@ interface SessionRow {
 const emptyRow = (): SessionRow => ({
   id: crypto.randomUUID(),
   day: 1,
-  discipline: '',
+  discipline: 'run',
   name: '',
   duration: '',
   distance: '',
@@ -41,10 +64,28 @@ const emptyRow = (): SessionRow => ({
 });
 
 export default function PlanBuilder() {
+  const { user, currentOrg } = useAuth();
   const [planName, setPlanName] = useState('');
   const [weekCount, setWeekCount] = useState(1);
   const [currentWeek, setCurrentWeek] = useState(1);
-  const [sessions, setSessions] = useState<SessionRow[]>([emptyRow()]);
+  const [sessionsByWeek, setSessionsByWeek] = useState<Record<number, SessionRow[]>>({ 1: [emptyRow()] });
+  const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+
+  const sessions = sessionsByWeek[currentWeek] || [];
+  const setSessions = (updater: (prev: SessionRow[]) => SessionRow[]) => {
+    setSessionsByWeek(prev => ({
+      ...prev,
+      [currentWeek]: updater(prev[currentWeek] || []),
+    }));
+  };
+
+  // Ensure each week has at least an empty slot when navigating
+  useEffect(() => {
+    if (!sessionsByWeek[currentWeek]) {
+      setSessionsByWeek(prev => ({ ...prev, [currentWeek]: [emptyRow()] }));
+    }
+  }, [currentWeek]);
 
   const addRow = () => setSessions(prev => [...prev, emptyRow()]);
   const removeRow = (id: string) => setSessions(prev => prev.filter(s => s.id !== id));
@@ -52,33 +93,121 @@ export default function PlanBuilder() {
     setSessions(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
   };
 
-  const handleImport = () => {
+  const handleSave = async () => {
+    if (!planName.trim()) { toast.error('Please enter a plan name'); return; }
+    if (!user || !currentOrg) { toast.error('No org context'); return; }
+    setSaving(true);
+
+    try {
+      // 1. Create training plan
+      const { data: plan, error: planErr } = await supabase
+        .from('training_plans')
+        .insert({ name: planName.trim(), organization_id: currentOrg.id, created_by: user.id })
+        .select()
+        .single();
+      if (planErr) throw planErr;
+
+      // 2. Create version
+      const { data: version, error: verErr } = await supabase
+        .from('plan_versions')
+        .insert({ plan_id: plan.id, version_number: 1, created_by: user.id })
+        .select()
+        .single();
+      if (verErr) throw verErr;
+
+      // 3. Collect all sessions across weeks
+      const allSessions = Object.entries(sessionsByWeek).flatMap(([week, rows]) =>
+        rows
+          .filter(r => r.name.trim())
+          .map((r, idx) => ({
+            plan_version_id: version.id,
+            week_number: Number(week),
+            day_of_week: r.day,
+            discipline: r.discipline as Discipline,
+            session_name: r.name.trim(),
+            duration_min: r.duration ? parseFloat(r.duration) : null,
+            distance_km: r.distance ? parseFloat(r.distance) : null,
+            intensity: (r.intensity || null) as Intensity | null,
+            workout_details: r.details || null,
+            notes: r.notes || null,
+            order_index: idx,
+          }))
+      );
+
+      if (allSessions.length > 0) {
+        const { error: sessErr } = await supabase.from('planned_sessions').insert(allSessions);
+        if (sessErr) throw sessErr;
+      }
+
+      toast.success(`Plan "${planName}" saved with ${allSessions.length} sessions!`);
+      // Reset form
+      setPlanName('');
+      setWeekCount(1);
+      setCurrentWeek(1);
+      setSessionsByWeek({ 1: [emptyRow()] });
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to save plan');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleImport = async () => {
+    if (!user || !currentOrg) { toast.error('No org context'); return; }
+
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.csv,.xlsx,.xls';
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        toast.info(`Importing ${file.name}… (file parsing coming with edge function)`);
+      if (!file) return;
+
+      setImporting(true);
+      try {
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+
+        // Find the "Plan (Daily)" sheet or use the first sheet
+        const sheetName = workbook.SheetNames.find(s =>
+          s.toLowerCase().includes('plan') || s.toLowerCase().includes('daily')
+        ) || workbook.SheetNames[0];
+
+        const sheet = workbook.Sheets[sheetName];
+        const csvData = XLSX.utils.sheet_to_csv(sheet);
+
+        const importName = planName.trim() || file.name.replace(/\.(xlsx|xls|csv)$/i, '');
+
+        const { data: result, error } = await supabase.functions.invoke('import-plan', {
+          body: {
+            csvData,
+            organizationId: currentOrg.id,
+            planName: importName,
+          },
+        });
+
+        if (error) throw error;
+        if (result?.error) throw new Error(result.error);
+
+        toast.success(`Imported "${importName}" — ${result.sessionsCreated} sessions created`);
+        if (result.errors?.length > 0) {
+          toast.warning(`${result.errors.length} rows had parsing issues`);
+        }
+      } catch (e: any) {
+        toast.error(e.message || 'Import failed');
+      } finally {
+        setImporting(false);
       }
     };
     input.click();
-  };
-
-  const handleSave = () => {
-    if (!planName.trim()) {
-      toast.error('Please enter a plan name');
-      return;
-    }
-    toast.success('Plan saved! (will persist with database)');
   };
 
   return (
     <div className="px-4 py-6 max-w-2xl mx-auto space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-display font-bold">Plan Builder</h1>
-        <Button variant="outline" size="sm" onClick={handleImport}>
-          <Upload className="h-4 w-4 mr-1" /> Import
+        <Button variant="outline" size="sm" onClick={handleImport} disabled={importing}>
+          {importing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
+          Import
         </Button>
       </div>
 
@@ -153,7 +282,7 @@ export default function PlanBuilder() {
                       <Select value={row.discipline} onValueChange={v => updateRow(row.id, 'discipline', v)}>
                         <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select" /></SelectTrigger>
                         <SelectContent>
-                          {disciplines.map(d => <SelectItem key={d} value={d.toLowerCase().replace(/ /g, '_')}>{d}</SelectItem>)}
+                          {disciplineOptions.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -176,9 +305,7 @@ export default function PlanBuilder() {
                       <Select value={row.intensity} onValueChange={v => updateRow(row.id, 'intensity', v)}>
                         <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select" /></SelectTrigger>
                         <SelectContent>
-                          {['Easy', 'Moderate', 'Hard', 'Race Pace', 'Max Effort'].map(i => (
-                            <SelectItem key={i} value={i.toLowerCase().replace(/ /g, '_')}>{i}</SelectItem>
-                          ))}
+                          {intensityOptions.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -196,8 +323,8 @@ export default function PlanBuilder() {
             </CardContent>
           </Card>
 
-          <Button className="w-full gradient-hyrox" size="lg" onClick={handleSave}>
-            Save Plan
+          <Button className="w-full gradient-hyrox" size="lg" onClick={handleSave} disabled={saving}>
+            {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving…</> : <><CheckCircle2 className="h-4 w-4 mr-2" /> Save Plan</>}
           </Button>
         </TabsContent>
 
@@ -211,8 +338,18 @@ export default function PlanBuilder() {
                   Upload your CSV or XLSX file matching the HYROX template format
                 </p>
               </div>
-              <Button className="gradient-hyrox" onClick={handleImport}>
-                <Upload className="h-4 w-4 mr-2" /> Choose File
+              <div className="max-w-xs mx-auto space-y-2">
+                <Label className="text-xs text-muted-foreground">Plan name (optional)</Label>
+                <Input
+                  value={planName}
+                  onChange={e => setPlanName(e.target.value)}
+                  placeholder="Auto-detected from filename"
+                  className="text-center"
+                />
+              </div>
+              <Button className="gradient-hyrox" onClick={handleImport} disabled={importing}>
+                {importing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                {importing ? 'Importing…' : 'Choose File'}
               </Button>
               <p className="text-xs text-muted-foreground">
                 Supports: Plan (Daily), Weekly Summary, Targets, Garmin Workouts sheets
