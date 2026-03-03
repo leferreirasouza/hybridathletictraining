@@ -2,11 +2,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Dumbbell, Clock, Target, TrendingUp, ChevronRight } from 'lucide-react';
+import { Calendar, Dumbbell, Clock, Target, TrendingUp, ChevronRight, Flag, MapPin } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { differenceInDays, differenceInWeeks, format } from 'date-fns';
 
 const container = {
   hidden: { opacity: 0 },
@@ -42,11 +43,34 @@ export default function Dashboard() {
     enabled: !!user,
   });
 
+  // Fetch next upcoming race
+  const { data: nextRace } = useQuery({
+    queryKey: ['next-race', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('race_results')
+        .select('race_date, race_name, race_location')
+        .eq('athlete_id', user.id)
+        .gte('race_date', today)
+        .order('race_date', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      return error ? null : data;
+    },
+    enabled: !!user,
+  });
+
   const totalKm = completedSessions?.reduce((sum, s) => sum + (Number(s.actual_distance_km) || 0), 0) || 0;
   const avgRpe = completedSessions?.length
     ? (completedSessions.reduce((sum, s) => sum + (s.rpe || 0), 0) / completedSessions.length).toFixed(1)
     : '—';
   const sessionCount = completedSessions?.length || 0;
+
+  const raceDateObj = nextRace?.race_date ? new Date(nextRace.race_date + 'T00:00:00') : null;
+  const daysUntilRace = raceDateObj ? differenceInDays(raceDateObj, new Date()) : null;
+  const weeksUntilRace = raceDateObj ? differenceInWeeks(raceDateObj, new Date()) : null;
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">
@@ -60,6 +84,54 @@ export default function Dashboard() {
             Hey, {firstName} 👊
           </h1>
         </motion.div>
+
+        {/* Race Countdown */}
+        {raceDateObj && daysUntilRace !== null && daysUntilRace >= 0 && (
+          <motion.div variants={item}>
+            <Card className="glass overflow-hidden border-primary/20">
+              <div className="h-1 gradient-hyrox" />
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="relative h-16 w-16 shrink-0">
+                  <svg className="h-16 w-16 -rotate-90" viewBox="0 0 64 64">
+                    <circle cx="32" cy="32" r="28" fill="none" stroke="hsl(var(--muted))" strokeWidth="4" />
+                    <circle
+                      cx="32" cy="32" r="28"
+                      fill="none"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth="4"
+                      strokeLinecap="round"
+                      strokeDasharray={`${2 * Math.PI * 28}`}
+                      strokeDashoffset={`${2 * Math.PI * 28 * (1 - Math.min(1, (daysUntilRace || 0) / 120))}`}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-lg font-display font-bold leading-none">{daysUntilRace}</span>
+                    <span className="text-[8px] text-muted-foreground uppercase tracking-wider">days</span>
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <Flag className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <p className="text-sm font-display font-bold truncate">
+                      {nextRace?.race_name || 'Next Race'}
+                    </p>
+                  </div>
+                  {nextRace?.race_location && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                      <MapPin className="h-3 w-3" /> {nextRace.race_location}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {format(raceDateObj, 'EEEE, MMMM d, yyyy')}
+                  </p>
+                  <Badge variant="secondary" className="mt-1.5 text-[10px] bg-primary/10 text-primary border-0">
+                    {weeksUntilRace} weeks to go
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Today's Session CTA */}
         <motion.div variants={item}>
