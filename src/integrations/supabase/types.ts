@@ -377,6 +377,99 @@ export type Database = {
         }
         Relationships: []
       }
+      race_results: {
+        Row: {
+          athlete_id: string
+          category: string | null
+          created_at: string
+          id: string
+          input_method: string | null
+          notes: string | null
+          race_date: string
+          race_location: string | null
+          race_name: string | null
+          run_1_seconds: number | null
+          run_2_seconds: number | null
+          run_3_seconds: number | null
+          run_4_seconds: number | null
+          run_5_seconds: number | null
+          run_6_seconds: number | null
+          run_7_seconds: number | null
+          run_8_seconds: number | null
+          screenshot_url: string | null
+          station_1_seconds: number | null
+          station_2_seconds: number | null
+          station_3_seconds: number | null
+          station_4_seconds: number | null
+          station_5_seconds: number | null
+          station_6_seconds: number | null
+          station_7_seconds: number | null
+          station_8_seconds: number | null
+          total_time_seconds: number | null
+          total_transition_seconds: number | null
+        }
+        Insert: {
+          athlete_id: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          input_method?: string | null
+          notes?: string | null
+          race_date: string
+          race_location?: string | null
+          race_name?: string | null
+          run_1_seconds?: number | null
+          run_2_seconds?: number | null
+          run_3_seconds?: number | null
+          run_4_seconds?: number | null
+          run_5_seconds?: number | null
+          run_6_seconds?: number | null
+          run_7_seconds?: number | null
+          run_8_seconds?: number | null
+          screenshot_url?: string | null
+          station_1_seconds?: number | null
+          station_2_seconds?: number | null
+          station_3_seconds?: number | null
+          station_4_seconds?: number | null
+          station_5_seconds?: number | null
+          station_6_seconds?: number | null
+          station_7_seconds?: number | null
+          station_8_seconds?: number | null
+          total_time_seconds?: number | null
+          total_transition_seconds?: number | null
+        }
+        Update: {
+          athlete_id?: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          input_method?: string | null
+          notes?: string | null
+          race_date?: string
+          race_location?: string | null
+          race_name?: string | null
+          run_1_seconds?: number | null
+          run_2_seconds?: number | null
+          run_3_seconds?: number | null
+          run_4_seconds?: number | null
+          run_5_seconds?: number | null
+          run_6_seconds?: number | null
+          run_7_seconds?: number | null
+          run_8_seconds?: number | null
+          screenshot_url?: string | null
+          station_1_seconds?: number | null
+          station_2_seconds?: number | null
+          station_3_seconds?: number | null
+          station_4_seconds?: number | null
+          station_5_seconds?: number | null
+          station_6_seconds?: number | null
+          station_7_seconds?: number | null
+          station_8_seconds?: number | null
+          total_time_seconds?: number | null
+          total_transition_seconds?: number | null
+        }
+        Relationships: []
+      }
       session_blocks: {
         Row: {
           block_type: Database["public"]["Enums"]["block_type"]

@@ -71,7 +71,7 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     // Build athlete description for the AI
-    const athleteDesc = `
+    let athleteDesc = `
 Athlete Profile:
 - Experience Level: ${profile.experience || "beginner"}
 - Available Training Days/Week: ${profile.trainingDays || 4}
@@ -82,7 +82,33 @@ Athlete Profile:
 - Injuries/Limitations: ${profile.injuries || "none"}
 - Additional Goals: ${profile.goals || "general HYROX preparation"}
 - Plan Duration Preference (weeks): ${profile.planWeeks || "8"}
+- Plan Focus: ${profile.planFocus || "balanced (running + stations)"}
 `.trim();
+
+    // Append race history if provided
+    if (profile.raceResults && profile.raceResults.length > 0) {
+      const stationNames = ["SkiErg", "Sled Push", "Sled Pull", "Burpee Broad Jumps", "Rowing", "Farmers Carry", "Sandbag Lunges", "Wall Balls"];
+      const fmtTime = (s: number | null) => {
+        if (!s) return "N/A";
+        const m = Math.floor(s / 60);
+        const sec = s % 60;
+        return `${m}:${String(sec).padStart(2, "0")}`;
+      };
+
+      athleteDesc += `\n\nPast HYROX Race Results (${profile.raceResults.length} race(s)):`;
+      for (const race of profile.raceResults) {
+        athleteDesc += `\n\n--- ${race.race_name || "Race"} (${race.race_date}, ${race.category}) - Total: ${fmtTime(race.total_time_seconds)} ---`;
+        for (let i = 0; i < 8; i++) {
+          const runKey = `run_${i + 1}_seconds`;
+          const stationKey = `station_${i + 1}_seconds`;
+          athleteDesc += `\n  Round ${i + 1}: Run ${fmtTime(race[runKey])} | ${stationNames[i]} ${fmtTime(race[stationKey])}`;
+        }
+        if (race.total_transition_seconds) {
+          athleteDesc += `\n  Transitions: ${fmtTime(race.total_transition_seconds)}`;
+        }
+      }
+      athleteDesc += `\n\nUse this race data to identify weaknesses and tailor the training plan. Focus on the athlete's slowest stations and running splits relative to their target.`;
+    }
 
     // Call AI to generate plan
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

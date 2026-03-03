@@ -10,6 +10,7 @@ import Onboarding from "@/pages/Onboarding";
 import Dashboard from "@/pages/Dashboard";
 import Schedule from "@/pages/Schedule";
 import History from "@/pages/History";
+import RaceResults from "@/pages/RaceResults";
 import LogSession from "@/pages/LogSession";
 import AIChat from "@/pages/AIChat";
 import Profile from "@/pages/Profile";
@@ -62,6 +63,7 @@ const App = () => (
               <Route path="dashboard" element={<RoleDashboard />} />
               <Route path="schedule" element={<Schedule />} />
               <Route path="log" element={<LogSession />} />
+              <Route path="races" element={<RaceResults />} />
               <Route path="history" element={<History />} />
               <Route path="ai" element={<AIChat />} />
               <Route path="profile" element={<Profile />} />
