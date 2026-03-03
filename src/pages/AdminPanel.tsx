@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Shield, Building2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import UserManagementTab from '@/components/admin/UserManagementTab';
+import AdminActivityTab from '@/components/admin/AdminActivityTab';
 
 interface Organization {
   id: string;
@@ -54,6 +55,7 @@ export default function AdminPanel() {
         <TabsList>
           {isMasterAdmin && <TabsTrigger value="orgs">Organizations</TabsTrigger>}
           <TabsTrigger value="users">User Management</TabsTrigger>
+          <TabsTrigger value="activity">Activity Log</TabsTrigger>
         </TabsList>
         {isMasterAdmin && (
           <TabsContent value="orgs">
@@ -62,6 +64,9 @@ export default function AdminPanel() {
         )}
         <TabsContent value="users">
           <UserManagementTab isMasterAdmin={isMasterAdmin} currentOrgId={currentOrg?.id} />
+        </TabsContent>
+        <TabsContent value="activity">
+          <AdminActivityTab />
         </TabsContent>
       </Tabs>
     </div>
