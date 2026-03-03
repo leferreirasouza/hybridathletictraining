@@ -5,18 +5,29 @@ import { disciplineConfig } from '@/components/schedule/config';
 const STORAGE_KEY_ENABLED = 'ha-notifs';
 const STORAGE_KEY_NIGHT = 'ha-notifs-night';
 const STORAGE_KEY_HOUR = 'ha-notifs-hour';
+const STORAGE_KEY_TRAINING_TIME = 'ha-training-time';
 
 export function getNotifPrefs() {
+  const trainingTime = localStorage.getItem(STORAGE_KEY_TRAINING_TIME) || '';
   return {
     enabled: localStorage.getItem(STORAGE_KEY_ENABLED) !== 'false',
     nightBefore: localStorage.getItem(STORAGE_KEY_NIGHT) !== 'false',
-    hourBefore: localStorage.getItem(STORAGE_KEY_HOUR) !== 'false',
+    hourBefore: trainingTime ? localStorage.getItem(STORAGE_KEY_HOUR) !== 'false' : false,
+    trainingTime, // HH:MM format or empty
   };
 }
 
 export function setNotifPref(key: 'enabled' | 'nightBefore' | 'hourBefore', value: boolean) {
   const storageKey = key === 'enabled' ? STORAGE_KEY_ENABLED : key === 'nightBefore' ? STORAGE_KEY_NIGHT : STORAGE_KEY_HOUR;
   localStorage.setItem(storageKey, String(value));
+}
+
+export function setTrainingTime(time: string) {
+  localStorage.setItem(STORAGE_KEY_TRAINING_TIME, time);
+  // Auto-disable hour-before if time is cleared
+  if (!time) {
+    localStorage.setItem(STORAGE_KEY_HOUR, 'false');
+  }
 }
 
 export async function requestNotificationPermission(): Promise<boolean> {
@@ -105,39 +116,27 @@ export function useSessionReminders(userId: string | undefined) {
         }
       }
 
-      // 1 hour before reminder for today's sessions
-      // Since planned sessions don't have a specific time, we use 7 AM as default start
+      // 1 hour before reminder based on user's training time
       if (
         prefs.hourBefore &&
-        session.date === today &&
-        currentHour === 6 &&
-        currentMin >= 0 &&
-        currentMin < 10
+        prefs.trainingTime &&
+        session.date === today
       ) {
-        const key = `hour-${session.id}-${today}`;
-        if (!firedRef.current.has(key)) {
-          firedRef.current.add(key);
-          showNotification(
-            '⏰ Session in 1 Hour',
-            `${session.session_name} (${discLabel})${session.duration_min ? ` · ${session.duration_min} min` : ''} — Time to warm up!`
-          );
-        }
-      }
+        const [trainH, trainM] = prefs.trainingTime.split(':').map(Number);
+        // Calculate 1 hour before training time
+        let reminderH = trainH - 1;
+        let reminderM = trainM;
+        if (reminderH < 0) reminderH = 23;
 
-      // Also fire a morning-of reminder at 7 AM for today's sessions (as a fallback for "1 hour before")
-      if (
-        prefs.hourBefore &&
-        session.date === today &&
-        currentHour === 7 &&
-        currentMin < 10
-      ) {
-        const key = `morning-${session.id}-${today}`;
-        if (!firedRef.current.has(key)) {
-          firedRef.current.add(key);
-          showNotification(
-            '🔥 Training Time',
-            `${session.session_name} (${discLabel})${session.duration_min ? ` · ${session.duration_min} min` : ''} — Let's go!`
-          );
+        if (currentHour === reminderH && Math.abs(currentMin - reminderM) < 10) {
+          const key = `hour-${session.id}-${today}`;
+          if (!firedRef.current.has(key)) {
+            firedRef.current.add(key);
+            showNotification(
+              '⏰ Session in 1 Hour',
+              `${session.session_name} (${discLabel})${session.duration_min ? ` · ${session.duration_min} min` : ''} — Time to warm up!`
+            );
+          }
         }
       }
     }
