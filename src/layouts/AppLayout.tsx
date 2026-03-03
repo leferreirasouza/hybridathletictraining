@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Calendar, Dumbbell, MessageSquare, User, BarChart3, Shield, ClipboardList, Trophy, TrendingUp } from 'lucide-react';
+import { Home, Calendar, Dumbbell, MessageSquare, Mail, User, BarChart3, Shield, ClipboardList, Trophy, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,15 +9,15 @@ const athleteTabs = [
   { path: '/dashboard', icon: Home, label: 'Today' },
   { path: '/schedule', icon: Calendar, label: 'Plan' },
   { path: '/log', icon: Dumbbell, label: 'Log' },
-  { path: '/analytics', icon: TrendingUp, label: 'Stats' },
+  { path: '/messages', icon: Mail, label: 'Chat' },
   { path: '/profile', icon: User, label: 'Profile' },
 ];
 
 const coachTabs = [
   { path: '/dashboard', icon: Home, label: 'Dashboard' },
   { path: '/athletes', icon: User, label: 'Athletes' },
+  { path: '/messages', icon: Mail, label: 'Chat' },
   { path: '/plans', icon: Calendar, label: 'Plans' },
-  { path: '/ai', icon: MessageSquare, label: 'AI' },
   { path: '/profile', icon: User, label: 'Profile' },
 ];
 
