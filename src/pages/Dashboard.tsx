@@ -4,14 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Calendar, Dumbbell, Clock, Target, TrendingUp, ChevronRight, Flag, MapPin, CheckCircle2 } from 'lucide-react';
+import { Calendar, Dumbbell, Clock, Target, TrendingUp, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { differenceInDays, differenceInWeeks, format } from 'date-fns';
 import { useScheduleData } from '@/hooks/useScheduleData';
 import { getDiscipline } from '@/components/schedule/config';
+import GoalRaceCard from '@/components/dashboard/GoalRaceCard';
+import ProfileCompletionCard from '@/components/dashboard/ProfileCompletionCard';
+import CoachInfoCard from '@/components/dashboard/CoachInfoCard';
+import FirstPlanCTA from '@/components/dashboard/FirstPlanCTA';
 
 const container = {
   hidden: { opacity: 0 },
@@ -27,23 +30,20 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 'Athlete';
 
-  const { sessions: plannedSessions, completedSessions: completedPlanned, targets, maxWeek } = useScheduleData();
+  const { sessions: plannedSessions, completedSessions: completedPlanned, targets, maxWeek, noPlan } = useScheduleData();
 
-  // Today's planned sessions
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
-  const todayDow = today.getDay() === 0 ? 7 : today.getDay(); // 1=Mon..7=Sun
+  const todayDow = today.getDay() === 0 ? 7 : today.getDay();
 
   const completedPlanIds = new Set(completedPlanned.filter(c => c.planned_session_id).map(c => c.planned_session_id));
 
   const todaySessions = plannedSessions.filter(s => {
-    // Match by explicit date or day_of_week
     if (s.date === todayStr) return true;
     if (!s.date && s.day_of_week === todayDow) return true;
     return false;
   });
 
-  // Fetch completed sessions this week
   const startOfWeek = new Date();
   startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1);
   const weekStart = startOfWeek.toISOString().split('T')[0];
@@ -63,40 +63,16 @@ export default function Dashboard() {
     enabled: !!user,
   });
 
-  // Fetch next upcoming race
-  const { data: nextRace } = useQuery({
-    queryKey: ['next-race', user?.id],
-    queryFn: async () => {
-      if (!user) return null;
-      const { data, error } = await supabase
-        .from('race_results')
-        .select('race_date, race_name, race_location')
-        .eq('athlete_id', user.id)
-        .gte('race_date', todayStr)
-        .order('race_date', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      return error ? null : data;
-    },
-    enabled: !!user,
-  });
-
   const totalKm = completedSessions?.reduce((sum, s) => sum + (Number(s.actual_distance_km) || 0), 0) || 0;
   const avgRpe = completedSessions?.length
     ? (completedSessions.reduce((sum, s) => sum + (s.rpe || 0), 0) / completedSessions.length).toFixed(1)
     : '—';
   const sessionCount = completedSessions?.length || 0;
 
-  const raceDateObj = nextRace?.race_date ? new Date(nextRace.race_date + 'T00:00:00') : null;
-  const daysUntilRace = raceDateObj ? differenceInDays(raceDateObj, new Date()) : null;
-  const weeksUntilRace = raceDateObj ? differenceInWeeks(raceDateObj, new Date()) : null;
-
-  // Plan completion stats
   const planStats = useMemo(() => {
     const totalPlanned = plannedSessions.length;
     const totalCompleted = completedPlanned.filter(c => c.planned_session_id).length;
     const completionPct = totalPlanned > 0 ? Math.round((totalCompleted / totalPlanned) * 100) : 0;
-    // Current week progress
     const currentWeekSessions = plannedSessions.filter(s => {
       if (s.date === todayStr) return true;
       if (!s.date && s.day_of_week <= todayDow) return true;
@@ -120,94 +96,46 @@ export default function Dashboard() {
           </h1>
         </motion.div>
 
-        {/* Race Countdown with Objectives & Plan Progress */}
-        {raceDateObj && daysUntilRace !== null && daysUntilRace >= 0 && (
+        {/* Profile Completion Nudge */}
+        <motion.div variants={item}>
+          <ProfileCompletionCard />
+        </motion.div>
+
+        {/* Goal Race Countdown (from profile, not race_results) */}
+        <motion.div variants={item}>
+          <GoalRaceCard />
+        </motion.div>
+
+        {/* Plan Completion (only if plan exists) */}
+        {!noPlan && planStats.totalPlanned > 0 && (
           <motion.div variants={item}>
-            <Card className="glass overflow-hidden border-primary/20">
-              <div className="h-1 gradient-hyrox" />
-              <CardContent className="p-4 space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="relative h-16 w-16 shrink-0">
-                    <svg className="h-16 w-16 -rotate-90" viewBox="0 0 64 64">
-                      <circle cx="32" cy="32" r="28" fill="none" stroke="hsl(var(--muted))" strokeWidth="4" />
-                      <circle
-                        cx="32" cy="32" r="28"
-                        fill="none"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth="4"
-                        strokeLinecap="round"
-                        strokeDasharray={`${2 * Math.PI * 28}`}
-                        strokeDashoffset={`${2 * Math.PI * 28 * (1 - Math.min(1, (daysUntilRace || 0) / 120))}`}
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-lg font-display font-bold leading-none">{daysUntilRace}</span>
-                      <span className="text-[8px] text-muted-foreground uppercase tracking-wider">days</span>
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <Flag className="h-3.5 w-3.5 text-primary shrink-0" />
-                      <p className="text-sm font-display font-bold truncate">
-                        {nextRace?.race_name || 'Next Race'}
-                      </p>
-                    </div>
-                    {nextRace?.race_location && (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                        <MapPin className="h-3 w-3" /> {nextRace.race_location}
-                      </p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {format(raceDateObj, 'EEEE, MMMM d, yyyy')}
-                    </p>
-                    <Badge variant="secondary" className="mt-1.5 text-[10px] bg-primary/10 text-primary border-0">
-                      {weeksUntilRace} weeks to go
-                    </Badge>
-                  </div>
+            <Card className="glass">
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                    Plan Completion
+                  </p>
+                  <span className="text-xs font-mono font-bold text-primary">{planStats.completionPct}%</span>
                 </div>
-
-                {/* Plan Completion Status */}
-                <div className="space-y-2 pt-1 border-t border-border/50">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium flex items-center gap-1.5">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                      Plan Completion
-                    </p>
-                    <span className="text-xs font-mono font-bold text-primary">{planStats.completionPct}%</span>
-                  </div>
-                  <Progress value={planStats.completionPct} className="h-2" />
-                  <div className="flex justify-between text-[10px] text-muted-foreground">
-                    <span>{planStats.totalCompleted} / {planStats.totalPlanned} sessions done</span>
-                    <span>This week: {planStats.currentWeekCompleted}/{planStats.currentWeekTotal}</span>
-                  </div>
+                <Progress value={planStats.completionPct} className="h-2" />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>{planStats.totalCompleted} / {planStats.totalPlanned} sessions done</span>
+                  <span>This week: {planStats.currentWeekCompleted}/{planStats.currentWeekTotal}</span>
                 </div>
-
-                {/* Training Objectives from targets */}
-                {targets.length > 0 && (
-                  <div className="space-y-1.5 pt-1 border-t border-border/50">
-                    <p className="text-xs font-medium flex items-center gap-1.5">
-                      <Target className="h-3.5 w-3.5 text-primary" />
-                      Objectives
-                    </p>
-                    <div className="space-y-1">
-                      {targets.slice(0, 3).map(t => (
-                        <div key={t.id} className="flex items-start gap-2 text-[11px] bg-muted/30 rounded-md px-2.5 py-1.5">
-                          <div className="h-1.5 w-1.5 rounded-full bg-primary mt-1 shrink-0" />
-                          <div className="min-w-0">
-                            <span className="font-medium">{t.type}</span>
-                            <span className="text-muted-foreground ml-1">— {t.primary_target}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </motion.div>
         )}
 
-        {/* Today's Sessions — actual plan data */}
+        {/* First Plan CTA (when no plan exists) */}
+        {noPlan && (
+          <motion.div variants={item}>
+            <FirstPlanCTA />
+          </motion.div>
+        )}
+
+        {/* Today's Sessions */}
         <motion.div variants={item}>
           <Card className="glass overflow-hidden border-primary/20">
             <div className="h-1 gradient-hyrox" />
@@ -216,9 +144,11 @@ export default function Dashboard() {
                 <div>
                   <CardTitle className="text-lg font-display">Today's Training</CardTitle>
                   <p className="text-sm text-muted-foreground mt-0.5">
-                    {todaySessions.length > 0
-                      ? `${todaySessions.length} session${todaySessions.length > 1 ? 's' : ''} planned`
-                      : 'Rest day — no sessions planned'}
+                    {noPlan
+                      ? 'No plan yet — generate one to get started'
+                      : todaySessions.length > 0
+                        ? `${todaySessions.length} session${todaySessions.length > 1 ? 's' : ''} planned`
+                        : 'Rest day — no sessions planned'}
                   </p>
                 </div>
                 {todaySessions.length > 0 && (
@@ -269,12 +199,20 @@ export default function Dashboard() {
                 </>
               ) : (
                 <div className="flex gap-2">
-                  <Button className="flex-1 gradient-hyrox" onClick={() => navigate('/schedule')}>
-                    <Calendar className="h-4 w-4 mr-2" /> View Schedule
-                  </Button>
-                  <Button variant="outline" className="flex-1" onClick={() => navigate('/log')}>
-                    <Dumbbell className="h-4 w-4 mr-2" /> Log Session
-                  </Button>
+                  {noPlan ? (
+                    <Button className="flex-1 gradient-hyrox" onClick={() => navigate('/plans')}>
+                      Generate Plan
+                    </Button>
+                  ) : (
+                    <>
+                      <Button className="flex-1 gradient-hyrox" onClick={() => navigate('/schedule')}>
+                        <Calendar className="h-4 w-4 mr-2" /> View Schedule
+                      </Button>
+                      <Button variant="outline" className="flex-1" onClick={() => navigate('/log')}>
+                        <Dumbbell className="h-4 w-4 mr-2" /> Log Session
+                      </Button>
+                    </>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -296,6 +234,11 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           ))}
+        </motion.div>
+
+        {/* Coach Info */}
+        <motion.div variants={item}>
+          <CoachInfoCard />
         </motion.div>
 
         {/* Week Overview */}

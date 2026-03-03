@@ -5,11 +5,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { Dumbbell, Users, Trophy } from 'lucide-react';
+import { Dumbbell, Users, Trophy, User, Flag } from 'lucide-react';
 
 type Role = 'athlete' | 'coach';
 
@@ -17,6 +18,13 @@ interface Org {
   id: string;
   name: string;
 }
+
+const FITNESS_LEVELS = [
+  { value: 'beginner', label: 'Beginner', desc: 'New to HYROX / structured training' },
+  { value: 'intermediate', label: 'Intermediate', desc: '1-2 HYROX races, consistent training' },
+  { value: 'advanced', label: 'Advanced', desc: '3+ races, competitive goals' },
+  { value: 'elite', label: 'Elite', desc: 'Podium contender / Pro division' },
+];
 
 export default function Onboarding() {
   const { user, refreshMemberships } = useAuth();
@@ -28,7 +36,17 @@ export default function Onboarding() {
   const [loading, setLoading] = useState(false);
   const [checkingMaster, setCheckingMaster] = useState(true);
 
-  // Check if user already has master_admin role (set via DB, not hardcoded emails)
+  // Athlete profile fields
+  const [age, setAge] = useState('');
+  const [weightKg, setWeightKg] = useState('');
+  const [maxHr, setMaxHr] = useState('');
+  const [fitnessLevel, setFitnessLevel] = useState('intermediate');
+  const [goalRaceName, setGoalRaceName] = useState('');
+  const [goalRaceDate, setGoalRaceDate] = useState('');
+  const [goalRaceLocation, setGoalRaceLocation] = useState('');
+
+  const totalSteps = role === 'athlete' ? 4 : role === 'coach' ? 3 : 2;
+
   useEffect(() => {
     if (!user) return;
     const checkMasterRole = async () => {
@@ -40,7 +58,6 @@ export default function Onboarding() {
         .limit(1);
 
       if (data && data.length > 0) {
-        // Already a master admin, refresh and go to dashboard
         await refreshMemberships();
         navigate('/dashboard');
       }
@@ -49,18 +66,14 @@ export default function Onboarding() {
     checkMasterRole();
   }, [user]);
 
-  // Fetch available orgs when reaching org selection step
   useEffect(() => {
     if (step === 2) fetchOrgs();
   }, [step]);
 
   const fetchOrgs = async () => {
     const { data, error } = await supabase.from('organizations').select('id, name').eq('is_active', true);
-    if (!error && data) {
-      setOrgs(data);
-    } else {
-      setOrgs([]);
-    }
+    if (!error && data) setOrgs(data);
+    else setOrgs([]);
   };
 
   const handleComplete = async () => {
@@ -76,6 +89,24 @@ export default function Onboarding() {
         role,
       });
       if (error) throw error;
+
+      // Save athlete profile data
+      if (role === 'athlete') {
+        await supabase.from('profiles').update({
+          age: age ? parseInt(age) : null,
+          weight_kg: weightKg ? parseFloat(weightKg) : null,
+          max_hr: maxHr ? parseInt(maxHr) : null,
+          fitness_level: fitnessLevel,
+          goal_race_name: goalRaceName.trim() || null,
+          goal_race_date: goalRaceDate || null,
+          goal_race_location: goalRaceLocation.trim() || null,
+          onboarding_completed: true,
+        } as any).eq('id', user.id);
+      } else {
+        await supabase.from('profiles').update({
+          onboarding_completed: true,
+        } as any).eq('id', user.id);
+      }
 
       await refreshMemberships();
       toast.success('Welcome to Hybrid Athletics! 🎉');
@@ -108,10 +139,11 @@ export default function Onboarding() {
           </div>
           <h1 className="text-2xl font-display font-bold">Let's get set up</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Step {step} of {role === 'coach' ? 3 : 2}
+            Step {step} of {totalSteps}
           </p>
         </div>
 
+        {/* Step 1: Role */}
         {step === 1 && (
           <Card className="glass">
             <CardHeader>
@@ -146,6 +178,7 @@ export default function Onboarding() {
           </Card>
         )}
 
+        {/* Step 2: Organization */}
         {step === 2 && (
           <Card className="glass">
             <CardHeader>
@@ -181,10 +214,10 @@ export default function Onboarding() {
                 {role === 'athlete' ? (
                   <Button
                     className="flex-1 gradient-hyrox"
-                    onClick={handleComplete}
-                    disabled={loading || !selectedOrgId}
+                    onClick={() => setStep(3)}
+                    disabled={!selectedOrgId}
                   >
-                    {loading ? 'Setting up…' : 'Get Started'}
+                    Continue
                   </Button>
                 ) : (
                   <Button
@@ -200,6 +233,99 @@ export default function Onboarding() {
           </Card>
         )}
 
+        {/* Step 3 (Athlete): Profile & Biometrics */}
+        {step === 3 && role === 'athlete' && (
+          <Card className="glass">
+            <CardHeader>
+              <CardTitle className="text-lg font-display flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" /> Your Profile
+              </CardTitle>
+              <CardDescription>Help us personalize your training plan</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Age</Label>
+                  <Input type="number" value={age} onChange={e => setAge(e.target.value)} placeholder="28" className="h-9" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Weight (kg)</Label>
+                  <Input type="number" step="0.1" value={weightKg} onChange={e => setWeightKg(e.target.value)} placeholder="75" className="h-9" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Max HR</Label>
+                  <Input type="number" value={maxHr} onChange={e => setMaxHr(e.target.value)} placeholder="190" className="h-9" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Fitness Level</Label>
+                <RadioGroup value={fitnessLevel} onValueChange={setFitnessLevel} className="space-y-2">
+                  {FITNESS_LEVELS.map(fl => (
+                    <label
+                      key={fl.value}
+                      className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
+                        fitnessLevel === fl.value ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50'
+                      }`}
+                    >
+                      <RadioGroupItem value={fl.value} />
+                      <div>
+                        <span className="font-medium">{fl.label}</span>
+                        <span className="text-xs text-muted-foreground ml-2">{fl.desc}</span>
+                      </div>
+                    </label>
+                  ))}
+                </RadioGroup>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setStep(2)} className="flex-1">Back</Button>
+                <Button className="flex-1 gradient-hyrox" onClick={() => setStep(4)}>Continue</Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 4 (Athlete): Goal Race */}
+        {step === 4 && role === 'athlete' && (
+          <Card className="glass">
+            <CardHeader>
+              <CardTitle className="text-lg font-display flex items-center gap-2">
+                <Flag className="h-5 w-5 text-primary" /> Goal Race
+              </CardTitle>
+              <CardDescription>Set your target race to power the countdown and plan builder</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Race Name</Label>
+                <Input value={goalRaceName} onChange={e => setGoalRaceName(e.target.value)} placeholder="HYROX Munich 2025" className="h-9" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Race Date</Label>
+                  <Input type="date" value={goalRaceDate} onChange={e => setGoalRaceDate(e.target.value)} className="h-9" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Location</Label>
+                  <Input value={goalRaceLocation} onChange={e => setGoalRaceLocation(e.target.value)} placeholder="Munich, DE" className="h-9" />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                You can skip this and set it later from your profile.
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setStep(3)} className="flex-1">Back</Button>
+                <Button
+                  className="flex-1 gradient-hyrox"
+                  onClick={handleComplete}
+                  disabled={loading}
+                >
+                  {loading ? 'Setting up…' : 'Get Started'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 3 (Coach): Confirm */}
         {step === 3 && role === 'coach' && (
           <Card className="glass">
             <CardHeader>

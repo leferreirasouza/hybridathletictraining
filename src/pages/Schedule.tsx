@@ -53,16 +53,22 @@ export default function Schedule() {
       </div>
 
       {noPlan ? (
-        <Card className="glass">
+        <Card className="glass border-primary/20 overflow-hidden">
+          <div className="h-1 gradient-hyrox" />
           <CardContent className="p-8 text-center space-y-3">
             <Calendar className="h-10 w-10 mx-auto text-muted-foreground" />
             <p className="font-display font-bold">No Training Plan Yet</p>
             <p className="text-sm text-muted-foreground">
-              Create or import a plan to see your schedule here.
+              Generate a personalized AI plan based on your goal race and fitness level, or import one from your coach.
             </p>
-            <Button className="gradient-hyrox" onClick={() => navigate('/plans')}>
-              Go to Plan Builder
-            </Button>
+            <div className="flex gap-2 justify-center">
+              <Button className="gradient-hyrox" onClick={() => navigate('/plans')}>
+                Generate AI Plan
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/plans')}>
+                Import Plan
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : (

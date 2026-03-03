@@ -11,7 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Loader2, Calendar, Clock, MapPin, Flame, Target, Pencil, Trash2 } from 'lucide-react';
+import { Loader2, Calendar, Clock, MapPin, Flame, Target, Pencil, Trash2, Dumbbell } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { getDiscipline } from '@/components/schedule/config';
@@ -45,6 +46,7 @@ export default function History() {
   const [editSession, setEditSession] = useState<CompletedSession | null>(null);
   const [editForm, setEditForm] = useState({ duration: '', distance: '', avgHr: '', avgPace: '', rpe: [6], notes: '' });
   const [saving, setSaving] = useState(false);
+  const navigate = useNavigate();
 
   const { data: sessions, isLoading } = useQuery({
     queryKey: ['session-history', user?.id],
@@ -124,10 +126,18 @@ export default function History() {
 
       {!sessions?.length ? (
         <Card className="glass">
-          <CardContent className="p-8 text-center space-y-2">
+          <CardContent className="p-8 text-center space-y-3">
             <Calendar className="h-10 w-10 mx-auto text-muted-foreground" />
             <p className="font-display font-bold">No Sessions Yet</p>
-            <p className="text-sm text-muted-foreground">Your completed sessions will appear here.</p>
+            <p className="text-sm text-muted-foreground">Complete a training session and log it to start tracking your progress.</p>
+            <div className="flex gap-2 justify-center">
+              <Button className="gradient-hyrox" onClick={() => navigate('/log')}>
+                <Dumbbell className="h-4 w-4 mr-2" /> Log a Session
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/schedule')}>
+                View Schedule
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : (
