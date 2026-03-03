@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Calendar, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Loader2, CalendarPlus } from 'lucide-react';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useScheduleData } from '@/hooks/useScheduleData';
 import WeeklyView from '@/components/schedule/WeeklyView';
@@ -11,6 +12,7 @@ import MonthlyView from '@/components/schedule/MonthlyView';
 import DailyView from '@/components/schedule/DailyView';
 import TargetsPanel from '@/components/schedule/TargetsPanel';
 import { dayLabels } from '@/components/schedule/config';
+import { exportWeekToGoogleCalendar } from '@/lib/googleCalendar';
 
 export default function Schedule() {
   const navigate = useNavigate();
@@ -92,15 +94,29 @@ export default function Schedule() {
                 <span className="text-sm font-medium font-display">
                   Week {displayWeek} <span className="text-muted-foreground font-normal">of {maxWeek}</span>
                 </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setWeekOffset(w => w + 1)}
-                  disabled={displayWeek >= maxWeek}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    title="Add week to Google Calendar"
+                    onClick={() => {
+                      exportWeekToGoogleCalendar(sessions, displayWeek);
+                      toast.success(`Opening ${sessions.filter(s => s.week_number === displayWeek).length} sessions in Google Calendar`);
+                    }}
+                  >
+                    <CalendarPlus className="h-4 w-4 text-primary" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setWeekOffset(w => w + 1)}
+                    disabled={displayWeek >= maxWeek}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             )}
 
