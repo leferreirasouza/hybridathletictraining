@@ -14,6 +14,7 @@ import AIChat from "@/pages/AIChat";
 import Profile from "@/pages/Profile";
 import CoachDashboard from "@/pages/CoachDashboard";
 import PlanBuilder from "@/pages/PlanBuilder";
+import AdminPanel from "@/pages/AdminPanel";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="athletes" element={<CoachDashboard />} />
               <Route path="plans" element={<PlanBuilder />} />
               <Route path="analytics" element={<Dashboard />} />
+              <Route path="admin" element={<AdminPanel />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Calendar, Dumbbell, MessageSquare, User, BarChart3 } from 'lucide-react';
+import { Home, Calendar, Dumbbell, MessageSquare, User, BarChart3, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,12 +20,20 @@ const coachTabs = [
   { path: '/analytics', icon: BarChart3, label: 'Analytics' },
 ];
 
+const adminTabs = [
+  { path: '/dashboard', icon: Home, label: 'Dashboard' },
+  { path: '/admin', icon: Shield, label: 'Admin' },
+  { path: '/athletes', icon: User, label: 'Athletes' },
+  { path: '/plans', icon: Calendar, label: 'Plans' },
+  { path: '/ai', icon: MessageSquare, label: 'AI' },
+];
+
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { currentRole } = useAuth();
 
-  const tabs = currentRole === 'coach' || currentRole === 'master_admin' ? coachTabs : athleteTabs;
+  const tabs = currentRole === 'master_admin' ? adminTabs : currentRole === 'coach' ? coachTabs : athleteTabs;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
