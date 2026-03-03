@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Plus, Pencil, Shield, Building2, UserPlus, Users } from 'lucide-react';
+import { Plus, Pencil, Shield, Building2, UserPlus, Users, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { motion } from 'framer-motion';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -256,6 +257,30 @@ function UserManagementTab({ isMasterAdmin, currentOrgId }: { isMasterAdmin: boo
     setSaving(false);
   };
 
+  const handleChangeRole = async (memberId: string, newRole: AppRole) => {
+    const { error } = await supabase.from('user_roles')
+      .update({ role: newRole })
+      .eq('id', memberId);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Role updated');
+      fetchMembers();
+    }
+  };
+
+  const handleRemoveMember = async (memberId: string) => {
+    const { error } = await supabase.from('user_roles')
+      .delete()
+      .eq('id', memberId);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Member removed');
+      fetchMembers();
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -322,6 +347,7 @@ function UserManagementTab({ isMasterAdmin, currentOrgId }: { isMasterAdmin: boo
                 <TableHead>User ID</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Organization</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -329,10 +355,42 @@ function UserManagementTab({ isMasterAdmin, currentOrgId }: { isMasterAdmin: boo
                 <TableRow key={m.id}>
                   <TableCell className="font-mono text-xs">{m.user_id?.slice(0, 8)}...</TableCell>
                   <TableCell>
-                    <span className="capitalize text-sm">{m.role?.replace('_', ' ')}</span>
+                    <Select value={m.role} onValueChange={(v) => handleChangeRole(m.id, v as AppRole)}>
+                      <SelectTrigger className="w-[130px] h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {assignableRoles.map(r => (
+                          <SelectItem key={r} value={r} className="capitalize">{r.replace('_', ' ')}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {m.organizations?.name ?? '—'}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remove member?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will remove the user's role from this organization. They will lose access immediately.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleRemoveMember(m.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Remove
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </TableCell>
                 </TableRow>
               ))}
