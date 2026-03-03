@@ -18,6 +18,7 @@ import CoachDashboard from "@/pages/CoachDashboard";
 import PlanBuilder from "@/pages/PlanBuilder";
 import AdminPanel from "@/pages/AdminPanel";
 import Analytics from "@/pages/Analytics";
+import Settings from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -71,6 +72,7 @@ const App = () => (
               <Route path="plans" element={<PlanBuilder />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="admin" element={<AdminPanel />} />
+              <Route path="settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

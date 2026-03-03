@@ -6,12 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Settings, Shield, Calendar, Upload, Download, Pencil, Check, X } from 'lucide-react';
+import { LogOut, Settings as SettingsIcon, Shield, Calendar, Upload, Download, Pencil, Check, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export default function Profile() {
+  const navigate = useNavigate();
   const { user, currentRole, signOut } = useAuth();
   const name = user?.user_metadata?.full_name || 'User';
   const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
@@ -90,7 +92,7 @@ export default function Profile() {
               { icon: Download, label: 'Export Plan', action: () => {} },
               { icon: Calendar, label: 'Google Calendar Sync', action: () => {} },
               { icon: Shield, label: 'Health Data Permissions', action: () => {} },
-              { icon: Settings, label: 'Settings', action: () => {} },
+              { icon: SettingsIcon, label: 'Settings', action: () => navigate('/settings') },
             ].map((item) => (
               <Button key={item.label} variant="ghost" className="w-full justify-start h-11" onClick={item.action}>
                 <item.icon className="h-4 w-4 mr-3 text-muted-foreground" />
