@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 
 const roleLabels: Record<string, string> = {
@@ -57,6 +58,21 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const { currentRole, effectiveRole, viewAsRole, setViewAsRole, user } = useAuth();
   const queryClient = useQueryClient();
+
+  const userName = user?.user_metadata?.full_name || 'User';
+  const userInitials = userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+
+  const { data: profile } = useQuery({
+    queryKey: ['profile-avatar', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase.from('profiles').select('avatar_url, full_name').eq('id', user.id).single();
+      return data as any;
+    },
+    enabled: !!user,
+  });
+
+  const avatarUrl = profile?.avatar_url;
 
   useSessionReminders(user?.id);
 
@@ -139,9 +155,12 @@ export default function AppLayout() {
         "sticky top-0 z-40 glass border-b flex items-center justify-between px-4 h-12",
         !isViewingAs && "safe-top"
       )}>
-        <span className="text-sm font-display font-bold text-foreground">Hybrid Athletics</span>
-        <Popover open={bellOpen} onOpenChange={setBellOpen}>
-          <PopoverTrigger asChild>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-display font-bold text-foreground">Hybrid Athletics</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Popover open={bellOpen} onOpenChange={setBellOpen}>
+            <PopoverTrigger asChild>
             <button
               className="relative p-2 rounded-lg hover:bg-muted/50 transition-colors"
               aria-label="Notifications"
@@ -210,7 +229,14 @@ export default function AppLayout() {
               </Button>
             </div>
           </PopoverContent>
-        </Popover>
+          </Popover>
+          <button onClick={() => navigate('/profile')} className="ml-1">
+            <Avatar className="h-7 w-7 border border-border">
+              {avatarUrl && <AvatarImage src={avatarUrl} alt={userName} />}
+              <AvatarFallback className="text-[10px] font-bold gradient-hyrox text-primary-foreground">{userInitials}</AvatarFallback>
+            </Avatar>
+          </button>
+        </div>
       </header>
 
       {/* View-As banner */}
@@ -255,7 +281,10 @@ export default function AppLayout() {
                           className="absolute -top-1 left-1/2 -translate-x-1/2 w-6 h-1 rounded-full gradient-hyrox"
                           transition={{ type: 'spring', stiffness: 500, damping: 30 }} />
                       )}
-                      <User className="h-5 w-5" />
+                      <Avatar className="h-5 w-5 border border-border">
+                        {avatarUrl && <AvatarImage src={avatarUrl} alt={userName} />}
+                        <AvatarFallback className="text-[7px] font-bold gradient-hyrox text-primary-foreground">{userInitials}</AvatarFallback>
+                      </Avatar>
                       <span className="text-[10px] font-medium">Menu</span>
                     </button>
                   </DropdownMenuTrigger>
@@ -299,7 +328,14 @@ export default function AppLayout() {
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }} />
                 )}
                 <div className="relative">
-                  <tab.icon className="h-5 w-5" />
+                  {tab.path === '/profile' ? (
+                    <Avatar className="h-5 w-5 border border-border">
+                      {avatarUrl && <AvatarImage src={avatarUrl} alt={userName} />}
+                      <AvatarFallback className="text-[7px] font-bold gradient-hyrox text-primary-foreground">{userInitials}</AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <tab.icon className="h-5 w-5" />
+                  )}
                   {showBadge && (
                     <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold leading-none">
                       {unreadCount > 99 ? '99+' : unreadCount}
