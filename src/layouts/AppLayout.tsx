@@ -17,7 +17,7 @@ const coachTabs = [
   { path: '/athletes', icon: User, label: 'Athletes' },
   { path: '/plans', icon: Calendar, label: 'Plans' },
   { path: '/ai', icon: MessageSquare, label: 'AI' },
-  { path: '/analytics', icon: BarChart3, label: 'Analytics' },
+  { path: '/profile', icon: User, label: 'Profile' },
 ];
 
 const adminTabs = [
@@ -25,7 +25,7 @@ const adminTabs = [
   { path: '/admin', icon: Shield, label: 'Admin' },
   { path: '/athletes', icon: User, label: 'Athletes' },
   { path: '/plans', icon: Calendar, label: 'Plans' },
-  { path: '/ai', icon: MessageSquare, label: 'AI' },
+  { path: '/profile', icon: User, label: 'Profile' },
 ];
 
 export default function AppLayout() {
