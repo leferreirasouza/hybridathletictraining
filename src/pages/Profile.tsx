@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Settings as SettingsIcon, Calendar, Upload, Pencil, Check, X, Activity, Flag, Heart, User } from 'lucide-react';
+import { LogOut, Settings as SettingsIcon, Calendar, Upload, Pencil, Check, X, Activity, Flag, Heart, User, TrendingUp, Flame, Route } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -43,6 +43,53 @@ export default function Profile() {
     },
     enabled: !!user,
   });
+
+  // Fetch training stats
+  const { data: completedSessions } = useQuery({
+    queryKey: ['training-stats', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase
+        .from('completed_sessions')
+        .select('date, actual_distance_km')
+        .eq('athlete_id', user.id)
+        .order('date', { ascending: false });
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  const trainingStats = useMemo(() => {
+    if (!completedSessions || completedSessions.length === 0) {
+      return { totalSessions: 0, totalDistance: 0, currentStreak: 0 };
+    }
+    const totalSessions = completedSessions.length;
+    const totalDistance = completedSessions.reduce((sum, s) => sum + (Number(s.actual_distance_km) || 0), 0);
+
+    // Calculate streak: consecutive days with sessions ending today or yesterday
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const uniqueDates = [...new Set(completedSessions.map(s => s.date))].sort().reverse();
+    let streak = 0;
+    const checkDate = new Date(today);
+    // Allow streak to start from today or yesterday
+    const firstSessionDate = uniqueDates[0] ? new Date(uniqueDates[0] + 'T00:00:00') : null;
+    if (firstSessionDate) {
+      const diffFromToday = Math.floor((today.getTime() - firstSessionDate.getTime()) / 86400000);
+      if (diffFromToday > 1) return { totalSessions, totalDistance, currentStreak: 0 };
+      checkDate.setTime(firstSessionDate.getTime());
+    }
+    for (const dateStr of uniqueDates) {
+      const d = new Date(dateStr + 'T00:00:00');
+      if (d.getTime() === checkDate.getTime()) {
+        streak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      } else if (d.getTime() < checkDate.getTime()) {
+        break;
+      }
+    }
+    return { totalSessions, totalDistance, currentStreak: streak };
+  }, [completedSessions]);
 
   // Biometric editing
   const [editingBio, setEditingBio] = useState(false);
@@ -265,6 +312,40 @@ export default function Profile() {
                 )}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Training Stats */}
+        <Card className="glass">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" /> Training Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="space-y-1">
+                <div className="flex items-center justify-center">
+                  <Activity className="h-4 w-4 text-primary" />
+                </div>
+                <p className="text-2xl font-bold font-display">{trainingStats.totalSessions}</p>
+                <p className="text-xs text-muted-foreground">Sessions</p>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-center">
+                  <Route className="h-4 w-4 text-primary" />
+                </div>
+                <p className="text-2xl font-bold font-display">{trainingStats.totalDistance.toFixed(1)}</p>
+                <p className="text-xs text-muted-foreground">Total km</p>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-center">
+                  <Flame className="h-4 w-4 text-orange-500" />
+                </div>
+                <p className="text-2xl font-bold font-display">{trainingStats.currentStreak}</p>
+                <p className="text-xs text-muted-foreground">Day Streak</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
