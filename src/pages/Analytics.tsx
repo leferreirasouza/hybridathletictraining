@@ -4,11 +4,11 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, TrendingUp, Clock, MapPin, Flame, Activity } from 'lucide-react';
+import { Loader2, TrendingUp, Clock, MapPin, Flame, Activity, Heart } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-  AreaChart, Area, LineChart, Line, Legend,
+  AreaChart, Area, LineChart, Line, Legend, PieChart, Pie, Cell,
 } from 'recharts';
 import { disciplineConfig } from '@/components/schedule/config';
 
@@ -25,6 +25,24 @@ const DISCIPLINE_COLORS: Record<string, string> = {
   stairs: 'hsl(48, 96%, 53%)',
   custom: 'hsl(220, 9%, 46%)',
 };
+
+// HR Zone definitions (standard 5-zone model based on % of max HR)
+const HR_ZONES = [
+  { zone: 'Z1 Recovery', min: 0.5, max: 0.6, color: 'hsl(210, 70%, 60%)' },
+  { zone: 'Z2 Aerobic', min: 0.6, max: 0.7, color: 'hsl(160, 70%, 45%)' },
+  { zone: 'Z3 Tempo', min: 0.7, max: 0.8, color: 'hsl(48, 90%, 50%)' },
+  { zone: 'Z4 Threshold', min: 0.8, max: 0.9, color: 'hsl(25, 95%, 53%)' },
+  { zone: 'Z5 Max', min: 0.9, max: 1.0, color: 'hsl(0, 80%, 50%)' },
+];
+
+function estimateZone(avgHr: number, maxHr: number): number {
+  const pct = avgHr / maxHr;
+  if (pct < 0.6) return 0;
+  if (pct < 0.7) return 1;
+  if (pct < 0.8) return 2;
+  if (pct < 0.9) return 3;
+  return 4;
+}
 
 const container = {
   hidden: { opacity: 0 },
@@ -59,7 +77,7 @@ export default function Analytics() {
       if (!user) return [];
       const { data, error } = await supabase
         .from('completed_sessions')
-        .select('date, discipline, actual_duration_min, actual_distance_km, rpe')
+        .select('date, discipline, actual_duration_min, actual_distance_km, rpe, avg_hr, max_hr')
         .eq('athlete_id', user.id)
         .order('date', { ascending: true });
       return error ? [] : data || [];
@@ -67,23 +85,28 @@ export default function Analytics() {
     enabled: !!user,
   });
 
-  const { weeklyData, disciplineBreakdown, totals, rpeData, stackedDisciplineData, activeDisciplines } = useMemo(() => {
+  const { weeklyData, disciplineBreakdown, totals, rpeData, stackedDisciplineData, activeDisciplines, hrZoneDistribution, hrZoneTrend } = useMemo(() => {
     if (!completedSessions?.length)
-      return { weeklyData: [], disciplineBreakdown: [], totals: { sessions: 0, duration: 0, distance: 0, avgRpe: 0 }, rpeData: [], stackedDisciplineData: [], activeDisciplines: [] };
+      return { weeklyData: [], disciplineBreakdown: [], totals: { sessions: 0, duration: 0, distance: 0, avgRpe: 0 }, rpeData: [], stackedDisciplineData: [], activeDisciplines: [], hrZoneDistribution: [], hrZoneTrend: [] };
 
     const weekMap = new Map<string, { week: string; duration: number; distance: number; sessions: number; rpeSum: number; rpeCount: number }>();
     const discMap = new Map<string, { discipline: string; duration: number; distance: number; sessions: number }>();
-    // For stacked discipline chart: week → { discipline: duration }
     const stackedMap = new Map<string, Record<string, string | number>>();
     const allDiscs = new Set<string>();
     let totalDuration = 0, totalDistance = 0, totalRpe = 0, rpeCount = 0;
+
+    // HR zone tracking
+    const zoneCounts = [0, 0, 0, 0, 0];
+    const weekZoneMap = new Map<string, number[]>();
+    // Estimate max HR from data or use 190 as default
+    const allMaxHr = completedSessions.filter(s => s.max_hr).map(s => s.max_hr!);
+    const estimatedMaxHr = allMaxHr.length > 0 ? Math.max(...allMaxHr) : 190;
 
     for (const s of completedSessions) {
       const weekKey = getISOWeekLabel(s.date);
       const dur = Number(s.actual_duration_min) || 0;
       const dist = Number(s.actual_distance_km) || 0;
 
-      // Weekly volume
       const existing = weekMap.get(weekKey) || { week: weekKey, duration: 0, distance: 0, sessions: 0, rpeSum: 0, rpeCount: 0 };
       existing.duration += dur;
       existing.distance += dist;
@@ -91,28 +114,51 @@ export default function Analytics() {
       if (s.rpe) { existing.rpeSum += s.rpe; existing.rpeCount += 1; }
       weekMap.set(weekKey, existing);
 
-      // Discipline totals
       const disc = discMap.get(s.discipline) || { discipline: s.discipline, duration: 0, distance: 0, sessions: 0 };
       disc.duration += dur;
       disc.distance += dist;
       disc.sessions += 1;
       discMap.set(s.discipline, disc);
 
-      // Stacked discipline per week
       const stackRow = stackedMap.get(weekKey) || { week: weekKey };
       stackRow[s.discipline] = (stackRow[s.discipline] as number || 0) + dur;
       stackedMap.set(weekKey, stackRow);
       allDiscs.add(s.discipline);
+
+      // HR zone classification
+      if (s.avg_hr && s.avg_hr > 0) {
+        const zi = estimateZone(s.avg_hr, estimatedMaxHr);
+        zoneCounts[zi] += 1;
+        const wz = weekZoneMap.get(weekKey) || [0, 0, 0, 0, 0];
+        wz[zi] += 1;
+        weekZoneMap.set(weekKey, wz);
+      }
 
       totalDuration += dur;
       totalDistance += dist;
       if (s.rpe) { totalRpe += s.rpe; rpeCount += 1; }
     }
 
-    // RPE trend: avg RPE per week
     const rpeData = Array.from(weekMap.values())
       .filter(w => w.rpeCount > 0)
       .map(w => ({ week: w.week, avgRpe: Math.round((w.rpeSum / w.rpeCount) * 10) / 10, sessions: w.sessions }));
+
+    const totalZoneSessions = zoneCounts.reduce((a, b) => a + b, 0);
+    const hrZoneDistribution = HR_ZONES.map((z, i) => ({
+      name: z.zone,
+      value: zoneCounts[i],
+      pct: totalZoneSessions > 0 ? Math.round((zoneCounts[i] / totalZoneSessions) * 100) : 0,
+      color: z.color,
+    })).filter(z => z.value > 0);
+
+    const hrZoneTrend = Array.from(weekZoneMap.entries()).map(([week, counts]) => {
+      const total = counts.reduce((a, b) => a + b, 0);
+      const row: Record<string, string | number> = { week };
+      HR_ZONES.forEach((z, i) => {
+        row[z.zone] = total > 0 ? Math.round((counts[i] / total) * 100) : 0;
+      });
+      return row;
+    });
 
     return {
       weeklyData: Array.from(weekMap.values()),
@@ -126,6 +172,8 @@ export default function Analytics() {
       rpeData,
       stackedDisciplineData: Array.from(stackedMap.values()),
       activeDisciplines: Array.from(allDiscs).sort(),
+      hrZoneDistribution,
+      hrZoneTrend,
     };
   }, [completedSessions]);
 
@@ -321,6 +369,94 @@ export default function Analytics() {
                       ))}
                     </Bar>
                   </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+        {/* HR Zone Distribution (Pie) */}
+        {hrZoneDistribution.length > 0 && (
+          <motion.div variants={item}>
+            <Card className="glass">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-display flex items-center gap-1.5">
+                  <Heart className="h-3.5 w-3.5 text-destructive" />
+                  HR Zone Distribution
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pb-3">
+                <div className="flex items-center gap-4">
+                  <ResponsiveContainer width="50%" height={160}>
+                    <PieChart>
+                      <Pie
+                        data={hrZoneDistribution}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={35}
+                        outerRadius={65}
+                        paddingAngle={2}
+                      >
+                        {hrZoneDistribution.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={tooltipStyle}
+                        formatter={(value: number, name: string) => [`${value} sessions`, name]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex-1 space-y-1.5">
+                    {hrZoneDistribution.map(z => (
+                      <div key={z.name} className="flex items-center gap-2 text-xs">
+                        <div className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ backgroundColor: z.color }} />
+                        <span className="text-muted-foreground flex-1 truncate">{z.name}</span>
+                        <span className="font-mono font-medium">{z.pct}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* HR Zone Trend Over Weeks (Stacked Area) */}
+        {hrZoneTrend.length > 1 && (
+          <motion.div variants={item}>
+            <Card className="glass">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-display flex items-center gap-1.5">
+                  <Heart className="h-3.5 w-3.5 text-destructive" />
+                  Zone Trend Over Weeks
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pb-3">
+                <ResponsiveContainer width="100%" height={200}>
+                  <AreaChart data={hrZoneTrend} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis dataKey="week" tick={{ fontSize: 10 }} className="fill-muted-foreground" />
+                    <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" unit="%" />
+                    <Tooltip
+                      contentStyle={tooltipStyle}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                      formatter={(value: number, name: string) => [`${value}%`, name]}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 10 }} />
+                    {HR_ZONES.map(z => (
+                      <Area
+                        key={z.zone}
+                        type="monotone"
+                        dataKey={z.zone}
+                        stackId="zones"
+                        stroke={z.color}
+                        fill={z.color}
+                        fillOpacity={0.6}
+                      />
+                    ))}
+                  </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
