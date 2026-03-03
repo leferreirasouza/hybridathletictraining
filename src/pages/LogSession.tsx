@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,9 +10,12 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { Check, AlertTriangle } from 'lucide-react';
+import { Check, AlertTriangle, Link2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { useScheduleData } from '@/hooks/useScheduleData';
+import { getDiscipline, dayLabelsFull } from '@/components/schedule/config';
 import type { Database } from '@/integrations/supabase/types';
 
 type Discipline = Database['public']['Enums']['discipline'];
@@ -33,6 +36,9 @@ const disciplineOptions: { value: Discipline; label: string }[] = [
 
 export default function LogSession() {
   const { user } = useAuth();
+  const { sessions, completedSessions, isLoading: scheduleLoading } = useScheduleData();
+
+  const [plannedSessionId, setPlannedSessionId] = useState<string>('none');
   const [discipline, setDiscipline] = useState<Discipline>('run');
   const [duration, setDuration] = useState('');
   const [distance, setDistance] = useState('');
@@ -44,6 +50,24 @@ export default function LogSession() {
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Build set of already-completed planned session IDs
+  const completedPlanIds = new Set(
+    completedSessions.filter(c => c.planned_session_id).map(c => c.planned_session_id)
+  );
+
+  // Available (not yet completed) planned sessions
+  const availablePlanned = sessions.filter(s => !completedPlanIds.has(s.id));
+
+  // When a planned session is selected, auto-fill fields
+  useEffect(() => {
+    if (plannedSessionId === 'none') return;
+    const ps = sessions.find(s => s.id === plannedSessionId);
+    if (!ps) return;
+    setDiscipline(ps.discipline as Discipline);
+    if (ps.duration_min) setDuration(String(ps.duration_min));
+    if (ps.distance_km) setDistance(String(ps.distance_km));
+  }, [plannedSessionId, sessions]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) { toast.error('Not logged in'); return; }
@@ -51,6 +75,7 @@ export default function LogSession() {
 
     const { error } = await supabase.from('completed_sessions').insert({
       athlete_id: user.id,
+      planned_session_id: plannedSessionId !== 'none' ? plannedSessionId : null,
       discipline,
       actual_duration_min: duration ? parseFloat(duration) : null,
       actual_distance_km: distance ? parseFloat(distance) : null,
@@ -67,7 +92,7 @@ export default function LogSession() {
       toast.error('Failed to log session: ' + error.message);
     } else {
       toast.success('Session logged! Great work 💪');
-      // Reset form
+      setPlannedSessionId('none');
       setDuration('');
       setDistance('');
       setAvgHr('');
@@ -89,6 +114,46 @@ export default function LogSession() {
         onSubmit={handleSubmit}
         className="space-y-4"
       >
+        {/* Link to planned session */}
+        {availablePlanned.length > 0 && (
+          <Card className="glass border-primary/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-display flex items-center gap-2">
+                <Link2 className="h-4 w-4 text-primary" />
+                Link to Planned Session
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Select value={plannedSessionId} onValueChange={setPlannedSessionId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a planned session (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No link — standalone session</SelectItem>
+                  {availablePlanned.map(ps => {
+                    const disc = getDiscipline(ps.discipline);
+                    const dayLabel = dayLabelsFull[ps.day_of_week - 1] || '';
+                    return (
+                      <SelectItem key={ps.id} value={ps.id}>
+                        <span className="flex items-center gap-2">
+                          W{ps.week_number} {dayLabel} · {ps.session_name}
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 ml-1">{disc.label}</Badge>
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {plannedSessionId !== 'none' && (
+                <p className="text-[11px] text-muted-foreground mt-2">
+                  Fields below have been pre-filled from the planned session. Adjust with your actual values.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Activity details */}
         <Card className="glass">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-display">Activity</CardTitle>
@@ -126,6 +191,7 @@ export default function LogSession() {
           </CardContent>
         </Card>
 
+        {/* Effort & Feedback */}
         <Card className="glass">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-display">Effort & Feedback</CardTitle>
