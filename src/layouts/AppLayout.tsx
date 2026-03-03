@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Calendar, Dumbbell, Mail, User, Shield, Eye, Bell } from 'lucide-react';
+import { Home, Calendar, Dumbbell, Mail, User, Shield, Eye, Bell, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useAuth, getAccessibleRoles } from '@/contexts/AuthContext';
@@ -9,6 +9,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { formatDistanceToNow } from 'date-fns';
 
 const roleLabels: Record<string, string> = {
   master_admin: 'Master Admin',
@@ -71,17 +75,50 @@ export default function AppLayout() {
     refetchInterval: 30000,
   });
 
+  const [bellOpen, setBellOpen] = useState(false);
+
+  const { data: recentUnread = [] } = useQuery({
+    queryKey: ['unread-messages-preview', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('direct_messages')
+        .select('id, content, created_at, sender_id')
+        .eq('recipient_id', user.id)
+        .is('read_at', null)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (error || !data?.length) return [];
+
+      // Fetch sender names
+      const senderIds = [...new Set(data.map(m => m.sender_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', senderIds);
+      const nameMap = new Map((profiles || []).map(p => [p.id, p.full_name]));
+
+      return data.map(m => ({
+        ...m,
+        sender_name: nameMap.get(m.sender_id) || 'Unknown',
+      }));
+    },
+    enabled: !!user && bellOpen,
+  });
+
   useEffect(() => {
     if (!user) return;
     const channel = supabase
       .channel('nav-unread-badge')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'direct_messages' }, (payload) => {
-        if ((payload.new as any).recipient_id === user.id) {
+         if ((payload.new as any).recipient_id === user.id) {
           queryClient.invalidateQueries({ queryKey: ['unread-message-count'] });
+          queryClient.invalidateQueries({ queryKey: ['unread-messages-preview'] });
         }
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'direct_messages' }, () => {
         queryClient.invalidateQueries({ queryKey: ['unread-message-count'] });
+        queryClient.invalidateQueries({ queryKey: ['unread-messages-preview'] });
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -103,18 +140,77 @@ export default function AppLayout() {
         !isViewingAs && "safe-top"
       )}>
         <span className="text-sm font-display font-bold text-foreground">Hybrid Athletics</span>
-        <button
-          onClick={() => navigate('/messages')}
-          className="relative p-2 rounded-lg hover:bg-muted/50 transition-colors"
-          aria-label="Messages"
-        >
-          <Bell className="h-5 w-5 text-muted-foreground" />
-          {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold leading-none">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
-        </button>
+        <Popover open={bellOpen} onOpenChange={setBellOpen}>
+          <PopoverTrigger asChild>
+            <button
+              className="relative p-2 rounded-lg hover:bg-muted/50 transition-colors"
+              aria-label="Notifications"
+            >
+              <Bell className="h-5 w-5 text-muted-foreground" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold leading-none">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-80 p-0" sideOffset={8}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <p className="text-sm font-display font-bold">Notifications</p>
+              {unreadCount > 0 && (
+                <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-0">
+                  {unreadCount} unread
+                </Badge>
+              )}
+            </div>
+            <ScrollArea className="max-h-[320px]">
+              {recentUnread.length === 0 ? (
+                <div className="p-6 text-center">
+                  <Bell className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                  <p className="text-sm text-muted-foreground">No unread messages</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {recentUnread.map((msg: any) => (
+                    <button
+                      key={msg.id}
+                      className="w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors"
+                      onClick={() => {
+                        setBellOpen(false);
+                        navigate('/messages');
+                      }}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-medium truncate">{msg.sender_name}</p>
+                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                              {formatDistanceToNow(new Date(msg.created_at), { addSuffix: false })}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{msg.content}</p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+            <div className="border-t border-border p-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs"
+                onClick={() => { setBellOpen(false); navigate('/messages'); }}
+              >
+                View all messages
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
       </header>
 
       {/* View-As banner */}
