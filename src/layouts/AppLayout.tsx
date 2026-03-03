@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Calendar, Dumbbell, Mail, User, Shield, Eye } from 'lucide-react';
+import { Home, Calendar, Dumbbell, Mail, User, Shield, Eye, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useAuth, getAccessibleRoles } from '@/contexts/AuthContext';
@@ -97,9 +97,29 @@ export default function AppLayout() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
+      {/* Top header bar with bell */}
+      <header className={cn(
+        "sticky top-0 z-40 glass border-b flex items-center justify-between px-4 h-12",
+        !isViewingAs && "safe-top"
+      )}>
+        <span className="text-sm font-display font-bold text-foreground">Hybrid Athletics</span>
+        <button
+          onClick={() => navigate('/messages')}
+          className="relative p-2 rounded-lg hover:bg-muted/50 transition-colors"
+          aria-label="Messages"
+        >
+          <Bell className="h-5 w-5 text-muted-foreground" />
+          {unreadCount > 0 && (
+            <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold leading-none">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
+        </button>
+      </header>
+
       {/* View-As banner */}
       {isViewingAs && (
-        <div className="bg-primary/10 border-b border-primary/20 px-4 py-1.5 flex items-center justify-center gap-2 safe-top">
+        <div className="bg-primary/10 border-b border-primary/20 px-4 py-1.5 flex items-center justify-center gap-2">
           <Eye className="h-3.5 w-3.5 text-primary" />
           <span className="text-xs font-medium text-primary">
             Viewing as {roleLabels[viewAsRole!]}
@@ -113,7 +133,7 @@ export default function AppLayout() {
         </div>
       )}
 
-      <main className={cn("flex-1 pb-20", !isViewingAs && "safe-top")}>
+      <main className="flex-1 pb-20">
         <Outlet />
       </main>
 
