@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { SessionCard } from './SessionCard';
@@ -9,10 +10,16 @@ interface WeeklyViewProps {
   sessions: any[];
   weekNumber: number;
   weeklySummary?: any;
+  completedSessions?: any[];
 }
 
-export default function WeeklyView({ sessions, weekNumber, weeklySummary }: WeeklyViewProps) {
+export default function WeeklyView({ sessions, weekNumber, weeklySummary, completedSessions = [] }: WeeklyViewProps) {
   const weekSessions = sessions.filter(s => s.week_number === weekNumber);
+
+  const completedPlanIds = useMemo(
+    () => new Set(completedSessions.filter(c => c.planned_session_id).map(c => c.planned_session_id)),
+    [completedSessions]
+  );
 
   return (
     <motion.div
@@ -75,7 +82,7 @@ export default function WeeklyView({ sessions, weekNumber, weeklySummary }: Week
               {day}
             </span>
             {daySessions.map(session => (
-              <SessionCard key={session.id} session={session} showDay={false} />
+              <SessionCard key={session.id} session={session} showDay={false} isCompleted={completedPlanIds.has(session.id)} />
             ))}
           </div>
         );

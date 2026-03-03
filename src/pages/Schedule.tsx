@@ -142,6 +142,7 @@ export default function Schedule() {
                     sessions={sessions}
                     weekNumber={displayWeek}
                     dayOfWeek={selectedDay}
+                    completedSessions={completedSessions}
                   />
                 </TabsContent>
 
@@ -150,6 +151,7 @@ export default function Schedule() {
                     sessions={sessions}
                     weekNumber={displayWeek}
                     weeklySummary={weeklySummary}
+                    completedSessions={completedSessions}
                   />
                 </TabsContent>
 
