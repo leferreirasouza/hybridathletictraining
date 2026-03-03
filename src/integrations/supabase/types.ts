@@ -535,6 +535,65 @@ export type Database = {
           },
         ]
       }
+      session_substitutions: {
+        Row: {
+          athlete_id: string
+          created_at: string
+          id: string
+          original_session_id: string
+          reason: string
+          reason_details: string | null
+          source: string
+          status: string
+          substitute_discipline: string
+          substitute_duration_min: number | null
+          substitute_notes: string | null
+          substitute_session_name: string
+          substitute_workout_details: string | null
+          substitution_date: string
+        }
+        Insert: {
+          athlete_id: string
+          created_at?: string
+          id?: string
+          original_session_id: string
+          reason: string
+          reason_details?: string | null
+          source?: string
+          status?: string
+          substitute_discipline?: string
+          substitute_duration_min?: number | null
+          substitute_notes?: string | null
+          substitute_session_name: string
+          substitute_workout_details?: string | null
+          substitution_date?: string
+        }
+        Update: {
+          athlete_id?: string
+          created_at?: string
+          id?: string
+          original_session_id?: string
+          reason?: string
+          reason_details?: string | null
+          source?: string
+          status?: string
+          substitute_discipline?: string
+          substitute_duration_min?: number | null
+          substitute_notes?: string | null
+          substitute_session_name?: string
+          substitute_workout_details?: string | null
+          substitution_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_substitutions_original_session_id_fkey"
+            columns: ["original_session_id"]
+            isOneToOne: false
+            referencedRelation: "planned_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       targets: {
         Row: {
           current_reference: string | null

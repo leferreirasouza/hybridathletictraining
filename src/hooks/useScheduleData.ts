@@ -95,10 +95,33 @@ export function useScheduleData() {
     enabled: !!user?.id,
   });
 
+  const { data: substitutions } = useQuery({
+    queryKey: ['session-substitutions', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('session_substitutions' as any)
+        .select('*')
+        .eq('athlete_id', user.id)
+        .in('status', ['active', 'pending_coach']);
+      return error ? [] : (data as any[]) || [];
+    },
+    enabled: !!user?.id,
+  });
+
   const maxWeek = useMemo(() => {
     if (!sessions?.length) return 1;
     return Math.max(...sessions.map(s => s.week_number));
   }, [sessions]);
+
+  // Build a map of session_id -> substitution for quick lookup
+  const substitutionMap = useMemo(() => {
+    const map: Record<string, any> = {};
+    for (const sub of (substitutions || [])) {
+      map[sub.original_session_id] = sub;
+    }
+    return map;
+  }, [substitutions]);
 
   return {
     plans,
@@ -111,6 +134,7 @@ export function useScheduleData() {
     weeklySummaries: weeklySummaries || [],
     targets: targets || [],
     completedSessions: completedSessions || [],
+    substitutionMap,
     maxWeek,
     isLoading: plansLoading || sessionsLoading,
     noPlan: !plansLoading && (!plans || plans.length === 0),

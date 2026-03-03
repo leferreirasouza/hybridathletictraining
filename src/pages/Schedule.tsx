@@ -19,7 +19,7 @@ export default function Schedule() {
   const {
     plans, activePlanId, setSelectedPlanId,
     sessions, weeklySummaries, targets, completedSessions,
-    maxWeek, isLoading, noPlan,
+    substitutionMap, maxWeek, isLoading, noPlan,
   } = useScheduleData();
 
   const [weekOffset, setWeekOffset] = useState(0);
@@ -159,6 +159,7 @@ export default function Schedule() {
                     weekNumber={displayWeek}
                     dayOfWeek={selectedDay}
                     completedSessions={completedSessions}
+                    substitutionMap={substitutionMap}
                   />
                 </TabsContent>
 
@@ -168,6 +169,7 @@ export default function Schedule() {
                     weekNumber={displayWeek}
                     weeklySummary={weeklySummary}
                     completedSessions={completedSessions}
+                    substitutionMap={substitutionMap}
                   />
                 </TabsContent>
 
