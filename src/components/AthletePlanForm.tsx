@@ -104,6 +104,7 @@ export default function AthletePlanForm() {
   const [totalTarget, setTotalTarget] = useState('');
   const [runKmTarget, setRunKmTarget] = useState('');
   const [ageGroup, setAgeGroup] = useState('30-34');
+  const [stationTargets, setStationTargets] = useState<Record<string, string>>({});
 
   // Fetch race results
   const { data: raceResults } = useQuery({
@@ -199,6 +200,7 @@ export default function AthletePlanForm() {
             targetTime: raceType === 'running' && targetTime ? targetTime : undefined,
             totalTarget: raceType === 'hyrox' && totalTarget ? totalTarget : undefined,
             runKmTarget: raceType === 'hyrox' && runKmTarget ? runKmTarget : undefined,
+            stationTargets: raceType === 'hyrox' ? Object.fromEntries(Object.entries(stationTargets).filter(([, v]) => v.trim())) : undefined,
             ageGroup,
             injuries: injuries.trim() || undefined,
             raceResults: hasRaceHistory ? raceResults : undefined,
@@ -249,6 +251,7 @@ export default function AthletePlanForm() {
             // HYROX-specific
             totalTarget: raceType === 'hyrox' && totalTarget ? totalTarget : undefined,
             runKmTarget: raceType === 'hyrox' && runKmTarget ? runKmTarget : undefined,
+            stationTargets: raceType === 'hyrox' ? Object.fromEntries(Object.entries(stationTargets).filter(([, v]) => v.trim())) : undefined,
             ageGroup,
           },
         },
@@ -601,6 +604,35 @@ export default function AthletePlanForm() {
                     Defaults based on {ageGroupRef?.label} age group averages. Adjust to your fitness level.
                   </p>
                 )}
+
+                {/* Per-Station Targets */}
+                <div className="space-y-2 pt-2 border-t border-border/30">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-medium">Station Time Targets (mm:ss)</Label>
+                    <p className="text-[10px] text-muted-foreground">Optional — set goals per station</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {hyroxStations.map(station => {
+                      const lastTime = raceAnalysis?.stationTimes.find(s => s.name === station);
+                      return (
+                        <div key={station} className="flex items-center gap-2">
+                          <Label className="text-[10px] w-24 shrink-0 truncate">{station}</Label>
+                          <Input
+                            value={stationTargets[station] || ''}
+                            onChange={e => setStationTargets(prev => ({ ...prev, [station]: e.target.value }))}
+                            placeholder={lastTime ? fmtTime(lastTime.seconds) : '—'}
+                            className="h-7 text-[11px] font-mono flex-1"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {hasRaceHistory && (
+                    <p className="text-[10px] text-muted-foreground">
+                      Placeholders show your last race times. Set targets to improve specific stations.
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           )}
