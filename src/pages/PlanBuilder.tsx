@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Database } from '@/integrations/supabase/types';
 import * as XLSX from 'xlsx';
+import AthletePlanForm from '@/components/AthletePlanForm';
 
 type Discipline = Database['public']['Enums']['discipline'];
 type Intensity = Database['public']['Enums']['intensity_level'];
@@ -64,7 +65,9 @@ const emptyRow = (): SessionRow => ({
 });
 
 export default function PlanBuilder() {
-  const { user, currentOrg } = useAuth();
+  const { user, currentOrg, currentRole } = useAuth();
+  const isCoach = currentRole === 'coach' || currentRole === 'master_admin';
+
   const [planName, setPlanName] = useState('');
   const [weekCount, setWeekCount] = useState(1);
   const [currentWeek, setCurrentWeek] = useState(1);
@@ -80,7 +83,6 @@ export default function PlanBuilder() {
     }));
   };
 
-  // Ensure each week has at least an empty slot when navigating
   useEffect(() => {
     if (!sessionsByWeek[currentWeek]) {
       setSessionsByWeek(prev => ({ ...prev, [currentWeek]: [emptyRow()] }));
@@ -99,7 +101,6 @@ export default function PlanBuilder() {
     setSaving(true);
 
     try {
-      // 1. Create training plan
       const { data: plan, error: planErr } = await supabase
         .from('training_plans')
         .insert({ name: planName.trim(), organization_id: currentOrg.id, created_by: user.id })
@@ -107,7 +108,6 @@ export default function PlanBuilder() {
         .single();
       if (planErr) throw planErr;
 
-      // 2. Create version
       const { data: version, error: verErr } = await supabase
         .from('plan_versions')
         .insert({ plan_id: plan.id, version_number: 1, created_by: user.id })
@@ -115,7 +115,6 @@ export default function PlanBuilder() {
         .single();
       if (verErr) throw verErr;
 
-      // 3. Collect all sessions across weeks
       const allSessions = Object.entries(sessionsByWeek).flatMap(([week, rows]) =>
         rows
           .filter(r => r.name.trim())
@@ -140,7 +139,6 @@ export default function PlanBuilder() {
       }
 
       toast.success(`Plan "${planName}" saved with ${allSessions.length} sessions!`);
-      // Reset form
       setPlanName('');
       setWeekCount(1);
       setCurrentWeek(1);
@@ -167,22 +165,16 @@ export default function PlanBuilder() {
         const data = await file.arrayBuffer();
         const workbook = XLSX.read(data, { type: 'array' });
 
-        // Find the "Plan (Daily)" sheet or use the first sheet
         const sheetName = workbook.SheetNames.find(s =>
           s.toLowerCase().includes('plan') || s.toLowerCase().includes('daily')
         ) || workbook.SheetNames[0];
 
         const sheet = workbook.Sheets[sheetName];
         const csvData = XLSX.utils.sheet_to_csv(sheet);
-
         const importName = planName.trim() || file.name.replace(/\.(xlsx|xls|csv)$/i, '');
 
         const { data: result, error } = await supabase.functions.invoke('import-plan', {
-          body: {
-            csvData,
-            organizationId: currentOrg.id,
-            planName: importName,
-          },
+          body: { csvData, organizationId: currentOrg.id, planName: importName },
         });
 
         if (error) throw error;
@@ -201,6 +193,17 @@ export default function PlanBuilder() {
     input.click();
   };
 
+  // ---------- ATHLETE VIEW ----------
+  if (!isCoach) {
+    return (
+      <div className="px-4 py-6 max-w-2xl mx-auto space-y-5">
+        <h1 className="text-xl font-display font-bold">Create Your Plan</h1>
+        <AthletePlanForm />
+      </div>
+    );
+  }
+
+  // ---------- COACH VIEW ----------
   return (
     <div className="px-4 py-6 max-w-2xl mx-auto space-y-5">
       <div className="flex items-center justify-between">
