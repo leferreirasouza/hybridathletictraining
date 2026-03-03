@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Calendar, Dumbbell, MessageSquare, User, BarChart3, Shield } from 'lucide-react';
+import { Home, Calendar, Dumbbell, MessageSquare, User, BarChart3, Shield, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,7 +8,7 @@ const athleteTabs = [
   { path: '/dashboard', icon: Home, label: 'Today' },
   { path: '/schedule', icon: Calendar, label: 'Schedule' },
   { path: '/log', icon: Dumbbell, label: 'Log' },
-  { path: '/ai', icon: MessageSquare, label: 'AI Coach' },
+  { path: '/history', icon: ClipboardList, label: 'History' },
   { path: '/profile', icon: User, label: 'Profile' },
 ];
 

@@ -1,9 +1,20 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { getDiscipline, intensityConfig, formatIntensity, dayLabelsFull } from './config';
-import { Clock, MapPin, ChevronRight, Flame } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import { Textarea } from '@/components/ui/textarea';
+import { getDiscipline, intensityConfig, dayLabelsFull } from './config';
+import { Clock, MapPin, ChevronRight, Flame, Check, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 interface Session {
   id: string;
@@ -19,7 +30,7 @@ interface Session {
   date?: string | null;
 }
 
-export function SessionCard({ session, showDay = true }: { session: Session; showDay?: boolean }) {
+export function SessionCard({ session, showDay = true, isCompleted = false }: { session: Session; showDay?: boolean; isCompleted?: boolean }) {
   const disc = getDiscipline(session.discipline);
   const IntIcon = disc.icon;
   const intConf = session.intensity ? intensityConfig[session.intensity] : null;
@@ -32,17 +43,16 @@ export function SessionCard({ session, showDay = true }: { session: Session; sho
           animate={{ opacity: 1, y: 0 }}
           className="cursor-pointer"
         >
-          <Card className="glass hover:border-primary/30 transition-all group">
+          <Card className={`glass hover:border-primary/30 transition-all group ${isCompleted ? 'border-success/30 bg-success/5' : ''}`}>
             <CardContent className="p-3.5">
               <div className="flex items-start gap-3">
-                {/* Discipline icon */}
-                <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${disc.color}`}>
-                  <IntIcon className="h-4.5 w-4.5" />
+                <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${isCompleted ? 'bg-success/15 text-success' : disc.color}`}>
+                  {isCompleted ? <CheckCircle2 className="h-4.5 w-4.5" /> : <IntIcon className="h-4.5 w-4.5" />}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium truncate">{session.session_name}</p>
+                    <p className={`text-sm font-medium truncate ${isCompleted ? 'line-through text-muted-foreground' : ''}`}>{session.session_name}</p>
                     <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                   </div>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -61,6 +71,9 @@ export function SessionCard({ session, showDay = true }: { session: Session; sho
                       <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
                         <MapPin className="h-3 w-3" />{session.distance_km}km
                       </span>
+                    )}
+                    {isCompleted && (
+                      <Badge variant="outline" className="text-[9px] px-1 py-0 border-success/30 text-success">Done</Badge>
                     )}
                   </div>
                 </div>
@@ -83,13 +96,88 @@ export function SessionCard({ session, showDay = true }: { session: Session; sho
       </SheetTrigger>
 
       <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh] overflow-y-auto">
-        <SessionDetailSheet session={session} />
+        <SessionDetailSheet session={session} isCompleted={isCompleted} />
       </SheetContent>
     </Sheet>
   );
 }
 
-function SessionDetailSheet({ session }: { session: Session }) {
+function QuickLogButton({ session }: { session: Session }) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [duration, setDuration] = useState(session.duration_min ? String(session.duration_min) : '');
+  const [distance, setDistance] = useState(session.distance_km ? String(session.distance_km) : '');
+  const [rpe, setRpe] = useState([6]);
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!user) { toast.error('Not logged in'); return; }
+    setSaving(true);
+    const { error } = await supabase.from('completed_sessions').insert({
+      athlete_id: user.id,
+      planned_session_id: session.id,
+      discipline: session.discipline as any,
+      actual_duration_min: duration ? parseFloat(duration) : null,
+      actual_distance_km: distance ? parseFloat(distance) : null,
+      rpe: rpe[0],
+      notes: notes || null,
+    });
+    setSaving(false);
+    if (error) {
+      toast.error('Failed to log: ' + error.message);
+    } else {
+      toast.success('Session logged! 💪');
+      setOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['completed-sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics-completed'] });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="w-full gradient-hyrox" size="lg">
+          <Check className="h-4 w-4 mr-2" /> Mark as Complete
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="font-display">Log: {session.session_name}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Duration (min)</Label>
+              <Input type="number" value={duration} onChange={e => setDuration(e.target.value)} placeholder="45" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Distance (km)</Label>
+              <Input type="number" step="0.1" value={distance} onChange={e => setDistance(e.target.value)} placeholder="8.0" />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">RPE</Label>
+              <Badge variant="secondary" className="font-mono text-xs">{rpe[0]}/10</Badge>
+            </div>
+            <Slider value={rpe} onValueChange={setRpe} min={1} max={10} step={1} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Notes (optional)</Label>
+            <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="How did it go?" rows={2} />
+          </div>
+          <Button className="w-full gradient-hyrox" onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving…' : 'Save'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SessionDetailSheet({ session, isCompleted }: { session: Session; isCompleted?: boolean }) {
   const disc = getDiscipline(session.discipline);
   const IntIcon = disc.icon;
   const intConf = session.intensity ? intensityConfig[session.intensity] : null;
@@ -139,6 +227,15 @@ function SessionDetailSheet({ session }: { session: Session }) {
         <div className="space-y-1.5">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Notes</h3>
           <p className="text-sm text-muted-foreground">{session.notes}</p>
+        </div>
+      )}
+
+      {/* Quick log button */}
+      {!isCompleted && <QuickLogButton session={session} />}
+      {isCompleted && (
+        <div className="flex items-center justify-center gap-2 text-success text-sm py-2">
+          <CheckCircle2 className="h-4 w-4" />
+          <span className="font-medium">Completed</span>
         </div>
       )}
     </div>

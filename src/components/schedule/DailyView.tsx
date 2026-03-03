@@ -1,16 +1,23 @@
 import { SessionCard } from './SessionCard';
 import { dayLabelsFull } from './config';
 import { motion } from 'framer-motion';
+import { useMemo } from 'react';
 
 interface DailyViewProps {
   sessions: any[];
   weekNumber: number;
   dayOfWeek: number;
+  completedSessions?: any[];
 }
 
-export default function DailyView({ sessions, weekNumber, dayOfWeek }: DailyViewProps) {
+export default function DailyView({ sessions, weekNumber, dayOfWeek, completedSessions = [] }: DailyViewProps) {
   const daySessions = sessions.filter(
     s => s.week_number === weekNumber && s.day_of_week === dayOfWeek
+  );
+
+  const completedPlanIds = useMemo(
+    () => new Set(completedSessions.filter(c => c.planned_session_id).map(c => c.planned_session_id)),
+    [completedSessions]
   );
 
   return (
@@ -35,7 +42,7 @@ export default function DailyView({ sessions, weekNumber, dayOfWeek }: DailyView
       ) : (
         <div className="space-y-2">
           {daySessions.map(session => (
-            <SessionCard key={session.id} session={session} showDay={false} />
+            <SessionCard key={session.id} session={session} showDay={false} isCompleted={completedPlanIds.has(session.id)} />
           ))}
         </div>
       )}
