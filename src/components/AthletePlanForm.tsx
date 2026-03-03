@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Sparkles, Trophy } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Loader2, Sparkles, Trophy, CalendarIcon, MapPin, Flag } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { format, differenceInWeeks, differenceInDays } from 'date-fns';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,7 +44,9 @@ export default function AthletePlanForm() {
   const [trainingDays, setTrainingDays] = useState('4');
   const [easyPace, setEasyPace] = useState('');
   const [racePace, setRacePace] = useState('');
-  const [raceDate, setRaceDate] = useState('');
+  const [nextRaceDate, setNextRaceDate] = useState<Date | undefined>();
+  const [nextRaceName, setNextRaceName] = useState('');
+  const [nextRaceLocation, setNextRaceLocation] = useState('');
   const [planWeeks, setPlanWeeks] = useState('8');
   const [planFocus, setPlanFocus] = useState('balanced');
   const [weakStations, setWeakStations] = useState<string[]>([]);
@@ -85,7 +91,9 @@ export default function AthletePlanForm() {
             trainingDays: parseInt(trainingDays),
             easyPace: easyPace || undefined,
             racePace: racePace || undefined,
-            raceDate: raceDate || undefined,
+            raceDate: nextRaceDate ? format(nextRaceDate, 'yyyy-MM-dd') : undefined,
+            raceName: nextRaceName.trim() || undefined,
+            raceLocation: nextRaceLocation.trim() || undefined,
             planWeeks: parseInt(planWeeks) || 8,
             planFocus,
             weakStations: weakStations.length > 0 ? weakStations : undefined,
@@ -249,11 +257,83 @@ export default function AthletePlanForm() {
             </div>
           </div>
 
-          {/* Race Date */}
-          <div className="space-y-2">
-            <Label>Goal Race Date (optional)</Label>
-            <Input type="date" value={raceDate} onChange={e => setRaceDate(e.target.value)} className="h-9" />
-          </div>
+          {/* Next Race */}
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Flag className="h-4 w-4 text-primary" />
+                <Label className="font-display font-bold text-sm">Next Race Target</Label>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Race Name</Label>
+                  <Input
+                    value={nextRaceName}
+                    onChange={e => setNextRaceName(e.target.value)}
+                    placeholder="HYROX Munich"
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs flex items-center gap-1"><MapPin className="h-3 w-3" /> Location</Label>
+                  <Input
+                    value={nextRaceLocation}
+                    onChange={e => setNextRaceLocation(e.target.value)}
+                    placeholder="Munich, DE"
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Race Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal h-9",
+                        !nextRaceDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="h-4 w-4 mr-2" />
+                      {nextRaceDate ? format(nextRaceDate, 'PPP') : 'Pick your race date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={nextRaceDate}
+                      onSelect={(date) => {
+                        setNextRaceDate(date);
+                        if (date) {
+                          const weeks = differenceInWeeks(date, new Date());
+                          if (weeks >= 4 && weeks <= 16) {
+                            const closest = [4, 6, 8, 10, 12, 16].reduce((prev, curr) =>
+                              Math.abs(curr - weeks) < Math.abs(prev - weeks) ? curr : prev
+                            );
+                            setPlanWeeks(String(closest));
+                          }
+                        }
+                      }}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              {nextRaceDate && (
+                <div className="flex items-center gap-2 pt-1">
+                  <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-0">
+                    {differenceInDays(nextRaceDate, new Date())} days away
+                  </Badge>
+                  <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-0">
+                    ~{differenceInWeeks(nextRaceDate, new Date())} weeks → {planWeeks}w plan
+                  </Badge>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Weak Stations */}
           <div className="space-y-2">
