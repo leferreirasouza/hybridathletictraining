@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, currentRole, signOut } = useAuth();
+  const { user, currentRole, effectiveRole, signOut } = useAuth();
   const name = user?.user_metadata?.full_name || 'User';
   const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
 
@@ -71,7 +71,7 @@ export default function Profile() {
                 <div>
                   <h1 className="text-xl font-display font-bold">{name}</h1>
                   <p className="text-sm text-muted-foreground">{user?.email}</p>
-                  <Badge variant="secondary" className="mt-1 capitalize">{currentRole || 'athlete'}</Badge>
+                  <Badge variant="secondary" className="mt-1 capitalize">{(effectiveRole || 'athlete').replace('_', ' ')}</Badge>
                 </div>
                 <Button size="icon" variant="ghost" className="h-8 w-8 ml-auto" onClick={() => setEditing(true)}>
                   <Pencil className="h-3.5 w-3.5 text-muted-foreground" />

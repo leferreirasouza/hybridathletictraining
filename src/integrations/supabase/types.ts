@@ -101,6 +101,7 @@ export type Database = {
         Row: {
           athlete_id: string
           coach_id: string
+          coach_type: string
           created_at: string
           id: string
           organization_id: string
@@ -108,6 +109,7 @@ export type Database = {
         Insert: {
           athlete_id: string
           coach_id: string
+          coach_type?: string
           created_at?: string
           id?: string
           organization_id: string
@@ -115,6 +117,7 @@ export type Database = {
         Update: {
           athlete_id?: string
           coach_id?: string
+          coach_type?: string
           created_at?: string
           id?: string
           organization_id?: string
@@ -801,7 +804,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "master_admin" | "coach" | "athlete"
+      app_role: "master_admin" | "admin" | "coach" | "athlete"
       block_type:
         | "warmup"
         | "main"
@@ -949,7 +952,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["master_admin", "coach", "athlete"],
+      app_role: ["master_admin", "admin", "coach", "athlete"],
       block_type: [
         "warmup",
         "main",

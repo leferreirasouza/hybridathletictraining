@@ -42,7 +42,7 @@ function initials(name: string) {
 }
 
 export default function Messages() {
-  const { user, currentOrg, currentRole } = useAuth();
+  const { user, currentOrg, effectiveRole } = useAuth();
   const queryClient = useQueryClient();
   const [activeContactId, setActiveContactId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -54,7 +54,7 @@ export default function Messages() {
     queryFn: async () => {
       if (!user || !currentOrg) return [];
 
-      const isCoach = currentRole === 'coach' || currentRole === 'master_admin';
+      const isCoach = effectiveRole === 'coach' || effectiveRole === 'admin' || effectiveRole === 'master_admin';
 
       const { data: assignments } = await supabase
         .from('coach_athlete_assignments')
@@ -318,7 +318,7 @@ export default function Messages() {
           <MessageSquare className="h-10 w-10 mx-auto text-muted-foreground" />
           <p className="font-display font-bold">No Conversations</p>
           <p className="text-sm text-muted-foreground">
-            {currentRole === 'athlete'
+            {effectiveRole === 'athlete'
               ? 'You need to be assigned to a coach to start messaging.'
               : 'Assign athletes to start messaging them.'}
           </p>
