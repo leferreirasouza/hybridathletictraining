@@ -230,6 +230,13 @@ export default function AuthPage() {
           and{' '}
           <Link to="/privacy" className="underline hover:text-foreground">Privacy Policy</Link>.
         </p>
+        <p className="text-xs text-center text-muted-foreground mt-2 space-x-2">
+          <Link to="/about" className="underline hover:text-foreground">About</Link>
+          <span>·</span>
+          <Link to="/faq" className="underline hover:text-foreground">FAQ</Link>
+          <span>·</span>
+          <Link to="/contact" className="underline hover:text-foreground">Contact</Link>
+        </p>
       </motion.div>
     </div>
   );
