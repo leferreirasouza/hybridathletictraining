@@ -352,7 +352,7 @@ export default function ExerciseLibrary() {
       <div className="flex gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search exercises..." className="pl-9" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('exerciseLibrary.searchExercises')} className="pl-9" />
         </div>
         <Select value={filterCategory} onValueChange={setFilterCategory}>
           <SelectTrigger className="w-[140px]"><SelectValue placeholder="Category" /></SelectTrigger>
