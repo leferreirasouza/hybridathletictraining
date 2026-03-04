@@ -72,6 +72,7 @@ export default function ExerciseLibrary() {
   const [screenshotOpen, setScreenshotOpen] = useState(false);
 
   const isCoachOrAdmin = effectiveRole && ['coach', 'admin', 'master_admin'].includes(effectiveRole);
+  const isMasterAdmin = effectiveRole === 'master_admin';
 
   const { data: exercises = [], isLoading } = useQuery({
     queryKey: ['exercise-library', currentOrg?.id],
@@ -240,7 +241,7 @@ export default function ExerciseLibrary() {
             {exercises.length} exercises · {approvedCount} approved · {pendingCount} pending review
           </p>
         </div>
-        {isCoachOrAdmin && (
+        {isMasterAdmin && (
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setScreenshotOpen(true)}>
               <Camera className="h-4 w-4 mr-1" />
@@ -407,7 +408,7 @@ export default function ExerciseLibrary() {
                   </p>
                 )}
               </div>
-              {isCoachOrAdmin && (
+              {isMasterAdmin && (
                 <div className="flex items-center gap-1 shrink-0">
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleApproval.mutate({ id: ex.id, approved: !ex.is_approved })}>
                     {ex.is_approved ? <X className="h-3.5 w-3.5 text-muted-foreground" /> : <Check className="h-3.5 w-3.5 text-primary" />}
