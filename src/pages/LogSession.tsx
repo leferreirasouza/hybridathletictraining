@@ -103,7 +103,7 @@ export default function LogSession() {
         distance: distance ? parseFloat(distance) : null,
         linked: plannedSessionId !== 'none',
       });
-      toast.success('Session logged! Great work 💪');
+      toast.success(t('logSession.sessionLogged'));
       setShareData({
         discipline,
         date: new Date().toISOString().split('T')[0],
