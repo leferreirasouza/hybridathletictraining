@@ -193,10 +193,12 @@ export default function RacePicker({ onSelect, selectedRaceId, planType }: RaceP
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {Object.entries(RACE_TYPE_LABELS).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{v}</SelectItem>
-                ))}
+                <SelectItem value="all">{allowedTypes ? (planType === 'hyrox' ? 'HYROX' : 'All Running') : 'All Types'}</SelectItem>
+                {Object.entries(RACE_TYPE_LABELS)
+                  .filter(([k]) => !allowedTypes || allowedTypes.includes(k))
+                  .map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
               </SelectContent>
             </Select>
             <Select value={countryFilter} onValueChange={setCountryFilter}>
