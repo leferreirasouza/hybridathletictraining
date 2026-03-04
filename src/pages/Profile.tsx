@@ -94,41 +94,25 @@ export default function Profile() {
   const [editingBio, setEditingBio] = useState(false);
   const [bioForm, setBioForm] = useState({ age: '', weight_kg: '', max_hr: '', fitness_level: 'intermediate' });
   const [editingGoal, setEditingGoal] = useState(false);
-  const [goalForm, setGoalForm] = useState({ goal_race_name: '', goal_race_date: '', goal_race_location: '' });
-
-  const startEditBio = () => {
-    setBioForm({
-      age: profile?.age?.toString() || '',
-      weight_kg: profile?.weight_kg?.toString() || '',
-      max_hr: profile?.max_hr?.toString() || '',
-      fitness_level: profile?.fitness_level || 'intermediate',
-    });
-    setEditingBio(true);
-  };
-
-  const saveBio = async () => {
-    setSaving(true);
-    const { error } = await supabase.from('profiles').update({
-      age: bioForm.age ? parseInt(bioForm.age) : null,
-      weight_kg: bioForm.weight_kg ? parseFloat(bioForm.weight_kg) : null,
-      max_hr: bioForm.max_hr ? parseInt(bioForm.max_hr) : null,
-      fitness_level: bioForm.fitness_level,
-    } as any).eq('id', user!.id);
-    setSaving(false);
-    if (error) { toast.error('Failed to save'); return; }
-    toast.success(t('profile.profileUpdated'));
-    setEditingBio(false);
-    queryClient.invalidateQueries({ queryKey: ['profile-full'] });
-    queryClient.invalidateQueries({ queryKey: ['profile-completion'] });
-  };
+  const [goalForm, setGoalForm] = useState({ goal_race_name: '', goal_race_date: '', goal_race_location: '', goal_race_id: '' });
 
   const startEditGoal = () => {
     setGoalForm({
       goal_race_name: profile?.goal_race_name || '',
       goal_race_date: profile?.goal_race_date || '',
       goal_race_location: profile?.goal_race_location || '',
+      goal_race_id: (profile as any)?.goal_race_id || '',
     });
     setEditingGoal(true);
+  };
+
+  const handleRaceSelected = (race: any) => {
+    setGoalForm({
+      goal_race_name: race.race_name,
+      goal_race_date: race.race_date,
+      goal_race_location: race.city ? `${race.city}, ${race.country}` : race.country,
+      goal_race_id: race.id,
+    });
   };
 
   const saveGoal = async () => {
@@ -137,6 +121,7 @@ export default function Profile() {
       goal_race_name: goalForm.goal_race_name.trim() || null,
       goal_race_date: goalForm.goal_race_date || null,
       goal_race_location: goalForm.goal_race_location.trim() || null,
+      goal_race_id: goalForm.goal_race_id || null,
     } as any).eq('id', user!.id);
     setSaving(false);
     if (error) { toast.error('Failed to save'); return; }
