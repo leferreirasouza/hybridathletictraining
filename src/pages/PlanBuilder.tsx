@@ -101,7 +101,7 @@ export default function PlanBuilder() {
     try {
       const { data: plan, error: planErr } = await supabase
         .from('training_plans')
-        .insert({ name: planName.trim(), organization_id: currentOrg.id, created_by: user.id })
+        .insert({ name: planName.trim(), organization_id: currentOrg.id, created_by: user.id, source: 'manual' })
         .select().single();
       if (planErr) throw planErr;
       const { data: version, error: verErr } = await supabase

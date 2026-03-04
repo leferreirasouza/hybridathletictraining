@@ -122,7 +122,7 @@ serve(async (req) => {
     // Create training plan
     const { data: plan, error: planError } = await supabase
       .from("training_plans")
-      .insert({ name: planName, organization_id: organizationId, created_by: user.id })
+      .insert({ name: planName, organization_id: organizationId, created_by: user.id, source: 'spreadsheet' })
       .select()
       .single();
     if (planError) throw planError;

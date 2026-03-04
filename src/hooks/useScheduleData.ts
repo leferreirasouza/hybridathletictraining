@@ -22,8 +22,9 @@ export function useScheduleData() {
       if (!currentOrg) return [];
       const { data, error } = await supabase
         .from('training_plans')
-        .select('id, name, created_at')
+        .select('id, name, created_at, source, archived_at')
         .eq('organization_id', currentOrg.id)
+        .is('archived_at', null)
         .order('created_at', { ascending: false });
       return error ? [] : data || [];
     },
