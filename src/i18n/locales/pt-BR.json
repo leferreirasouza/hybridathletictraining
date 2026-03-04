@@ -277,7 +277,11 @@
     "removeImage": "Remover",
     "parsing": "Analisando {{current}}/{{total}}…",
     "screenshotData": "Dados da captura",
-    "overwriteWarning": "Isso substituirá os campos atuais do formulário com os dados extraídos."
+    "overwriteWarning": "Isso substituirá os campos atuais do formulário com os dados extraídos.",
+    "multipleRacesDetected": "{{count}} corridas distintas detectadas!",
+    "racesDetected": "{{count}} Corridas Detectadas",
+    "saveAllRaces": "Salvar {{count}} Corrida(s)",
+    "multiSaved": "{{count}} resultados salvos!"
   },
   "history": {
     "title": "Histórico de Sessões",
