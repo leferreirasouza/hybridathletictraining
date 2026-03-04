@@ -340,7 +340,7 @@ export default function ExerciseLibrary() {
                 </ScrollArea>
                 <Button onClick={() => saveMutation.mutate(form)} disabled={!form.name || saveMutation.isPending} className="mt-2">
                   {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                  {editingId ? 'Update' : 'Add Exercise'}
+                  {editingId ? t('exerciseLibrary.update') : t('exerciseLibrary.addExercise')}
                 </Button>
               </DialogContent>
             </Dialog>
