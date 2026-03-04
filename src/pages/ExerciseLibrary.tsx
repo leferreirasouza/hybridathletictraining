@@ -357,16 +357,16 @@ export default function ExerciseLibrary() {
         <Select value={filterCategory} onValueChange={setFilterCategory}>
           <SelectTrigger className="w-[140px]"><SelectValue placeholder="Category" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All categories</SelectItem>
+            <SelectItem value="all">{t('exerciseLibrary.allCategories')}</SelectItem>
             {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c.replace('_', ' ')}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterApproved} onValueChange={setFilterApproved}>
           <SelectTrigger className="w-[130px]"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All status</SelectItem>
-            <SelectItem value="approved">Approved</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="all">{t('exerciseLibrary.allStatus')}</SelectItem>
+            <SelectItem value="approved">{t('exerciseLibrary.approved')}</SelectItem>
+            <SelectItem value="pending">{t('exerciseLibrary.pending')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
