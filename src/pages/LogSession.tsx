@@ -20,6 +20,7 @@ import { getDiscipline, dayLabelsFull } from '@/components/schedule/config';
 import type { Database } from '@/integrations/supabase/types';
 import ShareWorkoutDialog from '@/components/share/ShareWorkoutDialog';
 import type { ShareSessionData } from '@/components/share/types';
+import { useTranslation } from 'react-i18next';
 
 type Discipline = Database['public']['Enums']['discipline'];
 
