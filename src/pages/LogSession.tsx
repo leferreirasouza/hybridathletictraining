@@ -239,7 +239,7 @@ export default function LogSession() {
                 <Textarea
                   value={painNotes}
                   onChange={e => setPainNotes(e.target.value)}
-                  placeholder="Describe the pain location and severity…"
+                  placeholder={t('logSession.painDesc')}
                   rows={2}
                 />
               </motion.div>
