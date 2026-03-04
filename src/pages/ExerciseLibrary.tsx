@@ -237,10 +237,10 @@ export default function ExerciseLibrary() {
         <div>
           <h1 className="text-xl font-display font-bold flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-primary" />
-            Exercise Library
+            {t('exerciseLibrary.title')}
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {exercises.length} exercises · {approvedCount} approved · {pendingCount} pending review
+            {t('exerciseLibrary.exercisesCount', { total: exercises.length, approved: approvedCount, pending: pendingCount })}
           </p>
         </div>
         {isMasterAdmin && (
