@@ -265,6 +265,68 @@ Plan Duration (weeks): ${profile.planWeeks || "8"}
     // ---- FULL PLAN GENERATION ----
     if (!organizationId) throw new Error("Missing organizationId");
 
+    // Fetch existing sessions from OTHER plans to calculate aggregate load
+    const { data: existingPlans } = await supabase
+      .from("training_plans")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .neq("created_by", "placeholder"); // all org plans
+
+    let existingLoadSection = "";
+    if (existingPlans && existingPlans.length > 0) {
+      const planIds = existingPlans.map((p: any) => p.id);
+      // Get latest version per plan
+      const versionIds: string[] = [];
+      for (const pid of planIds) {
+        const { data: ver } = await supabase
+          .from("plan_versions")
+          .select("id")
+          .eq("plan_id", pid)
+          .order("version_number", { ascending: false })
+          .limit(1)
+          .single();
+        if (ver) versionIds.push(ver.id);
+      }
+      if (versionIds.length > 0) {
+        const { data: existingSessions } = await supabase
+          .from("planned_sessions")
+          .select("week_number, day_of_week, discipline, intensity, distance_km, duration_min")
+          .in("plan_version_id", versionIds);
+
+        if (existingSessions && existingSessions.length > 0) {
+          const experience = profile.experience || "intermediate";
+
+          // Safety limits by experience
+          const MAX_RUN_KM: Record<string, number> = { beginner: 30, intermediate: 55, advanced: 80, elite: 120 };
+          const MAX_SESSIONS: Record<string, number> = { beginner: 5, intermediate: 7, advanced: 10, elite: 12 };
+          const MAX_DURATION: Record<string, number> = { beginner: 300, intermediate: 480, advanced: 660, elite: 900 };
+          const MAX_HIGH: Record<string, number> = { beginner: 2, intermediate: 3, advanced: 4, elite: 5 };
+
+          const weeks = [...new Set(existingSessions.map((s: any) => s.week_number))].sort();
+          existingLoadSection = `\n\n⚠️ EXISTING TRAINING LOAD FROM OTHER ACTIVE PLANS:\n`;
+          existingLoadSection += `The athlete already has ${existingSessions.length} sessions across ${weeks.length} weeks.\n`;
+          for (const w of weeks) {
+            const ws = existingSessions.filter((s: any) => s.week_number === w);
+            const runKm = ws.filter((s: any) => s.discipline === "run").reduce((sum: number, s: any) => sum + (Number(s.distance_km) || 0), 0);
+            const dur = ws.reduce((sum: number, s: any) => sum + (Number(s.duration_min) || 0), 0);
+            const hi = ws.filter((s: any) => ["hard", "race_pace", "max_effort"].includes(s.intensity)).length;
+            existingLoadSection += `  Week ${w}: ${ws.length} sessions, ${runKm.toFixed(1)}km run, ${Math.round(dur)}min, ${hi} high-intensity\n`;
+          }
+          existingLoadSection += `\nSAFETY LIMITS (${experience}):\n`;
+          existingLoadSection += `- Max weekly running: ${MAX_RUN_KM[experience] || 55}km TOTAL across all plans\n`;
+          existingLoadSection += `- Max weekly sessions: ${MAX_SESSIONS[experience] || 7} TOTAL\n`;
+          existingLoadSection += `- Max weekly duration: ${MAX_DURATION[experience] || 480}min TOTAL\n`;
+          existingLoadSection += `- Max high-intensity/week: ${MAX_HIGH[experience] || 3} TOTAL\n`;
+          existingLoadSection += `- Max 10% weekly mileage increase\n`;
+          existingLoadSection += `- Include ≥1 strength/prehab session per week\n`;
+          existingLoadSection += `- Max 5 consecutive training days\n`;
+          existingLoadSection += `\nCRITICAL: The NEW plan combined with existing load MUST stay within these limits. Reduce volume, avoid overlapping high-intensity days, or lower intensity. Safety > performance.\n`;
+        }
+      }
+    }
+
+    athleteDesc += existingLoadSection;
+
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
