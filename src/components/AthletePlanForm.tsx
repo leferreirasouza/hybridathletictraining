@@ -661,12 +661,20 @@ export default function AthletePlanForm() {
                 <Flag className="h-4 w-4 text-primary" />
                 <Label className="font-display font-bold text-sm">Next Race</Label>
               </div>
+
+              {/* Race Picker from database */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Search Official Races</Label>
+                <RacePicker onSelect={handleRaceSelect} selectedRaceId={selectedRaceId} />
+              </div>
+
+              {/* Manual override fields */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Race Name</Label>
                   <Input
                     value={nextRaceName}
-                    onChange={e => setNextRaceName(e.target.value)}
+                    onChange={e => { setNextRaceName(e.target.value); setSelectedRaceId(undefined); }}
                     placeholder={raceType === 'hyrox' ? 'HYROX Munich' : 'City Marathon'}
                     className="h-8 text-xs"
                   />
@@ -675,7 +683,7 @@ export default function AthletePlanForm() {
                   <Label className="text-xs flex items-center gap-1"><MapPin className="h-3 w-3" /> Location</Label>
                   <Input
                     value={nextRaceLocation}
-                    onChange={e => setNextRaceLocation(e.target.value)}
+                    onChange={e => { setNextRaceLocation(e.target.value); setSelectedRaceId(undefined); }}
                     placeholder="Munich, DE"
                     className="h-8 text-xs"
                   />
@@ -702,6 +710,7 @@ export default function AthletePlanForm() {
                       selected={nextRaceDate}
                       onSelect={(date) => {
                         setNextRaceDate(date);
+                        setSelectedRaceId(undefined);
                         if (date) {
                           const weeks = differenceInWeeks(date, new Date());
                           if (weeks >= 4 && weeks <= 16) {
