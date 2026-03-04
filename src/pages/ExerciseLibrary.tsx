@@ -255,7 +255,7 @@ export default function ExerciseLibrary() {
             </Button>
             <Dialog open={dialogOpen} onOpenChange={(v) => { setDialogOpen(v); if (!v) resetForm(); }}>
               <DialogTrigger asChild>
-                <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Add</Button>
+                <Button size="sm"><Plus className="h-4 w-4 mr-1" /> {t('exerciseLibrary.add')}</Button>
               </DialogTrigger>
               <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
                 <DialogHeader>
