@@ -150,7 +150,7 @@ export default function LogSession() {
                   <SelectValue placeholder={t('logSession.selectPlanned')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">No link — standalone session</SelectItem>
+                  <SelectItem value="none">{t('logSession.noLink')}</SelectItem>
                   {availablePlanned.map(ps => {
                     const disc = getDiscipline(ps.discipline);
                     const dayLabel = dayLabelsFull[ps.day_of_week - 1] || '';
