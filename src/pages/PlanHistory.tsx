@@ -164,11 +164,11 @@ export default function PlanHistory() {
       </div>
 
       {/* Protection notice */}
-      <Card className="border-amber-500/30 bg-amber-500/5">
+      <Card className="border-destructive/30 bg-destructive/5">
         <CardContent className="p-4 flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+          <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
           <div className="text-sm">
-            <p className="font-medium text-amber-600 dark:text-amber-400">Plan Protection Active</p>
+            <p className="font-medium text-destructive">Plan Protection Active</p>
             <p className="text-muted-foreground mt-1">
               Coach-imported plans are never deleted or overwritten. AI-generated athlete plans are added alongside existing plans.
               Archived plans retain all sessions and can be restored at any time.
