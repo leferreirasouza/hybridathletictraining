@@ -70,6 +70,7 @@ export default function KnowledgeLibraryTab() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [viewDoc, setViewDoc] = useState<KnowledgeDocument | null>(null);
 
   const { data: documents = [], isLoading, refetch } = useQuery({
     queryKey: ['admin-knowledge-documents'],
