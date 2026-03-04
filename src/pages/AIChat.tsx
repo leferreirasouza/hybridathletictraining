@@ -6,6 +6,7 @@ import { Send, Bot, User, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -44,22 +45,35 @@ export default function AIChat() {
     let assistantSoFar = '';
 
     try {
+      // Get the user's actual JWT for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('You must be logged in to use AI Coach.');
+        setIsLoading(false);
+        return;
+      }
+
       const resp = await fetch(CHAT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ messages: allMessages }),
       });
 
+      if (resp.status === 401) {
+        toast.error('Session expired. Please log in again.');
+        setIsLoading(false);
+        return;
+      }
       if (resp.status === 429) {
         toast.error('Rate limit exceeded. Please wait a moment.');
         setIsLoading(false);
         return;
       }
       if (resp.status === 402) {
-        toast.error('AI credits exhausted. Add credits in Settings → Workspace → Usage.');
+        toast.error('AI credits exhausted.');
         setIsLoading(false);
         return;
       }
