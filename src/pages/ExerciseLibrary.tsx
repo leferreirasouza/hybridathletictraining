@@ -251,7 +251,7 @@ export default function ExerciseLibrary() {
             </Button>
             <Button variant="outline" size="sm" onClick={handleSeedAI} disabled={seedLoading}>
               {seedLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Sparkles className="h-4 w-4 mr-1" />}
-              AI Seed
+              {t('exerciseLibrary.aiSeed')}
             </Button>
             <Dialog open={dialogOpen} onOpenChange={(v) => { setDialogOpen(v); if (!v) resetForm(); }}>
               <DialogTrigger asChild>
