@@ -181,9 +181,9 @@ export default function LogSession() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Discipline</Label>
+              <Label>{t('logSession.discipline')}</Label>
               <Select value={discipline} onValueChange={(v) => setDiscipline(v as Discipline)}>
-                <SelectTrigger><SelectValue placeholder="Select discipline" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t('logSession.discipline')} /></SelectTrigger>
                 <SelectContent>
                   {disciplineOptions.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
                 </SelectContent>
