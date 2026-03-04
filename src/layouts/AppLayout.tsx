@@ -237,7 +237,7 @@ export default function AppLayout() {
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 glass border-t safe-bottom">
-        <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
+        <div className="flex items-center justify-around h-16 max-w-lg md:max-w-3xl lg:max-w-5xl mx-auto px-2">
           {tabs.map((tab) => {
             const isActive = location.pathname === tab.path ||
               (tab.path !== '/dashboard' && location.pathname.startsWith(tab.path));
