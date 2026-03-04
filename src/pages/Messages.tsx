@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Send, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 interface Contact {
   id: string;
@@ -42,6 +43,7 @@ function initials(name: string) {
 }
 
 export default function Messages() {
+  const { t } = useTranslation();
   const { user, currentOrg, effectiveRole } = useAuth();
   const queryClient = useQueryClient();
   const [activeContactId, setActiveContactId] = useState<string | null>(null);
@@ -215,8 +217,8 @@ export default function Messages() {
 
   function formatDateLabel(dateStr: string) {
     const d = new Date(dateStr);
-    if (isToday(d)) return 'Today';
-    if (isYesterday(d)) return 'Yesterday';
+    if (isToday(d)) return t('messages.today');
+    if (isYesterday(d)) return t('messages.yesterday');
     return format(d, 'EEEE, d MMM');
   }
 
@@ -244,7 +246,7 @@ export default function Messages() {
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
           {messages.length === 0 && (
             <p className="text-center text-sm text-muted-foreground py-8">
-              No messages yet. Say hello! 👋
+              {t('messages.noMessagesYet')}
             </p>
           )}
           {groupedMessages.map(group => (
@@ -288,7 +290,7 @@ export default function Messages() {
             className="flex items-center gap-2"
           >
             <Input
-              placeholder="Type a message..."
+              placeholder={t('messages.typeMessage')}
               value={draft}
               onChange={e => setDraft(e.target.value)}
               className="flex-1"
@@ -311,16 +313,16 @@ export default function Messages() {
   // Contact list view
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-4">
-      <h1 className="text-xl font-display font-bold">Messages</h1>
+      <h1 className="text-xl font-display font-bold">{t('messages.title')}</h1>
 
       {contacts.length === 0 ? (
         <Card className="p-8 text-center space-y-3">
           <MessageSquare className="h-10 w-10 mx-auto text-muted-foreground" />
-          <p className="font-display font-bold">No Conversations</p>
+          <p className="font-display font-bold">{t('messages.noConversations')}</p>
           <p className="text-sm text-muted-foreground">
             {effectiveRole === 'athlete'
-              ? 'You need to be assigned to a coach to start messaging.'
-              : 'Assign athletes to start messaging them.'}
+              ? t('messages.athleteNoCoach')
+              : t('messages.coachNoAthletes')}
           </p>
         </Card>
       ) : (
@@ -347,7 +349,7 @@ export default function Messages() {
                 </div>
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-muted-foreground truncate">
-                    {c.lastMessage || 'Start a conversation'}
+                    {c.lastMessage || t('messages.startConversation')}
                   </p>
                   {c.unreadCount > 0 && (
                     <Badge variant="default" className="ml-2 h-5 min-w-[20px] text-[10px] gradient-hyrox border-0">

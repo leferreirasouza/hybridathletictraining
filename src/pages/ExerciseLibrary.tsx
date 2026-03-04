@@ -15,6 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { Plus, Search, Sparkles, Check, X, Edit2, Trash2, Loader2, Dumbbell, ShieldCheck, AlertTriangle, BookOpen, Camera } from 'lucide-react';
 import ScreenshotParserDialog from '@/components/exercises/ScreenshotParserDialog';
+import { useTranslation } from 'react-i18next';
 
 const CATEGORIES = ['strength', 'endurance', 'mobility', 'plyometric', 'station_specific', 'accessory', 'warmup', 'cooldown', 'general'];
 const DIFFICULTIES = ['beginner', 'intermediate', 'advanced', 'elite'];
@@ -60,6 +61,7 @@ const emptyExercise = {
 };
 
 export default function ExerciseLibrary() {
+  const { t } = useTranslation();
   const { user, currentOrg, effectiveRole } = useAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -235,29 +237,29 @@ export default function ExerciseLibrary() {
         <div>
           <h1 className="text-xl font-display font-bold flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-primary" />
-            Exercise Library
+            {t('exerciseLibrary.title')}
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {exercises.length} exercises · {approvedCount} approved · {pendingCount} pending review
+            {t('exerciseLibrary.exercisesCount', { total: exercises.length, approved: approvedCount, pending: pendingCount })}
           </p>
         </div>
         {isMasterAdmin && (
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setScreenshotOpen(true)}>
               <Camera className="h-4 w-4 mr-1" />
-              Scan
+              {t('exerciseLibrary.scan')}
             </Button>
             <Button variant="outline" size="sm" onClick={handleSeedAI} disabled={seedLoading}>
               {seedLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Sparkles className="h-4 w-4 mr-1" />}
-              AI Seed
+              {t('exerciseLibrary.aiSeed')}
             </Button>
             <Dialog open={dialogOpen} onOpenChange={(v) => { setDialogOpen(v); if (!v) resetForm(); }}>
               <DialogTrigger asChild>
-                <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Add</Button>
+                <Button size="sm"><Plus className="h-4 w-4 mr-1" /> {t('exerciseLibrary.add')}</Button>
               </DialogTrigger>
               <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
                 <DialogHeader>
-                  <DialogTitle>{editingId ? 'Edit Exercise' : 'Add Exercise'}</DialogTitle>
+                  <DialogTitle>{editingId ? t('exerciseLibrary.editExercise') : t('exerciseLibrary.addExercise')}</DialogTitle>
                 </DialogHeader>
                 <ScrollArea className="flex-1 pr-4">
                   <div className="space-y-3 pb-4">
@@ -338,7 +340,7 @@ export default function ExerciseLibrary() {
                 </ScrollArea>
                 <Button onClick={() => saveMutation.mutate(form)} disabled={!form.name || saveMutation.isPending} className="mt-2">
                   {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                  {editingId ? 'Update' : 'Add Exercise'}
+                  {editingId ? t('exerciseLibrary.update') : t('exerciseLibrary.addExercise')}
                 </Button>
               </DialogContent>
             </Dialog>
@@ -350,21 +352,21 @@ export default function ExerciseLibrary() {
       <div className="flex gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search exercises..." className="pl-9" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('exerciseLibrary.searchExercises')} className="pl-9" />
         </div>
         <Select value={filterCategory} onValueChange={setFilterCategory}>
           <SelectTrigger className="w-[140px]"><SelectValue placeholder="Category" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All categories</SelectItem>
+            <SelectItem value="all">{t('exerciseLibrary.allCategories')}</SelectItem>
             {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c.replace('_', ' ')}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterApproved} onValueChange={setFilterApproved}>
           <SelectTrigger className="w-[130px]"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All status</SelectItem>
-            <SelectItem value="approved">Approved</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="all">{t('exerciseLibrary.allStatus')}</SelectItem>
+            <SelectItem value="approved">{t('exerciseLibrary.approved')}</SelectItem>
+            <SelectItem value="pending">{t('exerciseLibrary.pending')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -375,9 +377,9 @@ export default function ExerciseLibrary() {
       ) : filtered.length === 0 ? (
         <Card className="p-8 text-center">
           <Dumbbell className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
-          <p className="text-sm font-medium">No exercises found</p>
+          <p className="text-sm font-medium">{t('exerciseLibrary.noExercisesFound')}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            {exercises.length === 0 ? 'Use "AI Seed" to generate a starter HYROX exercise bank, or add exercises manually.' : 'Try adjusting your filters.'}
+            {exercises.length === 0 ? t('exerciseLibrary.noExercisesHint') : t('exerciseLibrary.adjustFilters')}
           </p>
         </Card>
       ) : (

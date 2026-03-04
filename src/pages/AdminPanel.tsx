@@ -14,6 +14,7 @@ import { Plus, Pencil, Shield, Building2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import UserManagementTab from '@/components/admin/UserManagementTab';
 import AdminActivityTab from '@/components/admin/AdminActivityTab';
+import { useTranslation } from 'react-i18next';
 
 interface Organization {
   id: string;
@@ -24,6 +25,7 @@ interface Organization {
 }
 
 export default function AdminPanel() {
+  const { t } = useTranslation();
   const { currentRole, currentOrg } = useAuth();
   const isMasterAdmin = currentRole === 'master_admin';
   const isAdmin = currentRole === 'admin' || isMasterAdmin;
@@ -31,31 +33,30 @@ export default function AdminPanel() {
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-muted-foreground">Access denied.</p>
+        <p className="text-muted-foreground">{t('auth.accessDenied')}</p>
       </div>
     );
   }
 
   return (
     <div className="p-4 max-w-4xl mx-auto space-y-6">
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-3">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3">
         <div className="h-10 w-10 rounded-xl gradient-hyrox flex items-center justify-center">
           <Shield className="h-5 w-5 text-primary-foreground" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold font-heading">Admin Panel</h1>
+          <h1 className="text-2xl font-bold font-heading">{t('admin.title')}</h1>
           <p className="text-sm text-muted-foreground">
-            {isMasterAdmin ? 'Manage organizations & admins' : 'Manage your organization'}
+            {isMasterAdmin ? t('admin.masterDesc') : t('admin.adminDesc')}
           </p>
         </div>
       </motion.div>
 
       <Tabs defaultValue={isMasterAdmin ? "orgs" : "users"}>
         <TabsList>
-          {isMasterAdmin && <TabsTrigger value="orgs">Organizations</TabsTrigger>}
-          <TabsTrigger value="users">User Management</TabsTrigger>
-          <TabsTrigger value="activity">Activity Log</TabsTrigger>
+          {isMasterAdmin && <TabsTrigger value="orgs">{t('admin.organizations')}</TabsTrigger>}
+          <TabsTrigger value="users">{t('admin.userManagement')}</TabsTrigger>
+          <TabsTrigger value="activity">{t('admin.activityLogTab')}</TabsTrigger>
         </TabsList>
         {isMasterAdmin && (
           <TabsContent value="orgs">
@@ -73,8 +74,8 @@ export default function AdminPanel() {
   );
 }
 
-/* ─── Organizations Tab (master_admin only) ─── */
 function OrganizationsTab() {
+  const { t } = useTranslation();
   const [orgs, setOrgs] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -84,8 +85,7 @@ function OrganizationsTab() {
   const [saving, setSaving] = useState(false);
 
   const fetchOrgs = async () => {
-    const { data, error } = await supabase
-      .from('organizations').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('organizations').select('*').order('created_at', { ascending: false });
     if (!error) setOrgs((data as unknown as Organization[]) ?? []);
     setLoading(false);
   };
@@ -99,21 +99,17 @@ function OrganizationsTab() {
     if (!formName.trim()) { toast.error('Name required'); return; }
     setSaving(true);
     if (editingOrg) {
-      const { error } = await supabase.from('organizations')
-        .update({ name: formName.trim(), logo_url: formLogo.trim() || null })
-        .eq('id', editingOrg.id);
+      const { error } = await supabase.from('organizations').update({ name: formName.trim(), logo_url: formLogo.trim() || null }).eq('id', editingOrg.id);
       error ? toast.error(error.message) : toast.success('Updated');
     } else {
-      const { error } = await supabase.from('organizations')
-        .insert({ name: formName.trim(), logo_url: formLogo.trim() || null });
+      const { error } = await supabase.from('organizations').insert({ name: formName.trim(), logo_url: formLogo.trim() || null });
       error ? toast.error(error.message) : toast.success('Created');
     }
     setSaving(false); setDialogOpen(false); fetchOrgs();
   };
 
   const toggleActive = async (org: Organization) => {
-    const { error } = await supabase.from('organizations')
-      .update({ is_active: !org.is_active } as any).eq('id', org.id);
+    const { error } = await supabase.from('organizations').update({ is_active: !org.is_active } as any).eq('id', org.id);
     error ? toast.error(error.message) : toast.success(org.is_active ? 'Disabled' : 'Enabled');
     fetchOrgs();
   };
@@ -122,29 +118,29 @@ function OrganizationsTab() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2 text-lg">
-          <Building2 className="h-5 w-5 text-primary" /> Organizations ({orgs.length})
+          <Building2 className="h-5 w-5 text-primary" /> {t('admin.organizations')} ({orgs.length})
         </CardTitle>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={openCreate} size="sm" className="gap-1.5">
-              <Plus className="h-4 w-4" /> New Org
+              <Plus className="h-4 w-4" /> {t('admin.newOrg')}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingOrg ? 'Edit Organization' : 'Create Organization'}</DialogTitle>
+              <DialogTitle>{editingOrg ? t('admin.editOrg') : t('admin.createOrg')}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
-                <Label>Name</Label>
+                <Label>{t('admin.orgName')}</Label>
                 <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Organization name" />
               </div>
               <div className="space-y-2">
-                <Label>Logo URL (optional)</Label>
+                <Label>{t('admin.logoUrl')}</Label>
                 <Input value={formLogo} onChange={(e) => setFormLogo(e.target.value)} placeholder="https://..." />
               </div>
               <Button onClick={handleSave} disabled={saving} className="w-full">
-                {saving ? 'Saving...' : editingOrg ? 'Update' : 'Create'}
+                {saving ? t('common.saving') : editingOrg ? t('common.save') : t('admin.create')}
               </Button>
             </div>
           </DialogContent>
@@ -154,15 +150,15 @@ function OrganizationsTab() {
         {loading ? (
           <div className="flex justify-center py-8"><div className="h-6 w-6 rounded-lg gradient-hyrox animate-pulse" /></div>
         ) : orgs.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">No organizations yet.</p>
+          <p className="text-center text-muted-foreground py-8">{t('admin.noOrgsYet')}</p>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('admin.orgName')}</TableHead>
+                <TableHead>{t('admin.status')}</TableHead>
+                <TableHead>{t('admin.created')}</TableHead>
+                <TableHead className="text-right">{t('admin.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -173,7 +169,7 @@ function OrganizationsTab() {
                     <div className="flex items-center gap-2">
                       <Switch checked={org.is_active} onCheckedChange={() => toggleActive(org)} />
                       <span className={`text-xs ${org.is_active ? 'text-success' : 'text-destructive'}`}>
-                        {org.is_active ? 'Active' : 'Disabled'}
+                        {org.is_active ? t('common.active') : t('common.disabled')}
                       </span>
                     </div>
                   </TableCell>

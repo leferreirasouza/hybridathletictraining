@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import { supabase } from '@/integrations/supabase/client';
+import { useTranslation } from 'react-i18next';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -15,16 +16,18 @@ interface Message {
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/hyrox-ai-coach`;
 
-const suggestions = [
-  "What's a good HYROX race strategy?",
-  "Can I swap today's run for a bike?",
-  "How should I pace the SkiErg station?",
-  "Suggest a recovery session",
-];
-
 export default function AIChat() {
+  const { t } = useTranslation();
+
+  const suggestions = [
+    t('aiChat.suggestion1'),
+    t('aiChat.suggestion2'),
+    t('aiChat.suggestion3'),
+    t('aiChat.suggestion4'),
+  ];
+
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: "Hey! I'm your **HYROX AI Coach**. Ask me about training plans, race strategy, session modifications, or performance insights. 🏋️" },
+    { role: 'assistant', content: t('aiChat.welcome') },
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -45,7 +48,6 @@ export default function AIChat() {
     let assistantSoFar = '';
 
     try {
-      // Get the user's actual JWT for authentication
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error('You must be logged in to use AI Coach.');
@@ -62,21 +64,9 @@ export default function AIChat() {
         body: JSON.stringify({ messages: allMessages }),
       });
 
-      if (resp.status === 401) {
-        toast.error('Session expired. Please log in again.');
-        setIsLoading(false);
-        return;
-      }
-      if (resp.status === 429) {
-        toast.error('Rate limit exceeded. Please wait a moment.');
-        setIsLoading(false);
-        return;
-      }
-      if (resp.status === 402) {
-        toast.error('AI credits exhausted.');
-        setIsLoading(false);
-        return;
-      }
+      if (resp.status === 401) { toast.error('Session expired. Please log in again.'); setIsLoading(false); return; }
+      if (resp.status === 429) { toast.error('Rate limit exceeded. Please wait a moment.'); setIsLoading(false); return; }
+      if (resp.status === 402) { toast.error('AI credits exhausted.'); setIsLoading(false); return; }
       if (!resp.ok || !resp.body) throw new Error('Failed to start stream');
 
       const reader = resp.body.getReader();
@@ -99,7 +89,6 @@ export default function AIChat() {
         const { done, value } = await reader.read();
         if (done) break;
         textBuffer += decoder.decode(value, { stream: true });
-
         let newlineIndex: number;
         while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
           let line = textBuffer.slice(0, newlineIndex);
@@ -120,7 +109,6 @@ export default function AIChat() {
         }
       }
 
-      // Final flush
       if (textBuffer.trim()) {
         for (let raw of textBuffer.split('\n')) {
           if (!raw) continue;
@@ -146,20 +134,18 @@ export default function AIChat() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-5rem)] max-w-lg mx-auto">
-      {/* Header */}
       <div className="px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-xl gradient-hyrox flex items-center justify-center">
             <Sparkles className="h-4 w-4 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-base font-display font-bold">AI Coach</h1>
-            <p className="text-[10px] text-muted-foreground">HYROX-specific training intelligence</p>
+            <h1 className="text-base font-display font-bold">{t('aiChat.title')}</h1>
+            <p className="text-[10px] text-muted-foreground">{t('aiChat.subtitle')}</p>
           </div>
         </div>
       </div>
 
-      {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         <AnimatePresence>
           {messages.map((msg, i) => (
@@ -209,7 +195,6 @@ export default function AIChat() {
           </motion.div>
         )}
 
-        {/* Suggestions */}
         {messages.length <= 1 && (
           <div className="flex flex-wrap gap-2 mt-4">
             {suggestions.map(s => (
@@ -221,13 +206,12 @@ export default function AIChat() {
         )}
       </div>
 
-      {/* Input */}
       <div className="px-4 py-3 border-t border-border">
         <form onSubmit={(e) => { e.preventDefault(); sendMessage(input); }} className="flex gap-2">
           <Input
             value={input}
             onChange={e => setInput(e.target.value)}
-            placeholder="Ask your AI coach…"
+            placeholder={t('aiChat.askPlaceholder')}
             className="rounded-full"
             disabled={isLoading}
           />

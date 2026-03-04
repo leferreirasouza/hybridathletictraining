@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { getDiscipline } from '@/components/schedule/config';
 import ShareWorkoutDialog from '@/components/share/ShareWorkoutDialog';
 import type { ShareSessionData } from '@/components/share/types';
+import { useTranslation } from 'react-i18next';
 
 const container = {
   hidden: { opacity: 0 },
@@ -43,6 +44,7 @@ interface CompletedSession {
 }
 
 export default function History() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [editSession, setEditSession] = useState<CompletedSession | null>(null);
@@ -94,7 +96,7 @@ export default function History() {
     if (error) {
       toast.error('Failed to update: ' + error.message);
     } else {
-      toast.success('Session updated');
+      toast.success(t('history.sessionUpdated'));
       setEditSession(null);
       queryClient.invalidateQueries({ queryKey: ['session-history'] });
     }
@@ -105,7 +107,7 @@ export default function History() {
     if (error) {
       toast.error('Failed to delete: ' + error.message);
     } else {
-      toast.success('Session deleted');
+      toast.success(t('history.sessionDeleted'));
       queryClient.invalidateQueries({ queryKey: ['session-history'] });
     }
   };
@@ -121,9 +123,9 @@ export default function History() {
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-4">
       <div>
-        <h1 className="text-xl font-display font-bold">Session History</h1>
+        <h1 className="text-xl font-display font-bold">{t('history.title')}</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          {sessions?.length || 0} sessions logged
+          {t('history.sessionsLogged', { count: sessions?.length || 0 })}
         </p>
       </div>
 
@@ -131,14 +133,14 @@ export default function History() {
         <Card className="glass">
           <CardContent className="p-8 text-center space-y-3">
             <Calendar className="h-10 w-10 mx-auto text-muted-foreground" />
-            <p className="font-display font-bold">No Sessions Yet</p>
-            <p className="text-sm text-muted-foreground">Complete a training session and log it to start tracking your progress.</p>
+            <p className="font-display font-bold">{t('history.noSessions')}</p>
+            <p className="text-sm text-muted-foreground">{t('history.noSessionsDesc')}</p>
             <div className="flex gap-2 justify-center">
               <Button className="gradient-hyrox" onClick={() => navigate('/log')}>
-                <Dumbbell className="h-4 w-4 mr-2" /> Log a Session
+                <Dumbbell className="h-4 w-4 mr-2" /> {t('history.logASession')}
               </Button>
               <Button variant="outline" onClick={() => navigate('/schedule')}>
-                View Schedule
+                {t('dashboard.viewSchedule')}
               </Button>
             </div>
           </CardContent>
@@ -166,12 +168,12 @@ export default function History() {
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                           {s.actual_duration_min && (
                             <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
-                              <Clock className="h-3 w-3" />{s.actual_duration_min} min
+                              <Clock className="h-3 w-3" />{s.actual_duration_min} {t('common.min')}
                             </span>
                           )}
                           {s.actual_distance_km && (
                             <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
-                              <MapPin className="h-3 w-3" />{s.actual_distance_km} km
+                              <MapPin className="h-3 w-3" />{s.actual_distance_km} {t('common.km')}
                             </span>
                           )}
                           {s.rpe && (
@@ -181,7 +183,7 @@ export default function History() {
                           )}
                           {s.avg_hr && (
                             <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
-                              <Flame className="h-3 w-3" />{s.avg_hr} bpm
+                              <Flame className="h-3 w-3" />{s.avg_hr} {t('common.bpm')}
                             </span>
                           )}
                         </div>
@@ -191,7 +193,7 @@ export default function History() {
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         {s.pain_flag && (
-                          <Badge variant="destructive" className="text-[9px] px-1.5 py-0.5">Pain</Badge>
+                          <Badge variant="destructive" className="text-[9px] px-1.5 py-0.5">{t('history.pain')}</Badge>
                         )}
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShareData({
                           discipline: s.discipline,
@@ -215,12 +217,12 @@ export default function History() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Delete session?</AlertDialogTitle>
-                              <AlertDialogDescription>This will permanently remove this logged session.</AlertDialogDescription>
+                              <AlertDialogTitle>{t('history.deleteSession')}</AlertDialogTitle>
+                              <AlertDialogDescription>{t('history.deleteSessionDesc')}</AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(s.id)} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
+                              <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(s.id)} className="bg-destructive text-destructive-foreground">{t('common.delete')}</AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
@@ -238,26 +240,26 @@ export default function History() {
       <Dialog open={!!editSession} onOpenChange={(open) => !open && setEditSession(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-display">Edit Session</DialogTitle>
+            <DialogTitle className="font-display">{t('history.editSession')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Duration (min)</Label>
+                <Label className="text-xs">{t('logSession.durationMin')}</Label>
                 <Input type="number" value={editForm.duration} onChange={e => setEditForm(f => ({ ...f, duration: e.target.value }))} />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Distance (km)</Label>
+                <Label className="text-xs">{t('logSession.distanceKm')}</Label>
                 <Input type="number" step="0.1" value={editForm.distance} onChange={e => setEditForm(f => ({ ...f, distance: e.target.value }))} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Avg HR</Label>
+                <Label className="text-xs">{t('logSession.avgHrBpm')}</Label>
                 <Input type="number" value={editForm.avgHr} onChange={e => setEditForm(f => ({ ...f, avgHr: e.target.value }))} />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Avg Pace</Label>
+                <Label className="text-xs">{t('logSession.avgPace')}</Label>
                 <Input value={editForm.avgPace} onChange={e => setEditForm(f => ({ ...f, avgPace: e.target.value }))} />
               </div>
             </div>
@@ -269,14 +271,14 @@ export default function History() {
               <Slider value={editForm.rpe} onValueChange={v => setEditForm(f => ({ ...f, rpe: v }))} min={1} max={10} step={1} />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Notes</Label>
+              <Label className="text-xs">{t('logSession.notes')}</Label>
               <Textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} rows={2} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditSession(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setEditSession(null)}>{t('common.cancel')}</Button>
             <Button className="gradient-hyrox" onClick={handleUpdate} disabled={saving}>
-              {saving ? 'Saving…' : 'Save Changes'}
+              {saving ? t('common.saving') : t('history.saveChanges')}
             </Button>
           </DialogFooter>
         </DialogContent>
