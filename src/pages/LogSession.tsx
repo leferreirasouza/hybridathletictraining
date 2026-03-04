@@ -167,7 +167,7 @@ export default function LogSession() {
               </Select>
               {plannedSessionId !== 'none' && (
                 <p className="text-[11px] text-muted-foreground mt-2">
-                  Fields below have been pre-filled from the planned session. Adjust with your actual values.
+                  {t('logSession.preFilled')}
                 </p>
               )}
             </CardContent>
