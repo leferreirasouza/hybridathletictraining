@@ -265,6 +265,11 @@ export default function Schedule() {
                   </CardContent>
                 </Card>
               )}
+
+              <TrainingLoadCard
+                sessions={sessions}
+                weekNumber={displayWeek}
+              />
             </div>
           </div>
         </>
