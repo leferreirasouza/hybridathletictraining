@@ -25,6 +25,26 @@ export default function AuthPage() {
   const [fullName, setFullName] = useState('');
   const [view, setView] = useState<View>('auth');
 
+  // Attempt biometric credential retrieval on mount
+  useEffect(() => {
+    retrieveCredential().then(async (cred) => {
+      if (!cred) return;
+      setEmail(cred.email);
+      setPassword(cred.password);
+      setLoading(true);
+      const { error } = await supabase.auth.signInWithPassword({
+        email: cred.email,
+        password: cred.password,
+      });
+      if (!error) {
+        navigate('/dashboard');
+      } else {
+        toast.error(error.message);
+      }
+      setLoading(false);
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -32,6 +52,7 @@ export default function AuthPage() {
     if (error) {
       toast.error(error.message);
     } else {
+      await storeCredential(email, password);
       navigate('/dashboard');
     }
     setLoading(false);
