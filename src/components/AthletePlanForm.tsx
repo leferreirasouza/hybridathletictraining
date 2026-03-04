@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import RacePicker from '@/components/races/RacePicker';
 
 const hyroxStations = [
   'SkiErg', 'Sled Push', 'Sled Pull', 'Burpee Broad Jumps',
