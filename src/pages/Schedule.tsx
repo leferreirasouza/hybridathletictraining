@@ -28,7 +28,7 @@ export default function Schedule() {
   const {
     plans, activePlanId, setSelectedPlanId, isAllPlans,
     sessions, weeklySummaries, targets, completedSessions,
-    substitutionMap, maxWeek, isLoading, noPlan,
+    substitutionMap, maxWeek, isLoading, noPlan, planColorMap,
   } = useScheduleData();
 
   const [weekOffset, setWeekOffset] = useState(0);
