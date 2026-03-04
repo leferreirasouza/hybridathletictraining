@@ -69,6 +69,7 @@ export default function ExerciseLibrary() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyExercise);
   const [seedLoading, setSeedLoading] = useState(false);
+  const [screenshotOpen, setScreenshotOpen] = useState(false);
 
   const isCoachOrAdmin = effectiveRole && ['coach', 'admin', 'master_admin'].includes(effectiveRole);
 
