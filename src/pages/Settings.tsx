@@ -20,12 +20,17 @@ import {
 
 type Units = 'metric' | 'imperial';
 type ThemeMode = 'light' | 'dark' | 'system';
+type CalendarPref = 'none' | 'google' | 'outlook' | 'apple';
 
 function getStoredTheme(): ThemeMode {
   return (localStorage.getItem('ha-theme') as ThemeMode) || 'dark';
 }
 function getStoredUnits(): Units {
   return (localStorage.getItem('ha-units') as Units) || 'metric';
+}
+function getStoredCalendar(): CalendarPref {
+  const v = localStorage.getItem('ha-default-calendar');
+  return v === 'google' || v === 'outlook' || v === 'apple' ? v : 'none';
 }
 
 function applyTheme(mode: ThemeMode) {
