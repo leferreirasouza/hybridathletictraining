@@ -594,6 +594,8 @@ function ChunkDetailDialog({
   doc: KnowledgeDocument | null;
   onClose: () => void;
 }) {
+  const [chunkSearch, setChunkSearch] = useState('');
+
   const { data: chunks = [], isLoading } = useQuery({
     queryKey: ['knowledge-chunks', doc?.id],
     queryFn: async () => {
@@ -609,10 +611,25 @@ function ChunkDetailDialog({
     enabled: !!doc,
   });
 
+  const filteredChunks = chunkSearch.trim()
+    ? chunks.filter((c: any) => c.content.toLowerCase().includes(chunkSearch.toLowerCase()))
+    : chunks;
+
+  const highlightMatch = (text: string, query: string) => {
+    if (!query.trim()) return text;
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+    return parts.map((part, i) =>
+      regex.test(part)
+        ? <mark key={i} className="bg-primary/30 text-foreground rounded-sm px-0.5">{part}</mark>
+        : part
+    );
+  };
+
   if (!doc) return null;
 
   return (
-    <Dialog open={!!doc} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={!!doc} onOpenChange={(open) => { if (!open) { setChunkSearch(''); onClose(); } }}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
@@ -646,19 +663,37 @@ function ChunkDetailDialog({
           )}
         </DialogHeader>
 
+        {/* Chunk search input */}
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            value={chunkSearch}
+            onChange={(e) => setChunkSearch(e.target.value)}
+            placeholder="Search within chunks..."
+            className="pl-8 h-8 text-xs"
+          />
+          {chunkSearch && (
+            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
+              {filteredChunks.length}/{chunks.length}
+            </span>
+          )}
+        </div>
+
         <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
           {isLoading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
-          ) : chunks.length === 0 ? (
+          ) : filteredChunks.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-              <p className="text-sm text-muted-foreground">No chunks found for this document</p>
+              <p className="text-sm text-muted-foreground">
+                {chunkSearch ? 'No chunks match your search' : 'No chunks found for this document'}
+              </p>
             </div>
           ) : (
             <div className="space-y-3 pb-4">
-              {chunks.map((chunk: any) => (
+              {filteredChunks.map((chunk: any) => (
                 <div key={chunk.id} className="rounded-lg border border-border bg-muted/30 p-3">
                   <div className="flex items-center justify-between mb-2">
                     <Badge variant="outline" className="text-[10px] font-mono">
@@ -669,7 +704,7 @@ function ChunkDetailDialog({
                     </span>
                   </div>
                   <p className="text-xs text-foreground/90 leading-relaxed whitespace-pre-wrap font-mono">
-                    {chunk.content}
+                    {highlightMatch(chunk.content, chunkSearch)}
                   </p>
                 </div>
               ))}
