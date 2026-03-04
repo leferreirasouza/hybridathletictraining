@@ -175,10 +175,30 @@ export default function Schedule() {
             )}
             {!isLoading && sessions.length > 0 && (
               <div className="flex justify-center pt-2">
-                <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={handleFullPlanExport}>
-                  <Download className="h-3.5 w-3.5" />
-                  {t('schedule.exportFullPlan')}
-                </Button>
+                {defaultProvider ? (
+                  <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => handleFullPlanExport(defaultProvider)}>
+                    <Download className="h-3.5 w-3.5" />
+                    {t('schedule.exportFullPlan')}
+                  </Button>
+                ) : (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="text-xs gap-1.5">
+                        <Download className="h-3.5 w-3.5" />
+                        {t('schedule.exportFullPlan')}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="center" className="w-48">
+                      {(['google', 'outlook', 'apple'] as CalendarProvider[]).map(provider => (
+                        <DropdownMenuItem key={provider} onClick={() => handleFullPlanExport(provider)}>
+                          {provider === 'google' && 'Google Calendar'}
+                          {provider === 'outlook' && 'Outlook Calendar'}
+                          {provider === 'apple' && 'Apple Calendar (.ics)'}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
             )}
           </Tabs>
