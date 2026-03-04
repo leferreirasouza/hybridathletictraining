@@ -58,11 +58,17 @@ export default function Schedule() {
         <div className="flex items-center gap-2">
           {targets.length > 0 && <TargetsPanel targets={targets} />}
           {plans && plans.length > 1 && (
-            <Select value={activePlanId} onValueChange={setSelectedPlanId}>
-              <SelectTrigger className="w-[140px] h-8 text-xs">
+            <Select value={isAllPlans ? 'all' : activePlanId} onValueChange={setSelectedPlanId}>
+              <SelectTrigger className="w-[160px] h-8 text-xs">
                 <SelectValue placeholder={t('schedule.selectPlan')} />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-block w-2 h-2 rounded-full bg-gradient-to-r from-primary to-blue-500" />
+                    All Plans
+                  </span>
+                </SelectItem>
                 {plans.map(p => (
                   <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                 ))}
