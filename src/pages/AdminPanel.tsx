@@ -68,6 +68,11 @@ export default function AdminPanel() {
         <TabsContent value="users">
           <UserManagementTab isMasterAdmin={isMasterAdmin} currentOrgId={currentOrg?.id} />
         </TabsContent>
+        {isMasterAdmin && (
+          <TabsContent value="knowledge">
+            <KnowledgeLibraryTab />
+          </TabsContent>
+        )}
         <TabsContent value="activity">
           <AdminActivityTab />
         </TabsContent>
