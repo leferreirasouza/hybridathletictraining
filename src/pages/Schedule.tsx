@@ -16,6 +16,11 @@ import { exportWeekToCalendar, CalendarProvider } from '@/lib/calendarExport';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useTranslation } from 'react-i18next';
 
+function getDefaultCalendarProvider(): CalendarProvider | null {
+  const v = localStorage.getItem('ha-default-calendar');
+  return v === 'google' || v === 'outlook' || v === 'apple' ? v : null;
+}
+
 export default function Schedule() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -28,6 +33,13 @@ export default function Schedule() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDay, setSelectedDay] = useState(1);
   const [view, setView] = useState<'day' | 'week' | 'month'>('week');
+  const defaultProvider = getDefaultCalendarProvider();
+
+  const handleCalendarExport = (provider: CalendarProvider) => {
+    exportWeekToCalendar(provider, sessions, displayWeek);
+    const count = sessions.filter(s => s.week_number === displayWeek).length;
+    toast.success(`${count} sessions → ${provider === 'apple' ? '.ics downloaded' : provider.charAt(0).toUpperCase() + provider.slice(1) + ' Calendar'}`);
+  };
 
   const displayWeek = Math.max(1, Math.min(maxWeek, 1 + weekOffset));
   const weeklySummary = weeklySummaries.find((ws: any) => ws.week_number === displayWeek);
@@ -92,26 +104,28 @@ export default function Schedule() {
                   {t('schedule.week')} {displayWeek} <span className="text-muted-foreground font-normal">/ {maxWeek}</span>
                 </span>
                 <div className="flex items-center gap-1">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" title="Add week to calendar">
-                        <CalendarPlus className="h-4 w-4 text-primary" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="center" className="w-48">
-                      {(['google', 'outlook', 'apple'] as CalendarProvider[]).map(provider => (
-                        <DropdownMenuItem key={provider} onClick={() => {
-                          exportWeekToCalendar(provider, sessions, displayWeek);
-                          const count = sessions.filter(s => s.week_number === displayWeek).length;
-                          toast.success(`${count} sessions → ${provider === 'apple' ? '.ics downloaded' : provider.charAt(0).toUpperCase() + provider.slice(1) + ' Calendar'}`);
-                        }}>
-                          {provider === 'google' && 'Google Calendar'}
-                          {provider === 'outlook' && 'Outlook Calendar'}
-                          {provider === 'apple' && 'Apple Calendar (.ics)'}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {defaultProvider ? (
+                    <Button variant="ghost" size="icon" className="h-8 w-8" title={`Add to ${defaultProvider} calendar`} onClick={() => handleCalendarExport(defaultProvider)}>
+                      <CalendarPlus className="h-4 w-4 text-primary" />
+                    </Button>
+                  ) : (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" title="Add week to calendar">
+                          <CalendarPlus className="h-4 w-4 text-primary" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="center" className="w-48">
+                        {(['google', 'outlook', 'apple'] as CalendarProvider[]).map(provider => (
+                          <DropdownMenuItem key={provider} onClick={() => handleCalendarExport(provider)}>
+                            {provider === 'google' && 'Google Calendar'}
+                            {provider === 'outlook' && 'Outlook Calendar'}
+                            {provider === 'apple' && 'Apple Calendar (.ics)'}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => w + 1)} disabled={displayWeek >= maxWeek}>
                     <ChevronRight className="h-4 w-4" />
                   </Button>

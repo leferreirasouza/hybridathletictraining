@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Moon, Sun, Ruler, Bell, ShieldCheck, Trash2, BellRing, BellOff, Globe } from 'lucide-react';
+import { ArrowLeft, Moon, Sun, Ruler, Bell, ShieldCheck, Trash2, BellRing, BellOff, Globe, CalendarPlus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -20,12 +20,17 @@ import {
 
 type Units = 'metric' | 'imperial';
 type ThemeMode = 'light' | 'dark' | 'system';
+type CalendarPref = 'none' | 'google' | 'outlook' | 'apple';
 
 function getStoredTheme(): ThemeMode {
   return (localStorage.getItem('ha-theme') as ThemeMode) || 'dark';
 }
 function getStoredUnits(): Units {
   return (localStorage.getItem('ha-units') as Units) || 'metric';
+}
+function getStoredCalendar(): CalendarPref {
+  const v = localStorage.getItem('ha-default-calendar');
+  return v === 'google' || v === 'outlook' || v === 'apple' ? v : 'none';
 }
 
 function applyTheme(mode: ThemeMode) {
@@ -49,6 +54,7 @@ export default function Settings() {
 
   const [theme, setTheme] = useState<ThemeMode>(getStoredTheme);
   const [units, setUnits] = useState<Units>(getStoredUnits);
+  const [calendarPref, setCalendarPref] = useState<CalendarPref>(getStoredCalendar);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const [notifPrefs, setNotifPrefs] = useState(getNotifPrefs);
@@ -92,6 +98,14 @@ export default function Settings() {
   useEffect(() => {
     localStorage.setItem('ha-units', units);
   }, [units]);
+
+  useEffect(() => {
+    if (calendarPref === 'none') {
+      localStorage.removeItem('ha-default-calendar');
+    } else {
+      localStorage.setItem('ha-default-calendar', calendarPref);
+    }
+  }, [calendarPref]);
 
   const handleDeleteAccount = () => {
     if (!confirmDelete) {
@@ -183,6 +197,33 @@ export default function Settings() {
                 <SelectContent>
                   <SelectItem value="metric">{t('settings.metric')}</SelectItem>
                   <SelectItem value="imperial">{t('settings.imperial')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Default Calendar */}
+        <Card className="glass">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <CalendarPlus className="h-4 w-4 text-primary" />
+              {t('settings.defaultCalendar')}
+            </CardTitle>
+            <CardDescription>{t('settings.defaultCalendarDesc')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="cal-select">{t('settings.calendarProvider')}</Label>
+              <Select value={calendarPref} onValueChange={(v) => setCalendarPref(v as CalendarPref)}>
+                <SelectTrigger className="w-40" id="cal-select">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t('settings.askEveryTime')}</SelectItem>
+                  <SelectItem value="google">Google Calendar</SelectItem>
+                  <SelectItem value="outlook">Outlook Calendar</SelectItem>
+                  <SelectItem value="apple">Apple Calendar</SelectItem>
                 </SelectContent>
               </Select>
             </div>
