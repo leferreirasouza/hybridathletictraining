@@ -14,6 +14,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import CoachInfoCard from '@/components/dashboard/CoachInfoCard';
+import RacePicker from '@/components/races/RacePicker';
 import { useTranslation } from 'react-i18next';
 
 const FITNESS_LEVELS = [
