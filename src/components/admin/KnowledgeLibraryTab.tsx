@@ -188,7 +188,11 @@ export default function KnowledgeLibraryTab() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((doc) => (
-                    <TableRow key={doc.id}>
+                    <TableRow
+                      key={doc.id}
+                      className="cursor-pointer hover:bg-muted/60"
+                      onClick={() => setViewDoc(doc)}
+                    >
                       <TableCell>
                         <div className="max-w-[200px]">
                           <p className="font-medium text-sm truncate">{doc.title}</p>
@@ -210,6 +214,7 @@ export default function KnowledgeLibraryTab() {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-[10px] text-primary hover:underline flex items-center gap-0.5 mt-0.5"
+                            onClick={(e) => e.stopPropagation()}
                           >
                             <ExternalLink className="h-2.5 w-2.5" /> Link
                           </a>
@@ -233,17 +238,20 @@ export default function KnowledgeLibraryTab() {
                         {formatDistanceToNow(new Date(doc.created_at), { addSuffix: true })}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => setDeleteId(doc.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={(e) => { e.stopPropagation(); setDeleteId(doc.id); }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ))
                 </TableBody>
               </Table>
             </div>
