@@ -14,50 +14,52 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
-
-const roleLabels: Record<string, string> = {
-  master_admin: 'Master Admin',
-  admin: 'Admin',
-  coach: 'Coach',
-  athlete: 'Athlete',
-};
-
-const tabsByRole: Record<string, { path: string; icon: any; label: string }[]> = {
-  athlete: [
-    { path: '/dashboard', icon: Home, label: 'Today' },
-    { path: '/schedule', icon: Calendar, label: 'Plan' },
-    { path: '/log', icon: Dumbbell, label: 'Log' },
-    { path: '/messages', icon: Mail, label: 'Chat' },
-    { path: '/profile', icon: User, label: 'Profile' },
-  ],
-  coach: [
-    { path: '/dashboard', icon: Home, label: 'Dashboard' },
-    { path: '/athletes', icon: User, label: 'Athletes' },
-    { path: '/exercises', icon: BookOpen, label: 'Library' },
-    { path: '/plans', icon: Calendar, label: 'Plans' },
-    { path: '/profile', icon: User, label: 'Profile' },
-  ],
-  admin: [
-    { path: '/dashboard', icon: Home, label: 'Dashboard' },
-    { path: '/admin', icon: Shield, label: 'Manage' },
-    { path: '/athletes', icon: User, label: 'Athletes' },
-    { path: '/messages', icon: Mail, label: 'Chat' },
-    { path: '/profile', icon: User, label: 'Profile' },
-  ],
-  master_admin: [
-    { path: '/dashboard', icon: Home, label: 'Dashboard' },
-    { path: '/admin', icon: Shield, label: 'Admin' },
-    { path: '/messages', icon: Mail, label: 'Chat' },
-    { path: '/plans', icon: Calendar, label: 'Plans' },
-    { path: '/profile', icon: User, label: 'Profile' },
-  ],
-};
+import { useTranslation } from 'react-i18next';
 
 export default function AppLayout() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const { currentRole, effectiveRole, viewAsRole, setViewAsRole, user } = useAuth();
   const queryClient = useQueryClient();
+
+  const roleLabels: Record<string, string> = {
+    master_admin: t('roles.master_admin'),
+    admin: t('roles.admin'),
+    coach: t('roles.coach'),
+    athlete: t('roles.athlete'),
+  };
+
+  const tabsByRole: Record<string, { path: string; icon: any; label: string }[]> = {
+    athlete: [
+      { path: '/dashboard', icon: Home, label: t('nav.today') },
+      { path: '/schedule', icon: Calendar, label: t('nav.plan') },
+      { path: '/log', icon: Dumbbell, label: t('nav.log') },
+      { path: '/messages', icon: Mail, label: t('nav.chat') },
+      { path: '/profile', icon: User, label: t('nav.profile') },
+    ],
+    coach: [
+      { path: '/dashboard', icon: Home, label: t('nav.dashboard') },
+      { path: '/athletes', icon: User, label: t('nav.athletes') },
+      { path: '/exercises', icon: BookOpen, label: t('nav.library') },
+      { path: '/plans', icon: Calendar, label: t('nav.plans') },
+      { path: '/profile', icon: User, label: t('nav.profile') },
+    ],
+    admin: [
+      { path: '/dashboard', icon: Home, label: t('nav.dashboard') },
+      { path: '/admin', icon: Shield, label: t('nav.manage') },
+      { path: '/athletes', icon: User, label: t('nav.athletes') },
+      { path: '/messages', icon: Mail, label: t('nav.chat') },
+      { path: '/profile', icon: User, label: t('nav.profile') },
+    ],
+    master_admin: [
+      { path: '/dashboard', icon: Home, label: t('nav.dashboard') },
+      { path: '/admin', icon: Shield, label: t('nav.admin') },
+      { path: '/messages', icon: Mail, label: t('nav.chat') },
+      { path: '/plans', icon: Calendar, label: t('nav.plans') },
+      { path: '/profile', icon: User, label: t('nav.profile') },
+    ],
+  };
 
   const userName = user?.user_metadata?.full_name || 'User';
   const userInitials = userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
@@ -106,12 +108,8 @@ export default function AppLayout() {
         .limit(10);
       if (error || !data?.length) return [];
 
-      // Fetch sender names
       const senderIds = [...new Set(data.map(m => m.sender_id))];
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('id', senderIds);
+      const { data: profiles } = await supabase.from('profiles').select('id, full_name').in('id', senderIds);
       const nameMap = new Map((profiles || []).map(p => [p.id, p.full_name]));
 
       return data.map(m => ({
@@ -143,28 +141,23 @@ export default function AppLayout() {
   const activeRole = effectiveRole ?? 'athlete';
   const tabs = tabsByRole[activeRole] ?? tabsByRole.athlete;
 
-  // Accessible roles for the switcher
   const accessibleRoles = currentRole ? getAccessibleRoles(currentRole) : [];
   const showSwitcher = accessibleRoles.length > 1;
   const isViewingAs = viewAsRole && viewAsRole !== currentRole;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      {/* Top header bar with bell */}
       <header className={cn(
         "sticky top-0 z-40 glass border-b flex items-center justify-between px-4 h-12",
         !isViewingAs && "safe-top"
       )}>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-display font-bold text-foreground">Hybrid Athletics</span>
+          <span className="text-sm font-display font-bold text-foreground">{t('app.name')}</span>
         </div>
         <div className="flex items-center gap-2">
           <Popover open={bellOpen} onOpenChange={setBellOpen}>
             <PopoverTrigger asChild>
-            <button
-              className="relative p-2 rounded-lg hover:bg-muted/50 transition-colors"
-              aria-label="Notifications"
-            >
+            <button className="relative p-2 rounded-lg hover:bg-muted/50 transition-colors" aria-label={t('nav.notifications')}>
               <Bell className="h-5 w-5 text-muted-foreground" />
               {unreadCount > 0 && (
                 <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold leading-none">
@@ -175,10 +168,10 @@ export default function AppLayout() {
           </PopoverTrigger>
           <PopoverContent align="end" className="w-80 p-0" sideOffset={8}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <p className="text-sm font-display font-bold">Notifications</p>
+              <p className="text-sm font-display font-bold">{t('nav.notifications')}</p>
               {unreadCount > 0 && (
                 <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-0">
-                  {unreadCount} unread
+                  {t('nav.unread', { count: unreadCount })}
                 </Badge>
               )}
             </div>
@@ -186,19 +179,12 @@ export default function AppLayout() {
               {recentUnread.length === 0 ? (
                 <div className="p-6 text-center">
                   <Bell className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-                  <p className="text-sm text-muted-foreground">No unread messages</p>
+                  <p className="text-sm text-muted-foreground">{t('nav.noUnread')}</p>
                 </div>
               ) : (
                 <div className="divide-y divide-border">
                   {recentUnread.map((msg: any) => (
-                    <button
-                      key={msg.id}
-                      className="w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors"
-                      onClick={() => {
-                        setBellOpen(false);
-                        navigate('/messages');
-                      }}
-                    >
+                    <button key={msg.id} className="w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors" onClick={() => { setBellOpen(false); navigate('/messages'); }}>
                       <div className="flex items-start gap-3">
                         <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
                           <MessageSquare className="h-3.5 w-3.5 text-primary" />
@@ -219,13 +205,8 @@ export default function AppLayout() {
               )}
             </ScrollArea>
             <div className="border-t border-border p-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full text-xs"
-                onClick={() => { setBellOpen(false); navigate('/messages'); }}
-              >
-                View all messages
+              <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => { setBellOpen(false); navigate('/messages'); }}>
+                {t('nav.viewAllMessages')}
               </Button>
             </div>
           </PopoverContent>
@@ -239,18 +220,14 @@ export default function AppLayout() {
         </div>
       </header>
 
-      {/* View-As banner */}
       {isViewingAs && (
         <div className="bg-primary/10 border-b border-primary/20 px-4 py-1.5 flex items-center justify-center gap-2">
           <Eye className="h-3.5 w-3.5 text-primary" />
           <span className="text-xs font-medium text-primary">
-            Viewing as {roleLabels[viewAsRole!]}
+            {t('nav.viewingAs', { role: roleLabels[viewAsRole!] })}
           </span>
-          <button
-            onClick={() => setViewAsRole(currentRole!)}
-            className="text-xs text-primary underline ml-2"
-          >
-            Exit
+          <button onClick={() => setViewAsRole(currentRole!)} className="text-xs text-primary underline ml-2">
+            {t('nav.exit')}
           </button>
         </div>
       )}
@@ -259,7 +236,6 @@ export default function AppLayout() {
         <Outlet />
       </main>
 
-      {/* Bottom Tab Bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 glass border-t safe-bottom">
         <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
           {tabs.map((tab) => {
@@ -267,7 +243,6 @@ export default function AppLayout() {
               (tab.path !== '/dashboard' && location.pathname.startsWith(tab.path));
             const showBadge = tab.path === '/messages' && unreadCount > 0;
 
-            // Replace profile tab with role switcher if available
             if (tab.path === '/profile' && showSwitcher) {
               return (
                 <DropdownMenu key="profile-switcher">
@@ -277,24 +252,22 @@ export default function AppLayout() {
                       isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
                     )}>
                       {isActive && (
-                        <motion.div layoutId="tab-indicator"
-                          className="absolute -top-1 left-1/2 -translate-x-1/2 w-6 h-1 rounded-full gradient-hyrox"
-                          transition={{ type: 'spring', stiffness: 500, damping: 30 }} />
+                        <motion.div layoutId="tab-indicator" className="absolute -top-1 left-1/2 -translate-x-1/2 w-6 h-1 rounded-full gradient-hyrox" transition={{ type: 'spring', stiffness: 500, damping: 30 }} />
                       )}
                       <Avatar className="h-5 w-5 border border-border">
                         {avatarUrl && <AvatarImage src={avatarUrl} alt={userName} />}
                         <AvatarFallback className="text-[7px] font-bold gradient-hyrox text-primary-foreground">{userInitials}</AvatarFallback>
                       </Avatar>
-                      <span className="text-[10px] font-medium">Menu</span>
+                      <span className="text-[10px] font-medium">{t('nav.menu')}</span>
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48 mb-2">
                     <DropdownMenuItem onClick={() => navigate('/profile')}>
-                      <User className="h-4 w-4 mr-2" /> Profile
+                      <User className="h-4 w-4 mr-2" /> {t('nav.profile')}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      <Eye className="h-3 w-3" /> Switch View
+                      <Eye className="h-3 w-3" /> {t('nav.switchView')}
                     </DropdownMenuLabel>
                     {accessibleRoles.map(role => (
                       <DropdownMenuItem
@@ -304,7 +277,7 @@ export default function AppLayout() {
                       >
                         {roleLabels[role]}
                         {role === currentRole && (
-                          <Badge variant="secondary" className="ml-auto text-[9px] px-1.5 py-0">yours</Badge>
+                          <Badge variant="secondary" className="ml-auto text-[9px] px-1.5 py-0">{t('nav.yours')}</Badge>
                         )}
                       </DropdownMenuItem>
                     ))}
@@ -323,9 +296,7 @@ export default function AppLayout() {
                 )}
               >
                 {isActive && (
-                  <motion.div layoutId="tab-indicator"
-                    className="absolute -top-1 left-1/2 -translate-x-1/2 w-6 h-1 rounded-full gradient-hyrox"
-                    transition={{ type: 'spring', stiffness: 500, damping: 30 }} />
+                  <motion.div layoutId="tab-indicator" className="absolute -top-1 left-1/2 -translate-x-1/2 w-6 h-1 rounded-full gradient-hyrox" transition={{ type: 'spring', stiffness: 500, damping: 30 }} />
                 )}
                 <div className="relative">
                   {tab.path === '/profile' ? (

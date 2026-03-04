@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Dumbbell, Users, Trophy, User, Flag } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 type Role = 'athlete' | 'coach';
 
@@ -19,14 +20,8 @@ interface Org {
   name: string;
 }
 
-const FITNESS_LEVELS = [
-  { value: 'beginner', label: 'Beginner', desc: 'New to HYROX / structured training' },
-  { value: 'intermediate', label: 'Intermediate', desc: '1-2 HYROX races, consistent training' },
-  { value: 'advanced', label: 'Advanced', desc: '3+ races, competitive goals' },
-  { value: 'elite', label: 'Elite', desc: 'Podium contender / Pro division' },
-];
-
 export default function Onboarding() {
+  const { t } = useTranslation();
   const { user, refreshMemberships } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -36,7 +31,6 @@ export default function Onboarding() {
   const [loading, setLoading] = useState(false);
   const [checkingMaster, setCheckingMaster] = useState(true);
 
-  // Athlete profile fields
   const [age, setAge] = useState('');
   const [weightKg, setWeightKg] = useState('');
   const [maxHr, setMaxHr] = useState('');
@@ -46,6 +40,13 @@ export default function Onboarding() {
   const [goalRaceLocation, setGoalRaceLocation] = useState('');
 
   const totalSteps = role === 'athlete' ? 4 : role === 'coach' ? 3 : 2;
+
+  const FITNESS_LEVELS = [
+    { value: 'beginner', label: t('onboarding.beginner'), desc: t('onboarding.beginnerDesc') },
+    { value: 'intermediate', label: t('onboarding.intermediate'), desc: t('onboarding.intermediateDesc') },
+    { value: 'advanced', label: t('onboarding.advanced'), desc: t('onboarding.advancedDesc') },
+    { value: 'elite', label: t('onboarding.elite'), desc: t('onboarding.eliteDesc') },
+  ];
 
   useEffect(() => {
     if (!user) return;
@@ -78,7 +79,7 @@ export default function Onboarding() {
 
   const handleComplete = async () => {
     if (!user || !selectedOrgId) {
-      toast.error('Please select an organization');
+      toast.error(t('onboarding.selectAnOrg'));
       return;
     }
     setLoading(true);
@@ -89,7 +90,6 @@ export default function Onboarding() {
       });
       if (error) throw error;
 
-      // Save athlete profile data
       if (role === 'athlete') {
         await supabase.from('profiles').update({
           age: age ? parseInt(age) : null,
@@ -108,7 +108,7 @@ export default function Onboarding() {
       }
 
       await refreshMemberships();
-      toast.success('Welcome to Hybrid Athletics! 🎉');
+      toast.success(t('onboarding.welcome'));
       navigate('/dashboard');
     } catch (e: any) {
       toast.error(e.message || 'Setup failed');
@@ -127,18 +127,14 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-background">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md space-y-6"
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md space-y-6">
         <div className="text-center">
           <div className="h-14 w-14 rounded-2xl gradient-hyrox flex items-center justify-center mx-auto mb-4">
             <Dumbbell className="h-7 w-7 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-display font-bold">Let's get set up</h1>
+          <h1 className="text-2xl font-display font-bold">{t('onboarding.title')}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Step {step} of {totalSteps}
+            {t('onboarding.stepOf', { step, total: totalSteps })}
           </p>
         </div>
 
@@ -146,14 +142,14 @@ export default function Onboarding() {
         {step === 1 && (
           <Card className="glass">
             <CardHeader>
-              <CardTitle className="text-lg font-display">Your Role</CardTitle>
-              <CardDescription>How will you use Hybrid Athletics?</CardDescription>
+              <CardTitle className="text-lg font-display">{t('onboarding.yourRole')}</CardTitle>
+              <CardDescription>{t('onboarding.howUse')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <RadioGroup value={role} onValueChange={(v) => setRole(v as Role)} className="space-y-3">
                 {[
-                  { value: 'athlete', icon: Trophy, label: 'Athlete', desc: 'Follow training plans, log sessions, track progress' },
-                  { value: 'coach', icon: Users, label: 'Coach', desc: 'Create plans, manage athletes, review performance' },
+                  { value: 'athlete', icon: Trophy, label: t('roles.athlete'), desc: t('onboarding.athleteDesc') },
+                  { value: 'coach', icon: Users, label: t('roles.coach'), desc: t('onboarding.coachDesc') },
                 ].map(opt => (
                   <label
                     key={opt.value}
@@ -171,7 +167,7 @@ export default function Onboarding() {
                 ))}
               </RadioGroup>
               <Button className="w-full gradient-hyrox" onClick={() => setStep(2)}>
-                Continue
+                {t('onboarding.continue')}
               </Button>
             </CardContent>
           </Card>
@@ -181,24 +177,20 @@ export default function Onboarding() {
         {step === 2 && (
           <Card className="glass">
             <CardHeader>
-              <CardTitle className="text-lg font-display">Select Organization</CardTitle>
+              <CardTitle className="text-lg font-display">{t('onboarding.selectOrg')}</CardTitle>
               <CardDescription>
-                {role === 'athlete'
-                  ? 'Choose the team / gym you belong to'
-                  : 'Choose the organization you coach for'}
+                {role === 'athlete' ? t('onboarding.selectOrgAthleteDesc') : t('onboarding.selectOrgCoachDesc')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {orgs.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No organizations available yet. Please contact an admin.
-                </p>
+                <p className="text-sm text-muted-foreground text-center py-4">{t('onboarding.noOrgs')}</p>
               ) : (
                 <div className="space-y-2">
-                  <Label>Organization</Label>
+                  <Label>{t('onboarding.organization')}</Label>
                   <Select value={selectedOrgId} onValueChange={setSelectedOrgId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select an organization" />
+                      <SelectValue placeholder={t('onboarding.selectAnOrg')} />
                     </SelectTrigger>
                     <SelectContent>
                       {orgs.map(org => (
@@ -209,24 +201,10 @@ export default function Onboarding() {
                 </div>
               )}
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setStep(1)} className="flex-1">Back</Button>
-                {role === 'athlete' ? (
-                  <Button
-                    className="flex-1 gradient-hyrox"
-                    onClick={() => setStep(3)}
-                    disabled={!selectedOrgId}
-                  >
-                    Continue
-                  </Button>
-                ) : (
-                  <Button
-                    className="flex-1 gradient-hyrox"
-                    onClick={() => setStep(3)}
-                    disabled={!selectedOrgId}
-                  >
-                    Continue
-                  </Button>
-                )}
+                <Button variant="outline" onClick={() => setStep(1)} className="flex-1">{t('onboarding.back')}</Button>
+                <Button className="flex-1 gradient-hyrox" onClick={() => setStep(3)} disabled={!selectedOrgId}>
+                  {t('onboarding.continue')}
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -237,27 +215,27 @@ export default function Onboarding() {
           <Card className="glass">
             <CardHeader>
               <CardTitle className="text-lg font-display flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" /> Your Profile
+                <User className="h-5 w-5 text-primary" /> {t('onboarding.yourProfile')}
               </CardTitle>
-              <CardDescription>Help us personalize your training plan</CardDescription>
+              <CardDescription>{t('onboarding.personalizeDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Age</Label>
+                  <Label className="text-xs">{t('onboarding.age')}</Label>
                   <Input type="number" value={age} onChange={e => setAge(e.target.value)} placeholder="28" className="h-9" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Weight (kg)</Label>
+                  <Label className="text-xs">{t('onboarding.weightKg')}</Label>
                   <Input type="number" step="0.1" value={weightKg} onChange={e => setWeightKg(e.target.value)} placeholder="75" className="h-9" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Max HR</Label>
+                  <Label className="text-xs">{t('onboarding.maxHr')}</Label>
                   <Input type="number" value={maxHr} onChange={e => setMaxHr(e.target.value)} placeholder="190" className="h-9" />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs">Fitness Level</Label>
+                <Label className="text-xs">{t('onboarding.fitnessLevel')}</Label>
                 <RadioGroup value={fitnessLevel} onValueChange={setFitnessLevel} className="space-y-2">
                   {FITNESS_LEVELS.map(fl => (
                     <label
@@ -276,8 +254,8 @@ export default function Onboarding() {
                 </RadioGroup>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setStep(2)} className="flex-1">Back</Button>
-                <Button className="flex-1 gradient-hyrox" onClick={() => setStep(4)}>Continue</Button>
+                <Button variant="outline" onClick={() => setStep(2)} className="flex-1">{t('onboarding.back')}</Button>
+                <Button className="flex-1 gradient-hyrox" onClick={() => setStep(4)}>{t('onboarding.continue')}</Button>
               </div>
             </CardContent>
           </Card>
@@ -288,36 +266,30 @@ export default function Onboarding() {
           <Card className="glass">
             <CardHeader>
               <CardTitle className="text-lg font-display flex items-center gap-2">
-                <Flag className="h-5 w-5 text-primary" /> Goal Race
+                <Flag className="h-5 w-5 text-primary" /> {t('onboarding.goalRace')}
               </CardTitle>
-              <CardDescription>Set your target race to power the countdown and plan builder</CardDescription>
+              <CardDescription>{t('onboarding.goalRaceDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-xs">Race Name</Label>
+                <Label className="text-xs">{t('onboarding.raceName')}</Label>
                 <Input value={goalRaceName} onChange={e => setGoalRaceName(e.target.value)} placeholder="HYROX Munich 2025" className="h-9" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Race Date</Label>
+                  <Label className="text-xs">{t('onboarding.raceDate')}</Label>
                   <Input type="date" value={goalRaceDate} onChange={e => setGoalRaceDate(e.target.value)} className="h-9" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Location</Label>
+                  <Label className="text-xs">{t('onboarding.location')}</Label>
                   <Input value={goalRaceLocation} onChange={e => setGoalRaceLocation(e.target.value)} placeholder="Munich, DE" className="h-9" />
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                You can skip this and set it later from your profile.
-              </p>
+              <p className="text-xs text-muted-foreground">{t('onboarding.skipHint')}</p>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setStep(3)} className="flex-1">Back</Button>
-                <Button
-                  className="flex-1 gradient-hyrox"
-                  onClick={handleComplete}
-                  disabled={loading}
-                >
-                  {loading ? 'Setting up…' : 'Get Started'}
+                <Button variant="outline" onClick={() => setStep(3)} className="flex-1">{t('onboarding.back')}</Button>
+                <Button className="flex-1 gradient-hyrox" onClick={handleComplete} disabled={loading}>
+                  {loading ? t('onboarding.settingUp') : t('onboarding.getStarted')}
                 </Button>
               </div>
             </CardContent>
@@ -328,23 +300,15 @@ export default function Onboarding() {
         {step === 3 && role === 'coach' && (
           <Card className="glass">
             <CardHeader>
-              <CardTitle className="text-lg font-display">Confirm</CardTitle>
-              <CardDescription>
-                You'll join <strong>{orgs.find(o => o.id === selectedOrgId)?.name}</strong> as a Coach.
-              </CardDescription>
+              <CardTitle className="text-lg font-display">{t('onboarding.confirm')}</CardTitle>
+              <CardDescription dangerouslySetInnerHTML={{ __html: t('onboarding.coachConfirmDesc', { org: orgs.find(o => o.id === selectedOrgId)?.name }) }} />
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                As a coach you'll be able to create training plans, manage athletes, and review performance data for this organization.
-              </p>
+              <p className="text-sm text-muted-foreground">{t('onboarding.coachConfirmInfo')}</p>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setStep(2)} className="flex-1">Back</Button>
-                <Button
-                  className="flex-1 gradient-hyrox"
-                  onClick={handleComplete}
-                  disabled={loading}
-                >
-                  {loading ? 'Setting up…' : 'Join as Coach'}
+                <Button variant="outline" onClick={() => setStep(2)} className="flex-1">{t('onboarding.back')}</Button>
+                <Button className="flex-1 gradient-hyrox" onClick={handleComplete} disabled={loading}>
+                  {loading ? t('onboarding.settingUp') : t('onboarding.joinAsCoach')}
                 </Button>
               </div>
             </CardContent>

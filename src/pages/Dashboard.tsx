@@ -15,6 +15,7 @@ import GoalRaceCard from '@/components/dashboard/GoalRaceCard';
 import ProfileCompletionCard from '@/components/dashboard/ProfileCompletionCard';
 import CoachInfoCard from '@/components/dashboard/CoachInfoCard';
 import FirstPlanCTA from '@/components/dashboard/FirstPlanCTA';
+import { useTranslation } from 'react-i18next';
 
 const container = {
   hidden: { opacity: 0 },
@@ -26,9 +27,10 @@ const item = {
 };
 
 export default function Dashboard() {
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 'Athlete';
+  const firstName = user?.user_metadata?.full_name?.split(' ')[0] || t('roles.athlete');
 
   const { sessions: plannedSessions, completedSessions: completedPlanned, targets, maxWeek, noPlan } = useScheduleData();
 
@@ -83,30 +85,30 @@ export default function Dashboard() {
     return { totalPlanned, totalCompleted, completionPct, currentWeekCompleted, currentWeekTotal: currentWeekSessions.length, weekPct };
   }, [plannedSessions, completedPlanned, completedPlanIds, todayStr, todayDow]);
 
+  const locale = i18n.language === 'pt-BR' ? 'pt-BR' : 'en-US';
+
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">
       <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
         {/* Greeting */}
         <motion.div variants={item}>
           <p className="text-muted-foreground text-sm">
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            {new Date().toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
           <h1 className="text-2xl font-display font-bold mt-1">
-            Hey, {firstName} 👊
+            {t('dashboard.hey', { name: firstName })}
           </h1>
         </motion.div>
 
-        {/* Profile Completion Nudge */}
         <motion.div variants={item}>
           <ProfileCompletionCard />
         </motion.div>
 
-        {/* Goal Race Countdown (from profile, not race_results) */}
         <motion.div variants={item}>
           <GoalRaceCard />
         </motion.div>
 
-        {/* Plan Completion (only if plan exists) */}
+        {/* Plan Completion */}
         {!noPlan && planStats.totalPlanned > 0 && (
           <motion.div variants={item}>
             <Card className="glass">
@@ -114,21 +116,20 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-medium flex items-center gap-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                    Plan Completion
+                    {t('dashboard.planCompletion')}
                   </p>
                   <span className="text-xs font-mono font-bold text-primary">{planStats.completionPct}%</span>
                 </div>
                 <Progress value={planStats.completionPct} className="h-2" />
                 <div className="flex justify-between text-[10px] text-muted-foreground">
-                  <span>{planStats.totalCompleted} / {planStats.totalPlanned} sessions done</span>
-                  <span>This week: {planStats.currentWeekCompleted}/{planStats.currentWeekTotal}</span>
+                  <span>{t('dashboard.sessionsDone', { done: planStats.totalCompleted, total: planStats.totalPlanned })}</span>
+                  <span>{t('dashboard.thisWeekProgress', { done: planStats.currentWeekCompleted, total: planStats.currentWeekTotal })}</span>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
         )}
 
-        {/* First Plan CTA (when no plan exists) */}
         {noPlan && (
           <motion.div variants={item}>
             <FirstPlanCTA />
@@ -142,18 +143,18 @@ export default function Dashboard() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg font-display">Today's Training</CardTitle>
+                  <CardTitle className="text-lg font-display">{t('dashboard.todaysTraining')}</CardTitle>
                   <p className="text-sm text-muted-foreground mt-0.5">
                     {noPlan
-                      ? 'No plan yet — generate one to get started'
+                      ? t('dashboard.noPlanYet')
                       : todaySessions.length > 0
-                        ? `${todaySessions.length} session${todaySessions.length > 1 ? 's' : ''} planned`
-                        : 'Rest day — no sessions planned'}
+                        ? t('dashboard.sessionsPlanned', { count: todaySessions.length })
+                        : t('dashboard.restDay')}
                   </p>
                 </div>
                 {todaySessions.length > 0 && (
                   <Badge variant="secondary" className="bg-primary/10 text-primary border-0">
-                    Active
+                    {t('dashboard.active')}
                   </Badge>
                 )}
               </div>
@@ -174,15 +175,15 @@ export default function Dashboard() {
                           <p className="text-sm font-medium truncate">{session.session_name}</p>
                           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                             <span>{disc.label}</span>
-                            {session.duration_min && <span>· {session.duration_min} min</span>}
+                            {session.duration_min && <span>· {session.duration_min} {t('common.min')}</span>}
                             {session.intensity && <span>· {session.intensity.replace('_', ' ')}</span>}
                           </div>
                         </div>
                         {isDone ? (
-                          <Badge variant="secondary" className="text-[10px] bg-success/10 text-success border-0 shrink-0">Done</Badge>
+                          <Badge variant="secondary" className="text-[10px] bg-success/10 text-success border-0 shrink-0">{t('dashboard.done')}</Badge>
                         ) : (
                           <Button size="sm" variant="ghost" className="shrink-0 text-xs" onClick={() => navigate('/log')}>
-                            Log
+                            {t('nav.log')}
                           </Button>
                         )}
                       </div>
@@ -190,10 +191,10 @@ export default function Dashboard() {
                   })}
                   <div className="flex gap-2">
                     <Button className="flex-1 gradient-hyrox" onClick={() => navigate('/schedule')}>
-                      <Calendar className="h-4 w-4 mr-2" /> View Schedule
+                      <Calendar className="h-4 w-4 mr-2" /> {t('dashboard.viewSchedule')}
                     </Button>
                     <Button variant="outline" className="flex-1" onClick={() => navigate('/log')}>
-                      <Dumbbell className="h-4 w-4 mr-2" /> Log Session
+                      <Dumbbell className="h-4 w-4 mr-2" /> {t('dashboard.logSession')}
                     </Button>
                   </div>
                 </>
@@ -201,15 +202,15 @@ export default function Dashboard() {
                 <div className="flex gap-2">
                   {noPlan ? (
                     <Button className="flex-1 gradient-hyrox" onClick={() => navigate('/plans')}>
-                      Generate Plan
+                      {t('dashboard.generatePlan')}
                     </Button>
                   ) : (
                     <>
                       <Button className="flex-1 gradient-hyrox" onClick={() => navigate('/schedule')}>
-                        <Calendar className="h-4 w-4 mr-2" /> View Schedule
+                        <Calendar className="h-4 w-4 mr-2" /> {t('dashboard.viewSchedule')}
                       </Button>
                       <Button variant="outline" className="flex-1" onClick={() => navigate('/log')}>
-                        <Dumbbell className="h-4 w-4 mr-2" /> Log Session
+                        <Dumbbell className="h-4 w-4 mr-2" /> {t('dashboard.logSession')}
                       </Button>
                     </>
                   )}
@@ -222,9 +223,9 @@ export default function Dashboard() {
         {/* Quick Stats */}
         <motion.div variants={item} className="grid grid-cols-3 gap-3">
           {[
-            { label: 'Week Volume', value: `${totalKm.toFixed(1)} km`, icon: TrendingUp },
-            { label: 'Sessions', value: `${sessionCount}`, icon: Calendar },
-            { label: 'Avg RPE', value: avgRpe, icon: Target },
+            { label: t('dashboard.weekVolume'), value: `${totalKm.toFixed(1)} ${t('common.km')}`, icon: TrendingUp },
+            { label: t('dashboard.sessions'), value: `${sessionCount}`, icon: Calendar },
+            { label: t('dashboard.avgRpe'), value: avgRpe, icon: Target },
           ].map((stat) => (
             <Card key={stat.label} className="glass">
               <CardContent className="p-3 text-center">
@@ -236,7 +237,6 @@ export default function Dashboard() {
           ))}
         </motion.div>
 
-        {/* Coach Info */}
         <motion.div variants={item}>
           <CoachInfoCard />
         </motion.div>
@@ -246,9 +246,9 @@ export default function Dashboard() {
           <Card className="glass">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-display">This Week</CardTitle>
+                <CardTitle className="text-base font-display">{t('dashboard.thisWeek')}</CardTitle>
                 <Button variant="ghost" size="sm" onClick={() => navigate('/schedule')}>
-                  View all <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                  {t('dashboard.viewAll')} <ChevronRight className="h-3.5 w-3.5 ml-1" />
                 </Button>
               </div>
             </CardHeader>
@@ -288,8 +288,8 @@ export default function Dashboard() {
                 <TrendingUp className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-display font-bold">Weekly Report</p>
-                <p className="text-xs text-muted-foreground">Review your training stats and AI coaching insights</p>
+                <p className="text-sm font-display font-bold">{t('dashboard.weeklyReport')}</p>
+                <p className="text-xs text-muted-foreground">{t('dashboard.weeklyReportDesc')}</p>
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </CardContent>
@@ -304,8 +304,8 @@ export default function Dashboard() {
                 <span className="text-lg">🤖</span>
               </div>
               <div className="flex-1">
-                <p className="text-sm font-display font-bold">AI Coach</p>
-                <p className="text-xs text-muted-foreground">Get personalized training advice and session adjustments</p>
+                <p className="text-sm font-display font-bold">{t('dashboard.aiCoach')}</p>
+                <p className="text-xs text-muted-foreground">{t('dashboard.aiCoachDesc')}</p>
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </CardContent>
