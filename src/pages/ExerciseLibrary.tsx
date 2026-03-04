@@ -15,6 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { Plus, Search, Sparkles, Check, X, Edit2, Trash2, Loader2, Dumbbell, ShieldCheck, AlertTriangle, BookOpen, Camera } from 'lucide-react';
 import ScreenshotParserDialog from '@/components/exercises/ScreenshotParserDialog';
+import { useTranslation } from 'react-i18next';
 
 const CATEGORIES = ['strength', 'endurance', 'mobility', 'plyometric', 'station_specific', 'accessory', 'warmup', 'cooldown', 'general'];
 const DIFFICULTIES = ['beginner', 'intermediate', 'advanced', 'elite'];
