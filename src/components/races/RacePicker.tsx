@@ -30,6 +30,8 @@ interface Race {
 interface RacePickerProps {
   onSelect: (race: Race) => void;
   selectedRaceId?: string;
+  /** Pre-filter by plan type: 'hyrox' shows only HYROX races, 'running' shows 5k/10k/21k/marathon */
+  planType?: 'hyrox' | 'running';
 }
 
 const RACE_TYPE_LABELS: Record<string, string> = {
