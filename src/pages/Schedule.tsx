@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -34,7 +34,21 @@ export default function Schedule() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDay, setSelectedDay] = useState(1);
   const [view, setView] = useState<'day' | 'week' | 'month'>('week');
+  const [hiddenPlanIds, setHiddenPlanIds] = useState<Set<string>>(new Set());
   const defaultProvider = getDefaultCalendarProvider();
+
+  const togglePlanVisibility = (planId: string) => {
+    setHiddenPlanIds(prev => {
+      const next = new Set(prev);
+      if (next.has(planId)) next.delete(planId); else next.add(planId);
+      return next;
+    });
+  };
+
+  const visibleSessions = useMemo(() => {
+    if (!isAllPlans || hiddenPlanIds.size === 0) return sessions;
+    return sessions.filter((s: any) => !hiddenPlanIds.has(s._planId));
+  }, [sessions, isAllPlans, hiddenPlanIds]);
 
   const handleCalendarExport = (provider: CalendarProvider) => {
     exportWeekToCalendar(provider, sessions, displayWeek);
@@ -103,16 +117,27 @@ export default function Schedule() {
           )}
 
           {isAllPlans && plans && plans.length > 1 && (
-            <div className="flex flex-wrap items-center gap-3 px-1">
-              {plans.map(p => (
-                <span key={p.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <span
-                    className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: planColorMap[p.id] }}
-                  />
-                  {p.name}
-                </span>
-              ))}
+            <div className="flex flex-wrap items-center gap-1.5 px-1">
+              {plans.map(p => {
+                const isHidden = hiddenPlanIds.has(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => togglePlanVisibility(p.id)}
+                    className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border transition-all ${
+                      isHidden
+                        ? 'opacity-40 border-border bg-muted line-through'
+                        : 'border-border/50 bg-background hover:bg-accent'
+                    }`}
+                  >
+                    <span
+                      className="inline-block w-2.5 h-2.5 rounded-full shrink-0 transition-opacity"
+                      style={{ backgroundColor: planColorMap[p.id], opacity: isHidden ? 0.3 : 1 }}
+                    />
+                    {p.name}
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -167,7 +192,7 @@ export default function Schedule() {
                 {view === 'day' && (
                   <div className="flex items-center gap-1 mt-2 overflow-x-auto pb-1">
                     {dayLabels.map((d, i) => {
-                      const hasSessions = sessions.some(s => s.week_number === displayWeek && s.day_of_week === i + 1);
+                      const hasSessions = visibleSessions.some(s => s.week_number === displayWeek && s.day_of_week === i + 1);
                       return (
                         <Button key={i} variant={selectedDay === i + 1 ? 'default' : 'ghost'} size="sm" className={`relative min-w-[40px] h-8 text-xs ${selectedDay === i + 1 ? 'gradient-hyrox text-primary-foreground' : ''}`} onClick={() => setSelectedDay(i + 1)}>
                           {d}
@@ -187,13 +212,13 @@ export default function Schedule() {
                 ) : (
                   <>
                     <TabsContent value="day" className="mt-3">
-                      <DailyView sessions={sessions} weekNumber={displayWeek} dayOfWeek={selectedDay} completedSessions={completedSessions} substitutionMap={substitutionMap} />
+                      <DailyView sessions={visibleSessions} weekNumber={displayWeek} dayOfWeek={selectedDay} completedSessions={completedSessions} substitutionMap={substitutionMap} />
                     </TabsContent>
                     <TabsContent value="week" className="mt-3">
-                      <WeeklyView sessions={sessions} weekNumber={displayWeek} weeklySummary={weeklySummary} completedSessions={completedSessions} substitutionMap={substitutionMap} />
+                      <WeeklyView sessions={visibleSessions} weekNumber={displayWeek} weeklySummary={weeklySummary} completedSessions={completedSessions} substitutionMap={substitutionMap} />
                     </TabsContent>
                     <TabsContent value="month" className="mt-3">
-                      <MonthlyView sessions={sessions} completedSessions={completedSessions} maxWeek={maxWeek} currentWeek={displayWeek} onSelectWeek={(w) => { setWeekOffset(w - 1); setView('week'); }} />
+                      <MonthlyView sessions={visibleSessions} completedSessions={completedSessions} maxWeek={maxWeek} currentWeek={displayWeek} onSelectWeek={(w) => { setWeekOffset(w - 1); setView('week'); }} />
                     </TabsContent>
                   </>
                 )}
