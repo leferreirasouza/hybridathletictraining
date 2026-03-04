@@ -178,7 +178,7 @@ export default function PlanBuilder() {
 
   if (!isCoach) {
     return (
-      <div className="px-4 py-6 max-w-2xl mx-auto space-y-5">
+      <div className="page-container py-6 space-y-5">
         <h1 className="text-xl font-display font-bold">{t('planBuilder.createYourPlan')}</h1>
         <AthletePlanForm />
       </div>
