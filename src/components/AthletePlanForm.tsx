@@ -1,4 +1,9 @@
 import { useState, useMemo, useCallback } from 'react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -79,6 +84,22 @@ export default function AthletePlanForm() {
   const [generating, setGenerating] = useState(false);
   const [prediction, setPrediction] = useState<any>(null);
   const [loadingPrediction, setLoadingPrediction] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  // Check for existing plans
+  const { data: existingPlans } = useQuery({
+    queryKey: ['existing-plans-count', currentOrg?.id],
+    queryFn: async () => {
+      if (!currentOrg) return [];
+      const { data } = await supabase
+        .from('training_plans')
+        .select('id, name, source')
+        .eq('organization_id', currentOrg.id)
+        .is('archived_at' as any, null);
+      return data || [];
+    },
+    enabled: !!currentOrg,
+  });
 
   // Race type
   const [raceType, setRaceType] = useState<'hyrox' | 'running'>('hyrox');
@@ -875,7 +896,13 @@ export default function AthletePlanForm() {
       <Button
         className="w-full gradient-hyrox"
         size="lg"
-        onClick={handleGenerate}
+        onClick={() => {
+          if (existingPlans && existingPlans.length > 0) {
+            setShowConfirmDialog(true);
+          } else {
+            handleGenerate();
+          }
+        }}
         disabled={generating}
       >
         {generating ? (
@@ -890,6 +917,41 @@ export default function AthletePlanForm() {
           AI is building your personalized plan. This may take 15-30 seconds…
         </p>
       )}
+
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-primary" />
+              You already have {existingPlans?.length} active plan{(existingPlans?.length ?? 0) !== 1 ? 's' : ''}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                This new AI plan will be <strong>added alongside</strong> your existing plans — it will <strong>not replace or overwrite</strong> them.
+              </p>
+              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1">
+                <p className="text-xs font-medium text-foreground">Your current plans:</p>
+                {existingPlans?.map(p => (
+                  <div key={p.id} className="flex items-center gap-2 text-xs">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    <span>{p.name}</span>
+                    <span className="text-muted-foreground capitalize">({p.source === 'spreadsheet' ? 'Coach Import' : p.source === 'ai_generated' ? 'AI' : 'Manual'})</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                All plans will appear merged in your training schedule. You can archive any plan from Plan History.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setShowConfirmDialog(false); handleGenerate(); }}>
+              Add New Plan
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   );
 }
