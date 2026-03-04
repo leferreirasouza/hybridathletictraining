@@ -12,7 +12,7 @@ import MonthlyView from '@/components/schedule/MonthlyView';
 import DailyView from '@/components/schedule/DailyView';
 import TargetsPanel from '@/components/schedule/TargetsPanel';
 import { dayLabels } from '@/components/schedule/config';
-import { exportWeekToCalendar, downloadIcsFullPlan, CalendarProvider } from '@/lib/calendarExport';
+import { exportWeekToCalendar, exportFullPlanToCalendar, CalendarProvider } from '@/lib/calendarExport';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useTranslation } from 'react-i18next';
 
@@ -41,10 +41,11 @@ export default function Schedule() {
     toast.success(`${count} sessions → ${provider === 'apple' ? '.ics downloaded' : provider.charAt(0).toUpperCase() + provider.slice(1) + ' Calendar'}`);
   };
 
-  const handleFullPlanExport = () => {
+  const handleFullPlanExport = (provider: CalendarProvider) => {
     const planName = plans?.find(p => p.id === activePlanId)?.name;
-    downloadIcsFullPlan(sessions, planName);
-    toast.success(t('schedule.fullPlanExported', { count: sessions.length }));
+    exportFullPlanToCalendar(provider, sessions, planName);
+    const label = provider === 'apple' ? '.ics downloaded' : `${provider.charAt(0).toUpperCase() + provider.slice(1)} Calendar`;
+    toast.success(t('schedule.fullPlanExported', { count: sessions.length }) + ` → ${label}`);
   };
 
   const displayWeek = Math.max(1, Math.min(maxWeek, 1 + weekOffset));
@@ -174,10 +175,30 @@ export default function Schedule() {
             )}
             {!isLoading && sessions.length > 0 && (
               <div className="flex justify-center pt-2">
-                <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={handleFullPlanExport}>
-                  <Download className="h-3.5 w-3.5" />
-                  {t('schedule.exportFullPlan')}
-                </Button>
+                {defaultProvider ? (
+                  <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => handleFullPlanExport(defaultProvider)}>
+                    <Download className="h-3.5 w-3.5" />
+                    {t('schedule.exportFullPlan')}
+                  </Button>
+                ) : (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="text-xs gap-1.5">
+                        <Download className="h-3.5 w-3.5" />
+                        {t('schedule.exportFullPlan')}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="center" className="w-48">
+                      {(['google', 'outlook', 'apple'] as CalendarProvider[]).map(provider => (
+                        <DropdownMenuItem key={provider} onClick={() => handleFullPlanExport(provider)}>
+                          {provider === 'google' && 'Google Calendar'}
+                          {provider === 'outlook' && 'Outlook Calendar'}
+                          {provider === 'apple' && 'Apple Calendar (.ics)'}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
             )}
           </Tabs>

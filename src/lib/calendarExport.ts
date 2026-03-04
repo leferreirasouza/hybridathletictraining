@@ -218,3 +218,24 @@ export function downloadIcsFullPlan(sessions: PlannedSession[], planName?: strin
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+export function exportFullPlanToCalendar(provider: CalendarProvider, sessions: PlannedSession[], planName?: string, planStartDate?: Date) {
+  if (!sessions.length) return;
+  switch (provider) {
+    case 'google':
+      sessions.forEach((session, i) => {
+        const url = buildGoogleCalendarUrl(session, planStartDate);
+        setTimeout(() => window.open(url, '_blank', 'noopener'), i * 300);
+      });
+      break;
+    case 'outlook':
+      sessions.forEach((session, i) => {
+        const url = buildOutlookCalendarUrl(session, planStartDate);
+        setTimeout(() => window.open(url, '_blank', 'noopener'), i * 300);
+      });
+      break;
+    case 'apple':
+      downloadIcsFullPlan(sessions, planName, planStartDate);
+      break;
+  }
+}
