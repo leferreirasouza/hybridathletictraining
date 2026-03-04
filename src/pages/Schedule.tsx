@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Calendar, Loader2, CalendarPlus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Loader2, CalendarPlus, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useScheduleData } from '@/hooks/useScheduleData';
@@ -12,7 +12,7 @@ import MonthlyView from '@/components/schedule/MonthlyView';
 import DailyView from '@/components/schedule/DailyView';
 import TargetsPanel from '@/components/schedule/TargetsPanel';
 import { dayLabels } from '@/components/schedule/config';
-import { exportWeekToCalendar, CalendarProvider } from '@/lib/calendarExport';
+import { exportWeekToCalendar, downloadIcsFullPlan, CalendarProvider } from '@/lib/calendarExport';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useTranslation } from 'react-i18next';
 
@@ -39,6 +39,12 @@ export default function Schedule() {
     exportWeekToCalendar(provider, sessions, displayWeek);
     const count = sessions.filter(s => s.week_number === displayWeek).length;
     toast.success(`${count} sessions → ${provider === 'apple' ? '.ics downloaded' : provider.charAt(0).toUpperCase() + provider.slice(1) + ' Calendar'}`);
+  };
+
+  const handleFullPlanExport = () => {
+    const planName = plans?.find(p => p.id === activePlanId)?.name;
+    downloadIcsFullPlan(sessions, planName);
+    toast.success(t('schedule.fullPlanExported', { count: sessions.length }));
   };
 
   const displayWeek = Math.max(1, Math.min(maxWeek, 1 + weekOffset));
@@ -165,6 +171,14 @@ export default function Schedule() {
                   <MonthlyView sessions={sessions} completedSessions={completedSessions} maxWeek={maxWeek} currentWeek={displayWeek} onSelectWeek={(w) => { setWeekOffset(w - 1); setView('week'); }} />
                 </TabsContent>
               </>
+            )}
+            {!isLoading && sessions.length > 0 && (
+              <div className="flex justify-center pt-2">
+                <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={handleFullPlanExport}>
+                  <Download className="h-3.5 w-3.5" />
+                  {t('schedule.exportFullPlan')}
+                </Button>
+              </div>
             )}
           </Tabs>
         </>

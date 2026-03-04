@@ -186,3 +186,35 @@ export function exportWeekToCalendar(provider: CalendarProvider, sessions: Plann
     case 'apple': downloadIcsWeek(sessions, weekNumber, planStartDate); break;
   }
 }
+
+// ─── Full plan .ics export ───
+export function downloadIcsFullPlan(sessions: PlannedSession[], planName?: string, planStartDate?: Date): void {
+  if (!sessions.length) return;
+
+  const events = sessions.map(session => {
+    const { startTime, endTime } = getEventTimes(session, planStartDate);
+    const title = session.session_name || `${disciplineConfig[session.discipline]?.label || session.discipline} Session`;
+    const desc = buildDescription(session).replace(/\n/g, '\\n');
+    return [
+      'BEGIN:VEVENT',
+      `DTSTART:${startTime}`,
+      `DTEND:${endTime}`,
+      `SUMMARY:${title}`,
+      `DESCRIPTION:${desc}`,
+      `UID:${session.id}@hybridathletics`,
+      'END:VEVENT',
+    ].join('\r\n');
+  });
+
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Hybrid Athletics//EN', ...events, 'END:VCALENDAR'].join('\r\n');
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const safeName = (planName || 'training_plan').replace(/[^a-zA-Z0-9]/g, '_');
+  a.download = `${safeName}_full.ics`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
