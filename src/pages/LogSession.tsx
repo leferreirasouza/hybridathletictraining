@@ -39,6 +39,7 @@ const disciplineOptions: { value: Discipline; label: string }[] = [
 ];
 
 export default function LogSession() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { sessions, completedSessions, isLoading: scheduleLoading } = useScheduleData();
 
