@@ -84,6 +84,22 @@ export default function AthletePlanForm() {
   const [generating, setGenerating] = useState(false);
   const [prediction, setPrediction] = useState<any>(null);
   const [loadingPrediction, setLoadingPrediction] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  // Check for existing plans
+  const { data: existingPlans } = useQuery({
+    queryKey: ['existing-plans-count', currentOrg?.id],
+    queryFn: async () => {
+      if (!currentOrg) return [];
+      const { data } = await supabase
+        .from('training_plans')
+        .select('id, name, source')
+        .eq('organization_id', currentOrg.id)
+        .is('archived_at' as any, null);
+      return data || [];
+    },
+    enabled: !!currentOrg,
+  });
 
   // Race type
   const [raceType, setRaceType] = useState<'hyrox' | 'running'>('hyrox');
