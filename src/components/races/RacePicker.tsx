@@ -100,6 +100,8 @@ export default function RacePicker({ onSelect, selectedRaceId, planType }: RaceP
 
   const filtered = useMemo(() => {
     return races.filter((r: Race) => {
+      // Apply planType-level filtering first
+      if (allowedTypes && !allowedTypes.includes(r.race_type)) return false;
       if (typeFilter !== 'all' && r.race_type !== typeFilter) return false;
       if (countryFilter !== 'All' && r.country !== countryFilter) return false;
       if (search) {
