@@ -253,7 +253,7 @@ export default function LogSession() {
         </Card>
 
         <Button type="submit" className="w-full gradient-hyrox" size="lg" disabled={saving}>
-          <Check className="h-4 w-4 mr-2" /> {saving ? 'Saving…' : 'Log Session'}
+          <Check className="h-4 w-4 mr-2" /> {saving ? t('logSession.savingSession') : t('logSession.logSessionBtn')}
         </Button>
       </motion.form>
 
