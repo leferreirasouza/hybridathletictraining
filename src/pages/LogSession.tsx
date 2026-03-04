@@ -246,8 +246,8 @@ export default function LogSession() {
             )}
 
             <div className="space-y-2">
-              <Label>Notes</Label>
-              <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="How did the session feel?" rows={3} />
+              <Label>{t('logSession.notes')}</Label>
+              <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder={t('logSession.notesPlaceholder')} rows={3} />
             </div>
           </CardContent>
         </Card>
