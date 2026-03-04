@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Moon, Sun, Ruler, Bell, ShieldCheck, Trash2, BellRing, BellOff, Globe } from 'lucide-react';
+import { ArrowLeft, Moon, Sun, Ruler, Bell, ShieldCheck, Trash2, BellRing, BellOff, Globe, CalendarPlus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
