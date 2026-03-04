@@ -25,7 +25,7 @@ export default function Schedule() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const {
-    plans, activePlanId, setSelectedPlanId,
+    plans, activePlanId, setSelectedPlanId, isAllPlans,
     sessions, weeklySummaries, targets, completedSessions,
     substitutionMap, maxWeek, isLoading, noPlan,
   } = useScheduleData();
