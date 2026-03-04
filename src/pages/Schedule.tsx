@@ -192,7 +192,7 @@ export default function Schedule() {
                 {view === 'day' && (
                   <div className="flex items-center gap-1 mt-2 overflow-x-auto pb-1">
                     {dayLabels.map((d, i) => {
-                      const hasSessions = sessions.some(s => s.week_number === displayWeek && s.day_of_week === i + 1);
+                      const hasSessions = visibleSessions.some(s => s.week_number === displayWeek && s.day_of_week === i + 1);
                       return (
                         <Button key={i} variant={selectedDay === i + 1 ? 'default' : 'ghost'} size="sm" className={`relative min-w-[40px] h-8 text-xs ${selectedDay === i + 1 ? 'gradient-hyrox text-primary-foreground' : ''}`} onClick={() => setSelectedDay(i + 1)}>
                           {d}
