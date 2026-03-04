@@ -425,7 +425,11 @@
     "view": "Ver",
     "noEquipment": "Sem equipamento",
     "lessTime": "Menos tempo",
-    "other": "Outro"
+    "other": "Outro",
+    "loadAlerts": "Alertas de Carga",
+    "loadAlertsDanger": "em risco",
+    "loadAlertsCaution": "atenção",
+    "noLoadAlerts": "Todos os atletas dentro dos limites seguros"
   },
   "faq": {
     "title": "Perguntas Frequentes",

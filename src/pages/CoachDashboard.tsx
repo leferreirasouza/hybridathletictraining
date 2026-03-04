@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useTranslation } from 'react-i18next';
+import AthleteLoadAlertsPanel from '@/components/coach/AthleteLoadAlertsPanel';
 
 const mockAthletes = [
   { id: '1', name: 'Sarah Mitchell', compliance: 92, sessions: '5/6', flag: false, lastActive: '2h ago' },
@@ -209,6 +210,8 @@ export default function CoachDashboard() {
             </CardContent>
           </Card>
         </motion.div>
+
+        <motion.div variants={item}><AthleteLoadAlertsPanel /></motion.div>
 
         <motion.div variants={item}><SwapRequestsPanel /></motion.div>
 
