@@ -114,7 +114,7 @@ export default function RacePicker({ onSelect, selectedRaceId, planType }: RaceP
       }
       return true;
     });
-  }, [races, typeFilter, countryFilter, search]);
+  }, [races, typeFilter, countryFilter, search, allowedTypes]);
 
   const handleSelectRace = (race: Race) => {
     onSelect(race);
