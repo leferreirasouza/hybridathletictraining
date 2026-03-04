@@ -102,6 +102,7 @@ const App = () => (
                 <Route path="settings" element={<Settings />} />
                 <Route path="activity" element={<ActivityLog />} />
                 <Route path="exercises" element={<ExerciseLibrary />} />
+                <Route path="plan-history" element={<PlanHistory />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
