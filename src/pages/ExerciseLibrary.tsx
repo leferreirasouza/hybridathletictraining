@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { Plus, Search, Sparkles, Check, X, Edit2, Trash2, Loader2, Dumbbell, ShieldCheck, AlertTriangle, BookOpen } from 'lucide-react';
+import { Plus, Search, Sparkles, Check, X, Edit2, Trash2, Loader2, Dumbbell, ShieldCheck, AlertTriangle, BookOpen, Camera } from 'lucide-react';
+import ScreenshotParserDialog from '@/components/exercises/ScreenshotParserDialog';
 
 const CATEGORIES = ['strength', 'endurance', 'mobility', 'plyometric', 'station_specific', 'accessory', 'warmup', 'cooldown', 'general'];
 const DIFFICULTIES = ['beginner', 'intermediate', 'advanced', 'elite'];
@@ -68,6 +69,7 @@ export default function ExerciseLibrary() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyExercise);
   const [seedLoading, setSeedLoading] = useState(false);
+  const [screenshotOpen, setScreenshotOpen] = useState(false);
 
   const isCoachOrAdmin = effectiveRole && ['coach', 'admin', 'master_admin'].includes(effectiveRole);
 
@@ -240,6 +242,10 @@ export default function ExerciseLibrary() {
         </div>
         {isCoachOrAdmin && (
           <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setScreenshotOpen(true)}>
+              <Camera className="h-4 w-4 mr-1" />
+              Scan
+            </Button>
             <Button variant="outline" size="sm" onClick={handleSeedAI} disabled={seedLoading}>
               {seedLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Sparkles className="h-4 w-4 mr-1" />}
               AI Seed
@@ -418,6 +424,8 @@ export default function ExerciseLibrary() {
           ))}
         </div>
       )}
+
+      <ScreenshotParserDialog open={screenshotOpen} onOpenChange={setScreenshotOpen} />
     </div>
   );
 }
