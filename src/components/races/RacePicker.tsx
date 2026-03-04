@@ -30,6 +30,8 @@ interface Race {
 interface RacePickerProps {
   onSelect: (race: Race) => void;
   selectedRaceId?: string;
+  /** Pre-filter by plan type: 'hyrox' shows only HYROX races, 'running' shows 5k/10k/21k/marathon */
+  planType?: 'hyrox' | 'running';
 }
 
 const RACE_TYPE_LABELS: Record<string, string> = {
@@ -40,6 +42,9 @@ const RACE_TYPE_LABELS: Record<string, string> = {
   marathon: 'Marathon',
   other: 'Other',
 };
+
+const RUNNING_TYPES = ['5k', '10k', '21k', 'marathon'];
+const HYROX_TYPES = ['hyrox'];
 
 const RACE_TYPE_COLORS: Record<string, string> = {
   hyrox: 'bg-primary/20 text-primary',
@@ -58,13 +63,22 @@ const COUNTRIES = [
   'United Kingdom', 'USA',
 ];
 
-export default function RacePicker({ onSelect, selectedRaceId }: RacePickerProps) {
+export default function RacePicker({ onSelect, selectedRaceId, planType }: RacePickerProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [showScrollHint, setShowScrollHint] = useState(true);
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
+
+  // Determine allowed types based on planType
+  const allowedTypes = useMemo(() => {
+    if (planType === 'hyrox') return HYROX_TYPES;
+    if (planType === 'running') return RUNNING_TYPES;
+    return null; // all types
+  }, [planType]);
+
+  const defaultTypeFilter = planType === 'hyrox' ? 'hyrox' : 'all';
+  const [typeFilter, setTypeFilter] = useState(defaultTypeFilter);
   const [countryFilter, setCountryFilter] = useState('All');
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [customRace, setCustomRace] = useState({
@@ -86,6 +100,8 @@ export default function RacePicker({ onSelect, selectedRaceId }: RacePickerProps
 
   const filtered = useMemo(() => {
     return races.filter((r: Race) => {
+      // Apply planType-level filtering first
+      if (allowedTypes && !allowedTypes.includes(r.race_type)) return false;
       if (typeFilter !== 'all' && r.race_type !== typeFilter) return false;
       if (countryFilter !== 'All' && r.country !== countryFilter) return false;
       if (search) {
@@ -98,7 +114,7 @@ export default function RacePicker({ onSelect, selectedRaceId }: RacePickerProps
       }
       return true;
     });
-  }, [races, typeFilter, countryFilter, search]);
+  }, [races, typeFilter, countryFilter, search, allowedTypes]);
 
   const handleSelectRace = (race: Race) => {
     onSelect(race);
@@ -177,10 +193,12 @@ export default function RacePicker({ onSelect, selectedRaceId }: RacePickerProps
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {Object.entries(RACE_TYPE_LABELS).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{v}</SelectItem>
-                ))}
+                <SelectItem value="all">{allowedTypes ? (planType === 'hyrox' ? 'HYROX' : 'All Running') : 'All Types'}</SelectItem>
+                {Object.entries(RACE_TYPE_LABELS)
+                  .filter(([k]) => !allowedTypes || allowedTypes.includes(k))
+                  .map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
               </SelectContent>
             </Select>
             <Select value={countryFilter} onValueChange={setCountryFilter}>

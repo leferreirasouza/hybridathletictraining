@@ -665,7 +665,7 @@ export default function AthletePlanForm() {
               {/* Race Picker from database */}
               <div className="space-y-1.5">
                 <Label className="text-xs">Search Official Races</Label>
-                <RacePicker onSelect={handleRaceSelect} selectedRaceId={selectedRaceId} />
+                <RacePicker onSelect={handleRaceSelect} selectedRaceId={selectedRaceId} planType={raceType} />
               </div>
 
               {/* Manual override fields */}
