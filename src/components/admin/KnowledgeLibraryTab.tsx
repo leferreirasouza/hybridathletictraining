@@ -251,7 +251,7 @@ export default function KnowledgeLibraryTab() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
+                  ))}
                 </TableBody>
               </Table>
             </div>
