@@ -33,6 +33,7 @@ const Analytics = lazy(() => import("@/pages/Analytics"));
 const Settings = lazy(() => import("@/pages/Settings"));
 const ActivityLog = lazy(() => import("@/pages/ActivityLog"));
 const ExerciseLibrary = lazy(() => import("@/pages/ExerciseLibrary"));
+const PlanHistory = lazy(() => import("@/pages/PlanHistory"));
 
 const queryClient = new QueryClient();
 
