@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.scrape-hyrox-races]
 verify_jwt = false
+
+[functions.ingest-knowledge]
+verify_jwt = false
