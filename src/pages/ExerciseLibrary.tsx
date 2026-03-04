@@ -241,7 +241,7 @@ export default function ExerciseLibrary() {
             {exercises.length} exercises · {approvedCount} approved · {pendingCount} pending review
           </p>
         </div>
-        {isCoachOrAdmin && (
+        {isMasterAdmin && (
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setScreenshotOpen(true)}>
               <Camera className="h-4 w-4 mr-1" />
