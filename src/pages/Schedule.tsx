@@ -28,7 +28,7 @@ export default function Schedule() {
   const {
     plans, activePlanId, setSelectedPlanId, isAllPlans,
     sessions, weeklySummaries, targets, completedSessions,
-    substitutionMap, maxWeek, isLoading, noPlan,
+    substitutionMap, maxWeek, isLoading, noPlan, planColorMap,
   } = useScheduleData();
 
   const [weekOffset, setWeekOffset] = useState(0);
@@ -100,6 +100,20 @@ export default function Schedule() {
         <>
           {plans && plans.length === 1 && (
             <p className="text-xs text-muted-foreground">{plans[0].name}</p>
+          )}
+
+          {isAllPlans && plans && plans.length > 1 && (
+            <div className="flex flex-wrap items-center gap-3 px-1">
+              {plans.map(p => (
+                <span key={p.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span
+                    className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: planColorMap[p.id] }}
+                  />
+                  {p.name}
+                </span>
+              ))}
+            </div>
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
