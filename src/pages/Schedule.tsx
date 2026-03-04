@@ -41,10 +41,11 @@ export default function Schedule() {
     toast.success(`${count} sessions → ${provider === 'apple' ? '.ics downloaded' : provider.charAt(0).toUpperCase() + provider.slice(1) + ' Calendar'}`);
   };
 
-  const handleFullPlanExport = () => {
+  const handleFullPlanExport = (provider: CalendarProvider) => {
     const planName = plans?.find(p => p.id === activePlanId)?.name;
-    downloadIcsFullPlan(sessions, planName);
-    toast.success(t('schedule.fullPlanExported', { count: sessions.length }));
+    exportFullPlanToCalendar(provider, sessions, planName);
+    const label = provider === 'apple' ? '.ics downloaded' : `${provider.charAt(0).toUpperCase() + provider.slice(1)} Calendar`;
+    toast.success(t('schedule.fullPlanExported', { count: sessions.length }) + ` → ${label}`);
   };
 
   const displayWeek = Math.max(1, Math.min(maxWeek, 1 + weekOffset));
