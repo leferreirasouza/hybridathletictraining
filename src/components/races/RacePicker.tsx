@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Flag, MapPin, Calendar, Plus, ExternalLink, Trophy } from 'lucide-react';
+import { Search, Flag, MapPin, Calendar, Plus, ExternalLink, Trophy, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -62,6 +62,7 @@ export default function RacePicker({ onSelect, selectedRaceId }: RacePickerProps
   const { t } = useTranslation();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [showScrollHint, setShowScrollHint] = useState(true);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('All');
@@ -196,61 +197,79 @@ export default function RacePicker({ onSelect, selectedRaceId }: RacePickerProps
         </div>
 
         {/* Race List */}
-        <ScrollArea className="flex-1 px-4">
-          <div className="space-y-1.5 py-2">
-            {filtered.length === 0 && !showCustomForm && (
-              <div className="text-center py-8 space-y-3">
-                <p className="text-sm text-muted-foreground">{t('racePicker.noRacesFound')}</p>
-                <Button variant="outline" size="sm" onClick={() => setShowCustomForm(true)}>
-                  <Plus className="h-3.5 w-3.5 mr-1" /> {t('racePicker.addCustom')}
-                </Button>
-              </div>
-            )}
-            {filtered.map((race: Race) => (
-              <button
-                key={race.id}
-                onClick={() => handleSelectRace(race)}
-                className={`w-full text-left rounded-lg border p-3 transition-colors hover:bg-accent/50 ${
-                  selectedRaceId === race.id ? 'border-primary bg-primary/5' : 'border-border'
-                }`}
-              >
-                <div className="flex items-start gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 shrink-0 ${RACE_TYPE_COLORS[race.race_type] || RACE_TYPE_COLORS.other}`}>
-                        {RACE_TYPE_LABELS[race.race_type] || race.race_type}
-                      </Badge>
-                      <p className="text-sm font-medium truncate">{race.race_name}</p>
-                    </div>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {format(new Date(race.race_date + 'T00:00:00'), 'MMM d, yyyy')}
-                      </span>
-                      {race.city && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {race.city}, {race.country}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {race.external_url && (
-                    <a
-                      href={race.external_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={e => e.stopPropagation()}
-                      className="text-muted-foreground hover:text-primary shrink-0 mt-1"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  )}
+        <div className="relative flex-1">
+          <ScrollArea className="h-full px-4" onScrollCapture={(e) => {
+            const target = e.currentTarget.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+            if (target) {
+              const atBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 40;
+              setShowScrollHint(!atBottom);
+            }
+          }}>
+            <div className="space-y-1.5 py-2">
+              {filtered.length === 0 && !showCustomForm && (
+                <div className="text-center py-8 space-y-3">
+                  <p className="text-sm text-muted-foreground">{t('racePicker.noRacesFound')}</p>
+                  <Button variant="outline" size="sm" onClick={() => setShowCustomForm(true)}>
+                    <Plus className="h-3.5 w-3.5 mr-1" /> {t('racePicker.addCustom')}
+                  </Button>
                 </div>
-              </button>
-            ))}
-          </div>
-        </ScrollArea>
+              )}
+              {filtered.map((race: Race) => (
+                <button
+                  key={race.id}
+                  onClick={() => handleSelectRace(race)}
+                  className={`w-full text-left rounded-lg border p-3 transition-colors hover:bg-accent/50 ${
+                    selectedRaceId === race.id ? 'border-primary bg-primary/5' : 'border-border'
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 shrink-0 ${RACE_TYPE_COLORS[race.race_type] || RACE_TYPE_COLORS.other}`}>
+                          {RACE_TYPE_LABELS[race.race_type] || race.race_type}
+                        </Badge>
+                        <p className="text-sm font-medium truncate">{race.race_name}</p>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(race.race_date + 'T00:00:00'), 'MMM d, yyyy')}
+                        </span>
+                        {race.city && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {race.city}, {race.country}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {race.external_url && (
+                      <a
+                        href={race.external_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        className="text-muted-foreground hover:text-primary shrink-0 mt-1"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
+
+          {/* Scroll down hint */}
+          {showScrollHint && filtered.length > 3 && (
+            <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-1 pointer-events-none">
+              <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-muted/90 backdrop-blur-sm text-xs text-muted-foreground animate-bounce shadow-sm">
+                <ChevronDown className="h-3.5 w-3.5" />
+                <span>{t('racePicker.scrollForMore', 'Scroll for more')}</span>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Custom Race Form / Add Button */}
         <div className="border-t p-4">
