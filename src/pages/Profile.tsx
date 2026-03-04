@@ -14,6 +14,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import CoachInfoCard from '@/components/dashboard/CoachInfoCard';
+import RacePicker from '@/components/races/RacePicker';
 import { useTranslation } from 'react-i18next';
 
 const FITNESS_LEVELS = [
@@ -92,8 +93,6 @@ export default function Profile() {
 
   const [editingBio, setEditingBio] = useState(false);
   const [bioForm, setBioForm] = useState({ age: '', weight_kg: '', max_hr: '', fitness_level: 'intermediate' });
-  const [editingGoal, setEditingGoal] = useState(false);
-  const [goalForm, setGoalForm] = useState({ goal_race_name: '', goal_race_date: '', goal_race_location: '' });
 
   const startEditBio = () => {
     setBioForm({
@@ -121,13 +120,26 @@ export default function Profile() {
     queryClient.invalidateQueries({ queryKey: ['profile-completion'] });
   };
 
+  const [editingGoal, setEditingGoal] = useState(false);
+  const [goalForm, setGoalForm] = useState({ goal_race_name: '', goal_race_date: '', goal_race_location: '', goal_race_id: '' });
+
   const startEditGoal = () => {
     setGoalForm({
       goal_race_name: profile?.goal_race_name || '',
       goal_race_date: profile?.goal_race_date || '',
       goal_race_location: profile?.goal_race_location || '',
+      goal_race_id: (profile as any)?.goal_race_id || '',
     });
     setEditingGoal(true);
+  };
+
+  const handleRaceSelected = (race: any) => {
+    setGoalForm({
+      goal_race_name: race.race_name,
+      goal_race_date: race.race_date,
+      goal_race_location: race.city ? `${race.city}, ${race.country}` : race.country,
+      goal_race_id: race.id,
+    });
   };
 
   const saveGoal = async () => {
@@ -136,6 +148,7 @@ export default function Profile() {
       goal_race_name: goalForm.goal_race_name.trim() || null,
       goal_race_date: goalForm.goal_race_date || null,
       goal_race_location: goalForm.goal_race_location.trim() || null,
+      goal_race_id: goalForm.goal_race_id || null,
     } as any).eq('id', user!.id);
     setSaving(false);
     if (error) { toast.error('Failed to save'); return; }
@@ -302,6 +315,10 @@ export default function Profile() {
           <CardContent>
             {editingGoal ? (
               <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">{t('racePicker.orSelectFromCalendar')}</Label>
+                  <RacePicker onSelect={handleRaceSelected} selectedRaceId={goalForm.goal_race_id} />
+                </div>
                 <div className="space-y-1">
                   <Label className="text-xs">{t('onboarding.raceName')}</Label>
                   <Input value={goalForm.goal_race_name} onChange={e => setGoalForm(f => ({ ...f, goal_race_name: e.target.value }))} className="h-8" placeholder="HYROX Munich 2025" />

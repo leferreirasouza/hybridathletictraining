@@ -571,6 +571,7 @@ export type Database = {
           fitness_level: string | null
           full_name: string
           goal_race_date: string | null
+          goal_race_id: string | null
           goal_race_location: string | null
           goal_race_name: string | null
           id: string
@@ -586,6 +587,7 @@ export type Database = {
           fitness_level?: string | null
           full_name?: string
           goal_race_date?: string | null
+          goal_race_id?: string | null
           goal_race_location?: string | null
           goal_race_name?: string | null
           id: string
@@ -601,6 +603,7 @@ export type Database = {
           fitness_level?: string | null
           full_name?: string
           goal_race_date?: string | null
+          goal_race_id?: string | null
           goal_race_location?: string | null
           goal_race_name?: string | null
           id?: string
@@ -609,7 +612,15 @@ export type Database = {
           updated_at?: string
           weight_kg?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_goal_race_id_fkey"
+            columns: ["goal_race_id"]
+            isOneToOne: false
+            referencedRelation: "races_calendar"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       race_results: {
         Row: {
@@ -701,6 +712,63 @@ export type Database = {
           station_8_seconds?: number | null
           total_time_seconds?: number | null
           total_transition_seconds?: number | null
+        }
+        Relationships: []
+      }
+      races_calendar: {
+        Row: {
+          city: string | null
+          continent: string | null
+          country: string
+          created_at: string
+          created_by: string | null
+          external_url: string | null
+          id: string
+          image_url: string | null
+          is_verified: boolean
+          location_detail: string | null
+          race_date: string
+          race_end_date: string | null
+          race_name: string
+          race_type: string
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          city?: string | null
+          continent?: string | null
+          country: string
+          created_at?: string
+          created_by?: string | null
+          external_url?: string | null
+          id?: string
+          image_url?: string | null
+          is_verified?: boolean
+          location_detail?: string | null
+          race_date: string
+          race_end_date?: string | null
+          race_name: string
+          race_type?: string
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          city?: string | null
+          continent?: string | null
+          country?: string
+          created_at?: string
+          created_by?: string | null
+          external_url?: string | null
+          id?: string
+          image_url?: string | null
+          is_verified?: boolean
+          location_detail?: string | null
+          race_date?: string
+          race_end_date?: string | null
+          race_name?: string
+          race_type?: string
+          source?: string
+          updated_at?: string
         }
         Relationships: []
       }

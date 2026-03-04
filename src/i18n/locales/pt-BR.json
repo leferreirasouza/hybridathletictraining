@@ -469,5 +469,19 @@
     "saving": "Salvando…",
     "active": "Ativo",
     "disabled": "Desativado"
+  },
+  "racePicker": {
+    "searchRaces": "Buscar uma corrida...",
+    "findRace": "Encontre Sua Corrida",
+    "searchPlaceholder": "Buscar por nome, cidade ou país...",
+    "noRacesFound": "Nenhuma corrida encontrada. Adicione a sua!",
+    "addCustom": "Adicionar Corrida",
+    "createCustomRace": "Criar Corrida Personalizada",
+    "raceNamePlaceholder": "ex: Maratona de São Paulo",
+    "createRace": "Criar Corrida",
+    "raceCreated": "Corrida adicionada com sucesso!",
+    "fillRequired": "Preencha o nome e a data da corrida",
+    "cantFindRace": "Não encontrou sua corrida? Adicione manualmente",
+    "orSelectFromCalendar": "Ou selecione do calendário de corridas"
   }
 }
