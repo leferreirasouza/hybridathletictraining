@@ -6,6 +6,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const LEGAL_DISCLAIMER = `
+
+---
+⚠️ **Disclaimer**: This AI coaching advice is for informational and educational purposes only. It does not constitute medical, physiological, or professional health advice. Always consult a qualified healthcare professional before starting or modifying any training program. The AI coach may make errors — training decisions should be validated by a certified human coach. Hybrid Athletic Training accepts no liability for injuries, health issues, or adverse outcomes resulting from following AI-generated recommendations.`;
+
 const HYROX_SYSTEM_PROMPT = `You are the HYROX Coach AI — an expert assistant for HYROX athletes and coaches.
 
 Your knowledge covers:
@@ -23,7 +28,13 @@ RULES:
 - Use conservative progression: no more than 10% weekly volume increase.
 - Always cite specific sessions/dates when referencing the athlete's plan.
 - If asked to modify more than 2-3 sessions, flag that this is a "major reset" and recommend coach approval.
-- Format responses with markdown for readability.`;
+- Format responses with markdown for readability.
+- IMPORTANT: You MUST always append the following legal disclaimer at the end of EVERY response you give, without exception. Do not skip or modify it:
+${LEGAL_DISCLAIMER}
+
+KNOWLEDGE BASE CONTEXT:
+When provided with knowledge base context below, use it to inform your answers. Cite specific sources when possible. If the knowledge base contradicts general knowledge, prefer the knowledge base as it represents the coaching organization's methodology.
+`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -31,7 +42,6 @@ serve(async (req) => {
   }
 
   try {
-    // Authenticate the caller
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -40,11 +50,13 @@ serve(async (req) => {
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnon = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    const supabase = createClient(supabaseUrl, supabaseAnon, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
     const token = authHeader.replace("Bearer ", "");
     const { data, error: claimsError } = await supabase.auth.getClaims(token);
@@ -55,9 +67,78 @@ serve(async (req) => {
       });
     }
 
+    const userId = data.claims.sub as string;
     const { messages } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    // --- RAG: Retrieve relevant knowledge chunks ---
+    let knowledgeContext = "";
+    try {
+      const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+
+      // Get user's organization
+      const { data: userRoles } = await serviceClient
+        .from("user_roles")
+        .select("organization_id")
+        .eq("user_id", userId)
+        .limit(1);
+
+      if (userRoles && userRoles.length > 0) {
+        const orgId = userRoles[0].organization_id;
+
+        // Get the latest user message for keyword matching
+        const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
+        const query = lastUserMsg?.content || "";
+
+        if (query.length > 3) {
+          // Simple keyword search across knowledge chunks
+          // Search for relevant chunks by matching keywords
+          const keywords = query
+            .toLowerCase()
+            .split(/\s+/)
+            .filter((w: string) => w.length > 3)
+            .slice(0, 5);
+
+          if (keywords.length > 0) {
+            // Get processed documents for this org
+            const { data: docs } = await serviceClient
+              .from("knowledge_documents")
+              .select("id, title")
+              .eq("organization_id", orgId)
+              .eq("status", "processed");
+
+            if (docs && docs.length > 0) {
+              const docIds = docs.map(d => d.id);
+              const docTitleMap = new Map(docs.map(d => [d.id, d.title]));
+
+              // Get chunks from these documents using text search
+              const searchPattern = keywords.join(" | ");
+              const { data: chunks } = await serviceClient
+                .from("knowledge_chunks")
+                .select("content, document_id, chunk_index")
+                .in("document_id", docIds)
+                .textSearch("content", searchPattern, { type: "websearch", config: "english" })
+                .limit(8);
+
+              if (chunks && chunks.length > 0) {
+                knowledgeContext = "\n\n--- KNOWLEDGE BASE CONTEXT ---\n";
+                for (const chunk of chunks) {
+                  const docTitle = docTitleMap.get(chunk.document_id) || "Unknown";
+                  knowledgeContext += `\n[Source: ${docTitle}]\n${chunk.content}\n`;
+                }
+                knowledgeContext += "\n--- END KNOWLEDGE BASE ---\n";
+              }
+            }
+          }
+        }
+      }
+    } catch (ragErr) {
+      console.error("RAG retrieval error (non-fatal):", ragErr);
+      // Continue without knowledge context
+    }
+
+    const systemPrompt = HYROX_SYSTEM_PROMPT + knowledgeContext;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -68,7 +149,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: HYROX_SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           ...messages,
         ],
         stream: true,
