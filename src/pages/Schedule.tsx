@@ -12,7 +12,7 @@ import MonthlyView from '@/components/schedule/MonthlyView';
 import DailyView from '@/components/schedule/DailyView';
 import TargetsPanel from '@/components/schedule/TargetsPanel';
 import { dayLabels } from '@/components/schedule/config';
-import { exportWeekToCalendar, downloadIcsFullPlan, CalendarProvider } from '@/lib/calendarExport';
+import { exportWeekToCalendar, exportFullPlanToCalendar, CalendarProvider } from '@/lib/calendarExport';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useTranslation } from 'react-i18next';
 
