@@ -141,7 +141,7 @@ export default function LogSession() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-display flex items-center gap-2">
                 <Link2 className="h-4 w-4 text-primary" />
-                Link to Planned Session
+                {t('logSession.linkPlanned')}
               </CardTitle>
             </CardHeader>
             <CardContent>
