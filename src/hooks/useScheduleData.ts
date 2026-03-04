@@ -30,9 +30,10 @@ export function useScheduleData() {
     enabled: !!currentOrg,
   });
 
-  // 'all' shows merged view; otherwise show specific plan
-  const isAllPlans = selectedPlanId === 'all';
-  const activePlanId = isAllPlans ? '' : (selectedPlanId || plans?.[0]?.id || '');
+  // Auto-default to 'all' when multiple plans exist
+  const effectiveSelection = selectedPlanId || ((plans?.length ?? 0) > 1 ? 'all' : (plans?.[0]?.id || ''));
+  const isAllPlans = effectiveSelection === 'all';
+  const activePlanId = isAllPlans ? '' : effectiveSelection;
 
   // Build a color map for plans
   const planColorMap = useMemo(() => {
