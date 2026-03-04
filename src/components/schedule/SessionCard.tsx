@@ -10,7 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { getDiscipline, intensityConfig, dayLabelsFull } from './config';
 import { Clock, MapPin, ChevronRight, Flame, Check, CheckCircle2, CalendarPlus, ArrowLeftRight } from 'lucide-react';
 import { SwapSessionDialog } from './SwapSessionDialog';
-import { buildGoogleCalendarUrl } from '@/lib/googleCalendar';
+import { addToCalendar, CalendarProvider } from '@/lib/calendarExport';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -286,16 +287,24 @@ function SessionDetailSheet({ session, isCompleted, substitution }: { session: S
           </div>
         )}
         {!isCompleted && !substitution && <SwapSessionDialog session={session} />}
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => {
-            const url = buildGoogleCalendarUrl(session);
-            window.open(url, '_blank', 'noopener');
-          }}
-        >
-          <CalendarPlus className="h-4 w-4 mr-2" /> Add to Google Calendar
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="w-full">
+              <CalendarPlus className="h-4 w-4 mr-2" /> Add to Calendar
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" className="w-48">
+            <DropdownMenuItem onClick={() => addToCalendar('google', session)}>
+              Google Calendar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addToCalendar('outlook', session)}>
+              Outlook Calendar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addToCalendar('apple', session)}>
+              Apple Calendar (.ics)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
