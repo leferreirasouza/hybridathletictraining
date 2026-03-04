@@ -109,7 +109,7 @@ export default function RacePicker({ onSelect, selectedRaceId }: RacePickerProps
       toast.error(t('racePicker.fillRequired'));
       return;
     }
-    const { data, error } = await supabase.from('races_calendar' as any).insert({
+    const { data, error } = await (supabase as any).from('races_calendar').insert({
       race_name: customRace.race_name.trim(),
       race_type: customRace.race_type,
       race_date: customRace.race_date,
