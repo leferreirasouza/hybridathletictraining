@@ -62,6 +62,7 @@ export default function RacePicker({ onSelect, selectedRaceId }: RacePickerProps
   const { t } = useTranslation();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [showScrollHint, setShowScrollHint] = useState(true);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('All');
