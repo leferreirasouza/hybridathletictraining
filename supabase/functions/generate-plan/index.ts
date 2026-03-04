@@ -371,7 +371,7 @@ Plan Duration (weeks): ${profile.planWeeks || "8"}
     });
   } catch (e) {
     console.error("generate-plan error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+    return new Response(JSON.stringify({ error: "An error occurred processing your request" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
