@@ -21,6 +21,9 @@
   </head>
 
   <body>
+    <script>
+      (function(){var t=localStorage.getItem('ha-theme')||'dark';if(t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark');})();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
