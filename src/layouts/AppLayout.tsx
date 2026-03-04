@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Calendar, Dumbbell, Mail, User, Shield, Eye, Bell, MessageSquare } from 'lucide-react';
+import { Home, Calendar, Dumbbell, Mail, User, Shield, Eye, Bell, MessageSquare, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useAuth, getAccessibleRoles } from '@/contexts/AuthContext';
@@ -33,7 +33,7 @@ const tabsByRole: Record<string, { path: string; icon: any; label: string }[]> =
   coach: [
     { path: '/dashboard', icon: Home, label: 'Dashboard' },
     { path: '/athletes', icon: User, label: 'Athletes' },
-    { path: '/messages', icon: Mail, label: 'Chat' },
+    { path: '/exercises', icon: BookOpen, label: 'Library' },
     { path: '/plans', icon: Calendar, label: 'Plans' },
     { path: '/profile', icon: User, label: 'Profile' },
   ],

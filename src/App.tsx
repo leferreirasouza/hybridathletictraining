@@ -32,6 +32,7 @@ const AdminPanel = lazy(() => import("@/pages/AdminPanel"));
 const Analytics = lazy(() => import("@/pages/Analytics"));
 const Settings = lazy(() => import("@/pages/Settings"));
 const ActivityLog = lazy(() => import("@/pages/ActivityLog"));
+const ExerciseLibrary = lazy(() => import("@/pages/ExerciseLibrary"));
 
 const queryClient = new QueryClient();
 
@@ -99,6 +100,7 @@ const App = () => (
                 <Route path="admin" element={<AdminPanel />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="activity" element={<ActivityLog />} />
+                <Route path="exercises" element={<ExerciseLibrary />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

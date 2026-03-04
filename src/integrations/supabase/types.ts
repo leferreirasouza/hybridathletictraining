@@ -224,6 +224,92 @@ export type Database = {
         }
         Relationships: []
       }
+      exercise_library: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          category: string
+          coaching_cues: string | null
+          contraindications: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          difficulty_level: string
+          discipline: string
+          equipment_required: string[] | null
+          hyrox_station: string | null
+          id: string
+          is_approved: boolean
+          muscle_groups: string[] | null
+          name: string
+          organization_id: string
+          progression_from: string | null
+          progression_to: string | null
+          source: string
+          subcategory: string | null
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          category?: string
+          coaching_cues?: string | null
+          contraindications?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          difficulty_level?: string
+          discipline?: string
+          equipment_required?: string[] | null
+          hyrox_station?: string | null
+          id?: string
+          is_approved?: boolean
+          muscle_groups?: string[] | null
+          name: string
+          organization_id: string
+          progression_from?: string | null
+          progression_to?: string | null
+          source?: string
+          subcategory?: string | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          category?: string
+          coaching_cues?: string | null
+          contraindications?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          difficulty_level?: string
+          discipline?: string
+          equipment_required?: string[] | null
+          hyrox_station?: string | null
+          id?: string
+          is_approved?: boolean
+          muscle_groups?: string[] | null
+          name?: string
+          organization_id?: string
+          progression_from?: string | null
+          progression_to?: string | null
+          source?: string
+          subcategory?: string | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_library_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       garmin_workouts: {
         Row: {
           id: string
@@ -258,6 +344,100 @@ export type Database = {
             columns: ["plan_version_id"]
             isOneToOne: false
             referencedRelation: "plan_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_chunks: {
+        Row: {
+          chunk_index: number
+          content: string
+          created_at: string
+          document_id: string
+          embedding: string | null
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          chunk_index?: number
+          content: string
+          created_at?: string
+          document_id: string
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          chunk_index?: number
+          content?: string
+          created_at?: string
+          document_id?: string
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_chunks_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_documents: {
+        Row: {
+          content_text: string | null
+          created_at: string
+          file_path: string | null
+          id: string
+          metadata: Json | null
+          organization_id: string
+          source_type: string
+          source_url: string | null
+          status: string
+          title: string
+          total_chunks: number | null
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          content_text?: string | null
+          created_at?: string
+          file_path?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id: string
+          source_type?: string
+          source_url?: string | null
+          status?: string
+          title: string
+          total_chunks?: number | null
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          content_text?: string | null
+          created_at?: string
+          file_path?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id?: string
+          source_type?: string
+          source_url?: string | null
+          status?: string
+          title?: string
+          total_chunks?: number | null
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
