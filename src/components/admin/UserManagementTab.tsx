@@ -56,12 +56,29 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
   const fetchMembers = async () => {
     setLoadingMembers(true);
     let query = supabase.from('user_roles')
-      .select('id, user_id, role, organization_id, organizations(name), profiles:user_id(full_name)');
+      .select('id, user_id, role, organization_id, organizations(name)');
     if (!isMasterAdmin && currentOrgId) {
       query = query.eq('organization_id', currentOrgId);
     }
-    const { data } = await query.order('created_at', { ascending: false }).limit(100);
-    setMembers(data ?? []);
+    const { data: rolesData } = await query.order('created_at', { ascending: false }).limit(100);
+    
+    if (rolesData && rolesData.length > 0) {
+      // Fetch profiles separately since there's no FK from user_roles to profiles
+      const userIds = [...new Set(rolesData.map(r => r.user_id))];
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+      
+      const profileMap = new Map(profilesData?.map(p => [p.id, p]) ?? []);
+      const merged = rolesData.map(r => ({
+        ...r,
+        profiles: profileMap.get(r.user_id) ?? null,
+      }));
+      setMembers(merged);
+    } else {
+      setMembers([]);
+    }
     setSelectedIds(new Set());
     setLoadingMembers(false);
   };
