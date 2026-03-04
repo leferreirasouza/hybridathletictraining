@@ -84,16 +84,30 @@ Requirements:
 [detailed workout description]
 **Coach Note:** [brief explanation of why this is equivalent]`;
 
-      const response = await supabase.functions.invoke('hyrox-ai-coach', {
-        body: { messages: [{ role: 'user', content: prompt }] },
-      });
+      // Use fetch directly to get the streaming response
+      const session_token = (await supabase.auth.getSession()).data.session?.access_token;
+      if (!session_token) throw new Error('Not authenticated');
 
-      if (response.error) throw new Error(response.error.message);
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/hyrox-ai-coach`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] }),
+        }
+      );
 
-      // Parse SSE response
-      const reader = response.data.getReader?.();
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}));
+        throw new Error(errBody.error || `Request failed (${response.status})`);
+      }
+
       let fullText = '';
-
+      const reader = response.body?.getReader();
       if (reader) {
         const decoder = new TextDecoder();
         while (true) {
@@ -111,20 +125,28 @@ Requirements:
             } catch { /* skip */ }
           }
         }
-      } else if (typeof response.data === 'string') {
-        fullText = response.data;
       }
 
-      // Parse the structured response
-      const nameMatch = fullText.match(/\*\*Session Name:\*\*\s*(.+)/);
-      const discMatch = fullText.match(/\*\*Discipline:\*\*\s*(.+)/);
-      const durMatch = fullText.match(/\*\*Duration:\*\*\s*(\d+)/);
-      const workoutMatch = fullText.match(/\*\*Workout:\*\*\s*([\s\S]*?)(?:\*\*Coach Note:|$)/);
-      const noteMatch = fullText.match(/\*\*Coach Note:\*\*\s*([\s\S]*?)$/);
+      // Parse the structured response (handle ** and ## formats)
+      const nameMatch = fullText.match(/\*\*Session Name:?\*\*\s*(.+?)(?:\n|$)/) 
+        || fullText.match(/##\s*Session Name:?\s*(.+?)(?:\n|$)/);
+      const discMatch = fullText.match(/\*\*Discipline:?\*\*\s*(.+?)(?:\n|$)/)
+        || fullText.match(/##\s*Discipline:?\s*(.+?)(?:\n|$)/);
+      const durMatch = fullText.match(/\*\*Duration:?\*\*\s*(\d+)/)
+        || fullText.match(/Duration:?\s*(\d+)/);
+      const workoutMatch = fullText.match(/\*\*Workout:?\*\*\s*([\s\S]*?)(?:\*\*Coach Note|$)/)
+        || fullText.match(/##\s*Workout:?\s*([\s\S]*?)(?:##\s*Coach Note|\*\*Coach Note|$)/);
+      const noteMatch = fullText.match(/\*\*Coach Note:?\*\*\s*([\s\S]*?)$/)
+        || fullText.match(/##\s*Coach Note:?\s*([\s\S]*?)$/);
+
+      // Clean discipline string (remove markdown artifacts)
+      const rawDisc = discMatch?.[1]?.trim().toLowerCase().replace(/\*+/g, '') || 'custom';
+      const validDisciplines = ['run', 'bike', 'strength', 'mobility', 'custom'];
+      const discipline = validDisciplines.find(d => rawDisc.includes(d)) || 'custom';
 
       setAiResult({
-        name: nameMatch?.[1]?.trim() || 'Alternative Session',
-        discipline: discMatch?.[1]?.trim().toLowerCase() || 'custom',
+        name: nameMatch?.[1]?.trim().replace(/\*+/g, '') || 'Alternative Session',
+        discipline,
         duration: durMatch?.[1] ? parseInt(durMatch[1]) : session.duration_min || null,
         details: workoutMatch?.[1]?.trim() || fullText,
         notes: noteMatch?.[1]?.trim() || '',
