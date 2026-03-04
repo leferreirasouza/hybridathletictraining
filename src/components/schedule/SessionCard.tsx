@@ -31,6 +31,8 @@ interface Session {
   workout_details?: string | null;
   notes?: string | null;
   date?: string | null;
+  _planName?: string;
+  _planColor?: string;
 }
 
 interface Substitution {
@@ -97,6 +99,18 @@ export function SessionCard({ session, showDay = true, isCompleted = false, subs
                     )}
                     {substitution?.status === 'pending_coach' && (
                       <Badge variant="outline" className="text-[9px] px-1 py-0 border-amber-500/30 text-amber-500">Pending</Badge>
+                    )}
+                    {session._planName && (
+                      <Badge
+                        variant="outline"
+                        className="text-[9px] px-1.5 py-0 shrink-0"
+                        style={{
+                          borderColor: session._planColor ? `${session._planColor}40` : undefined,
+                          color: session._planColor || undefined,
+                        }}
+                      >
+                        {session._planName}
+                      </Badge>
                     )}
                   </div>
                 </div>
