@@ -172,6 +172,14 @@ export default function Schedule() {
                 </TabsContent>
               </>
             )}
+            {!isLoading && sessions.length > 0 && (
+              <div className="flex justify-center pt-2">
+                <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={handleFullPlanExport}>
+                  <Download className="h-3.5 w-3.5" />
+                  {t('schedule.exportFullPlan')}
+                </Button>
+              </div>
+            )}
           </Tabs>
         </>
       )}
