@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { useTranslation } from 'react-i18next';
+import { DesktopSidebar } from './DesktopSidebar';
 
 export default function AppLayout() {
   const { t } = useTranslation();
@@ -146,179 +147,273 @@ export default function AppLayout() {
   const isViewingAs = viewAsRole && viewAsRole !== currentRole;
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      <header className={cn(
-        "sticky top-0 z-40 glass border-b flex items-center justify-between px-4 h-12",
-        !isViewingAs && "safe-top"
-      )}>
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-display font-bold text-foreground">{t('app.name')}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Popover open={bellOpen} onOpenChange={setBellOpen}>
-            <PopoverTrigger asChild>
-            <button className="relative p-2 rounded-lg hover:bg-muted/50 transition-colors" aria-label={t('nav.notifications')}>
-              <Bell className="h-5 w-5 text-muted-foreground" />
-              {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold leading-none">
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
-              )}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-80 p-0" sideOffset={8}>
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <p className="text-sm font-display font-bold">{t('nav.notifications')}</p>
-              {unreadCount > 0 && (
-                <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-0">
-                  {t('nav.unread', { count: unreadCount })}
-                </Badge>
-              )}
-            </div>
-            <ScrollArea className="max-h-[320px]">
-              {recentUnread.length === 0 ? (
-                <div className="p-6 text-center">
-                  <Bell className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-                  <p className="text-sm text-muted-foreground">{t('nav.noUnread')}</p>
+    <div className="flex min-h-screen bg-background">
+      {/* Desktop Sidebar — hidden on mobile */}
+      <DesktopSidebar
+        tabs={tabs}
+        unreadCount={unreadCount}
+        avatarUrl={avatarUrl}
+        userName={profile?.full_name || userName}
+        userInitials={userInitials}
+        showSwitcher={showSwitcher}
+        accessibleRoles={accessibleRoles}
+        activeRole={activeRole}
+        currentRole={currentRole}
+        roleLabels={roleLabels}
+        setViewAsRole={setViewAsRole}
+      />
+
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Mobile header — hidden on desktop */}
+        <header className={cn(
+          "sticky top-0 z-40 glass border-b flex items-center justify-between px-4 h-12 lg:hidden",
+          !isViewingAs && "safe-top"
+        )}>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-display font-bold text-foreground">{t('app.name')}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Popover open={bellOpen} onOpenChange={setBellOpen}>
+              <PopoverTrigger asChild>
+                <button className="relative p-2 rounded-lg hover:bg-muted/50 transition-colors" aria-label={t('nav.notifications')}>
+                  <Bell className="h-5 w-5 text-muted-foreground" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold leading-none">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80 p-0" sideOffset={8}>
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                  <p className="text-sm font-display font-bold">{t('nav.notifications')}</p>
+                  {unreadCount > 0 && (
+                    <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-0">
+                      {t('nav.unread', { count: unreadCount })}
+                    </Badge>
+                  )}
                 </div>
-              ) : (
-                <div className="divide-y divide-border">
-                  {recentUnread.map((msg: any) => (
-                    <button key={msg.id} className="w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors" onClick={() => { setBellOpen(false); navigate('/messages'); }}>
-                      <div className="flex items-start gap-3">
-                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <MessageSquare className="h-3.5 w-3.5 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-sm font-medium truncate">{msg.sender_name}</p>
-                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                              {formatDistanceToNow(new Date(msg.created_at), { addSuffix: false })}
-                            </span>
+                <ScrollArea className="max-h-[320px]">
+                  {recentUnread.length === 0 ? (
+                    <div className="p-6 text-center">
+                      <Bell className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                      <p className="text-sm text-muted-foreground">{t('nav.noUnread')}</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-border">
+                      {recentUnread.map((msg: any) => (
+                        <button key={msg.id} className="w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors" onClick={() => { setBellOpen(false); navigate('/messages'); }}>
+                          <div className="flex items-start gap-3">
+                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                              <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-sm font-medium truncate">{msg.sender_name}</p>
+                                <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                  {formatDistanceToNow(new Date(msg.created_at), { addSuffix: false })}
+                                </span>
+                              </div>
+                              <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{msg.content}</p>
+                            </div>
                           </div>
-                          <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{msg.content}</p>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+                <div className="border-t border-border p-2">
+                  <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => { setBellOpen(false); navigate('/messages'); }}>
+                    {t('nav.viewAllMessages')}
+                  </Button>
                 </div>
-              )}
-            </ScrollArea>
-            <div className="border-t border-border p-2">
-              <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => { setBellOpen(false); navigate('/messages'); }}>
-                {t('nav.viewAllMessages')}
-              </Button>
-            </div>
-          </PopoverContent>
-          </Popover>
-          <button onClick={() => navigate('/profile')} className="ml-1">
-            <Avatar className="h-7 w-7 border border-border">
-              {avatarUrl && <AvatarImage src={avatarUrl} alt={userName} />}
-              <AvatarFallback className="text-[10px] font-bold gradient-hyrox text-primary-foreground">{userInitials}</AvatarFallback>
-            </Avatar>
-          </button>
-        </div>
-      </header>
+              </PopoverContent>
+            </Popover>
+            <button onClick={() => navigate('/profile')} className="ml-1">
+              <Avatar className="h-7 w-7 border border-border">
+                {avatarUrl && <AvatarImage src={avatarUrl} alt={userName} />}
+                <AvatarFallback className="text-[10px] font-bold gradient-hyrox text-primary-foreground">{userInitials}</AvatarFallback>
+              </Avatar>
+            </button>
+          </div>
+        </header>
 
-      {isViewingAs && (
-        <div className="bg-primary/10 border-b border-primary/20 px-4 py-1.5 flex items-center justify-center gap-2">
-          <Eye className="h-3.5 w-3.5 text-primary" />
-          <span className="text-xs font-medium text-primary">
-            {t('nav.viewingAs', { role: roleLabels[viewAsRole!] })}
-          </span>
-          <button onClick={() => setViewAsRole(currentRole!)} className="text-xs text-primary underline ml-2">
-            {t('nav.exit')}
-          </button>
-        </div>
-      )}
+        {/* Desktop header — shown only on desktop */}
+        <header className="hidden lg:flex sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border items-center justify-end px-6 h-14">
+          <div className="flex items-center gap-3">
+            {isViewingAs && (
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
+                <Eye className="h-3.5 w-3.5 text-primary" />
+                <span className="text-xs font-medium text-primary">
+                  {t('nav.viewingAs', { role: roleLabels[viewAsRole!] })}
+                </span>
+                <button onClick={() => setViewAsRole(currentRole!)} className="text-xs text-primary underline ml-1">
+                  {t('nav.exit')}
+                </button>
+              </div>
+            )}
+            <Popover open={bellOpen} onOpenChange={setBellOpen}>
+              <PopoverTrigger asChild>
+                <button className="relative p-2 rounded-lg hover:bg-muted/50 transition-colors" aria-label={t('nav.notifications')}>
+                  <Bell className="h-5 w-5 text-muted-foreground" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold leading-none">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80 p-0" sideOffset={8}>
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                  <p className="text-sm font-display font-bold">{t('nav.notifications')}</p>
+                  {unreadCount > 0 && (
+                    <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-0">
+                      {t('nav.unread', { count: unreadCount })}
+                    </Badge>
+                  )}
+                </div>
+                <ScrollArea className="max-h-[320px]">
+                  {recentUnread.length === 0 ? (
+                    <div className="p-6 text-center">
+                      <Bell className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                      <p className="text-sm text-muted-foreground">{t('nav.noUnread')}</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-border">
+                      {recentUnread.map((msg: any) => (
+                        <button key={msg.id} className="w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors" onClick={() => { setBellOpen(false); navigate('/messages'); }}>
+                          <div className="flex items-start gap-3">
+                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                              <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-sm font-medium truncate">{msg.sender_name}</p>
+                                <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                  {formatDistanceToNow(new Date(msg.created_at), { addSuffix: false })}
+                                </span>
+                              </div>
+                              <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{msg.content}</p>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+                <div className="border-t border-border p-2">
+                  <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => { setBellOpen(false); navigate('/messages'); }}>
+                    {t('nav.viewAllMessages')}
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+        </header>
 
-      <main className="flex-1 pb-20">
-        <Outlet />
-      </main>
+        {/* Mobile viewing-as banner */}
+        {isViewingAs && (
+          <div className="lg:hidden bg-primary/10 border-b border-primary/20 px-4 py-1.5 flex items-center justify-center gap-2">
+            <Eye className="h-3.5 w-3.5 text-primary" />
+            <span className="text-xs font-medium text-primary">
+              {t('nav.viewingAs', { role: roleLabels[viewAsRole!] })}
+            </span>
+            <button onClick={() => setViewAsRole(currentRole!)} className="text-xs text-primary underline ml-2">
+              {t('nav.exit')}
+            </button>
+          </div>
+        )}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 glass border-t safe-bottom">
-        <div className="flex items-center justify-around h-16 max-w-lg md:max-w-3xl lg:max-w-5xl mx-auto px-2">
-          {tabs.map((tab) => {
-            const isActive = location.pathname === tab.path ||
-              (tab.path !== '/dashboard' && location.pathname.startsWith(tab.path));
-            const showBadge = tab.path === '/messages' && unreadCount > 0;
+        <main className="flex-1 pb-20 lg:pb-6">
+          <Outlet />
+        </main>
 
-            if (tab.path === '/profile' && showSwitcher) {
+        {/* Mobile bottom nav — hidden on desktop */}
+        <nav className="fixed bottom-0 left-0 right-0 z-50 glass border-t safe-bottom lg:hidden">
+          <div className="flex items-center justify-around h-16 max-w-lg md:max-w-3xl mx-auto px-2">
+            {tabs.map((tab) => {
+              const isActive = location.pathname === tab.path ||
+                (tab.path !== '/dashboard' && location.pathname.startsWith(tab.path));
+              const showBadge = tab.path === '/messages' && unreadCount > 0;
+
+              if (tab.path === '/profile' && showSwitcher) {
+                return (
+                  <DropdownMenu key="profile-switcher">
+                    <DropdownMenuTrigger asChild>
+                      <button className={cn(
+                        "flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors relative",
+                        isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                      )}>
+                        {isActive && (
+                          <motion.div layoutId="tab-indicator" className="absolute -top-1 left-1/2 -translate-x-1/2 w-6 h-1 rounded-full gradient-hyrox" transition={{ type: 'spring', stiffness: 500, damping: 30 }} />
+                        )}
+                        <Avatar className="h-5 w-5 border border-border">
+                          {avatarUrl && <AvatarImage src={avatarUrl} alt={userName} />}
+                          <AvatarFallback className="text-[7px] font-bold gradient-hyrox text-primary-foreground">{userInitials}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-[10px] font-medium">{t('nav.menu')}</span>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48 mb-2">
+                      <DropdownMenuItem onClick={() => navigate('/profile')}>
+                        <User className="h-4 w-4 mr-2" /> {t('nav.profile')}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <Eye className="h-3 w-3" /> {t('nav.switchView')}
+                      </DropdownMenuLabel>
+                      {accessibleRoles.map(role => (
+                        <DropdownMenuItem
+                          key={role}
+                          onClick={() => setViewAsRole(role)}
+                          className={cn(activeRole === role && "bg-primary/10 text-primary")}
+                        >
+                          {roleLabels[role]}
+                          {role === currentRole && (
+                            <Badge variant="secondary" className="ml-auto text-[9px] px-1.5 py-0">{t('nav.yours')}</Badge>
+                          )}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                );
+              }
+
               return (
-                <DropdownMenu key="profile-switcher">
-                  <DropdownMenuTrigger asChild>
-                    <button className={cn(
-                      "flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors relative",
-                      isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                    )}>
-                      {isActive && (
-                        <motion.div layoutId="tab-indicator" className="absolute -top-1 left-1/2 -translate-x-1/2 w-6 h-1 rounded-full gradient-hyrox" transition={{ type: 'spring', stiffness: 500, damping: 30 }} />
-                      )}
+                <button
+                  key={tab.path}
+                  onClick={() => navigate(tab.path)}
+                  className={cn(
+                    "flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors relative",
+                    isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {isActive && (
+                    <motion.div layoutId="tab-indicator" className="absolute -top-1 left-1/2 -translate-x-1/2 w-6 h-1 rounded-full gradient-hyrox" transition={{ type: 'spring', stiffness: 500, damping: 30 }} />
+                  )}
+                  <div className="relative">
+                    {tab.path === '/profile' ? (
                       <Avatar className="h-5 w-5 border border-border">
                         {avatarUrl && <AvatarImage src={avatarUrl} alt={userName} />}
                         <AvatarFallback className="text-[7px] font-bold gradient-hyrox text-primary-foreground">{userInitials}</AvatarFallback>
                       </Avatar>
-                      <span className="text-[10px] font-medium">{t('nav.menu')}</span>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48 mb-2">
-                    <DropdownMenuItem onClick={() => navigate('/profile')}>
-                      <User className="h-4 w-4 mr-2" /> {t('nav.profile')}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      <Eye className="h-3 w-3" /> {t('nav.switchView')}
-                    </DropdownMenuLabel>
-                    {accessibleRoles.map(role => (
-                      <DropdownMenuItem
-                        key={role}
-                        onClick={() => setViewAsRole(role)}
-                        className={cn(activeRole === role && "bg-primary/10 text-primary")}
-                      >
-                        {roleLabels[role]}
-                        {role === currentRole && (
-                          <Badge variant="secondary" className="ml-auto text-[9px] px-1.5 py-0">{t('nav.yours')}</Badge>
-                        )}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                    ) : (
+                      <tab.icon className="h-5 w-5" />
+                    )}
+                    {showBadge && (
+                      <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold leading-none">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] font-medium">{tab.label}</span>
+                </button>
               );
-            }
-
-            return (
-              <button
-                key={tab.path}
-                onClick={() => navigate(tab.path)}
-                className={cn(
-                  "flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors relative",
-                  isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {isActive && (
-                  <motion.div layoutId="tab-indicator" className="absolute -top-1 left-1/2 -translate-x-1/2 w-6 h-1 rounded-full gradient-hyrox" transition={{ type: 'spring', stiffness: 500, damping: 30 }} />
-                )}
-                <div className="relative">
-                  {tab.path === '/profile' ? (
-                    <Avatar className="h-5 w-5 border border-border">
-                      {avatarUrl && <AvatarImage src={avatarUrl} alt={userName} />}
-                      <AvatarFallback className="text-[7px] font-bold gradient-hyrox text-primary-foreground">{userInitials}</AvatarFallback>
-                    </Avatar>
-                  ) : (
-                    <tab.icon className="h-5 w-5" />
-                  )}
-                  {showBadge && (
-                    <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold leading-none">
-                      {unreadCount > 99 ? '99+' : unreadCount}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] font-medium">{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </nav>
+            })}
+          </div>
+        </nav>
+      </div>
     </div>
   );
 }
