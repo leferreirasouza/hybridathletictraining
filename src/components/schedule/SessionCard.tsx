@@ -31,6 +31,8 @@ interface Session {
   workout_details?: string | null;
   notes?: string | null;
   date?: string | null;
+  _planName?: string;
+  _planColor?: string;
 }
 
 interface Substitution {
