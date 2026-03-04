@@ -16,6 +16,11 @@ import { exportWeekToCalendar, CalendarProvider } from '@/lib/calendarExport';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useTranslation } from 'react-i18next';
 
+function getDefaultCalendarProvider(): CalendarProvider | null {
+  const v = localStorage.getItem('ha-default-calendar');
+  return v === 'google' || v === 'outlook' || v === 'apple' ? v : null;
+}
+
 export default function Schedule() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -28,6 +33,13 @@ export default function Schedule() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDay, setSelectedDay] = useState(1);
   const [view, setView] = useState<'day' | 'week' | 'month'>('week');
+  const defaultProvider = getDefaultCalendarProvider();
+
+  const handleCalendarExport = (provider: CalendarProvider) => {
+    exportWeekToCalendar(provider, sessions, displayWeek);
+    const count = sessions.filter(s => s.week_number === displayWeek).length;
+    toast.success(`${count} sessions → ${provider === 'apple' ? '.ics downloaded' : provider.charAt(0).toUpperCase() + provider.slice(1) + ' Calendar'}`);
+  };
 
   const displayWeek = Math.max(1, Math.min(maxWeek, 1 + weekOffset));
   const weeklySummary = weeklySummaries.find((ws: any) => ws.week_number === displayWeek);
