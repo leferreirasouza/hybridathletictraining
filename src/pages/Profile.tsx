@@ -14,15 +14,17 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import CoachInfoCard from '@/components/dashboard/CoachInfoCard';
+import { useTranslation } from 'react-i18next';
 
 const FITNESS_LEVELS = [
-  { value: 'beginner', label: 'Beginner' },
-  { value: 'intermediate', label: 'Intermediate' },
-  { value: 'advanced', label: 'Advanced' },
-  { value: 'elite', label: 'Elite' },
+  { value: 'beginner', labelKey: 'onboarding.beginner' },
+  { value: 'intermediate', labelKey: 'onboarding.intermediate' },
+  { value: 'advanced', labelKey: 'onboarding.advanced' },
+  { value: 'elite', labelKey: 'onboarding.elite' },
 ];
 
 export default function Profile() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, currentRole, effectiveRole, signOut } = useAuth();
@@ -35,7 +37,6 @@ export default function Profile() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch profile data
   const { data: profile } = useQuery({
     queryKey: ['profile-full', user?.id],
     queryFn: async () => {
@@ -46,7 +47,6 @@ export default function Profile() {
     enabled: !!user,
   });
 
-  // Fetch training stats
   const { data: completedSessions } = useQuery({
     queryKey: ['training-stats', user?.id],
     queryFn: async () => {
@@ -67,14 +67,11 @@ export default function Profile() {
     }
     const totalSessions = completedSessions.length;
     const totalDistance = completedSessions.reduce((sum, s) => sum + (Number(s.actual_distance_km) || 0), 0);
-
-    // Calculate streak: consecutive days with sessions ending today or yesterday
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const uniqueDates = [...new Set(completedSessions.map(s => s.date))].sort().reverse();
     let streak = 0;
     const checkDate = new Date(today);
-    // Allow streak to start from today or yesterday
     const firstSessionDate = uniqueDates[0] ? new Date(uniqueDates[0] + 'T00:00:00') : null;
     if (firstSessionDate) {
       const diffFromToday = Math.floor((today.getTime() - firstSessionDate.getTime()) / 86400000);
@@ -93,21 +90,10 @@ export default function Profile() {
     return { totalSessions, totalDistance, currentStreak: streak };
   }, [completedSessions]);
 
-  // Biometric editing
   const [editingBio, setEditingBio] = useState(false);
-  const [bioForm, setBioForm] = useState({
-    age: '',
-    weight_kg: '',
-    max_hr: '',
-    fitness_level: 'intermediate',
-  });
-
+  const [bioForm, setBioForm] = useState({ age: '', weight_kg: '', max_hr: '', fitness_level: 'intermediate' });
   const [editingGoal, setEditingGoal] = useState(false);
-  const [goalForm, setGoalForm] = useState({
-    goal_race_name: '',
-    goal_race_date: '',
-    goal_race_location: '',
-  });
+  const [goalForm, setGoalForm] = useState({ goal_race_name: '', goal_race_date: '', goal_race_location: '' });
 
   const startEditBio = () => {
     setBioForm({
@@ -129,7 +115,7 @@ export default function Profile() {
     } as any).eq('id', user!.id);
     setSaving(false);
     if (error) { toast.error('Failed to save'); return; }
-    toast.success('Profile updated');
+    toast.success(t('profile.profileUpdated'));
     setEditingBio(false);
     queryClient.invalidateQueries({ queryKey: ['profile-full'] });
     queryClient.invalidateQueries({ queryKey: ['profile-completion'] });
@@ -153,7 +139,7 @@ export default function Profile() {
     } as any).eq('id', user!.id);
     setSaving(false);
     if (error) { toast.error('Failed to save'); return; }
-    toast.success('Goal race updated');
+    toast.success(t('profile.goalRaceUpdated'));
     setEditingGoal(false);
     queryClient.invalidateQueries({ queryKey: ['profile-full'] });
     queryClient.invalidateQueries({ queryKey: ['profile-goal-race'] });
@@ -166,7 +152,7 @@ export default function Profile() {
     const { error: authError } = await supabase.auth.updateUser({ data: { full_name: fullName.trim() } });
     if (!authError) {
       await supabase.from('profiles').update({ full_name: fullName.trim() }).eq('id', user!.id);
-      toast.success('Profile updated');
+      toast.success(t('profile.profileUpdated'));
       setEditing(false);
     } else {
       toast.error('Failed to update: ' + authError.message);
@@ -177,47 +163,20 @@ export default function Profile() {
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Image must be under 2MB');
-      return;
-    }
-
+    if (!file.type.startsWith('image/')) { toast.error('Please select an image file'); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error('Image must be under 2MB'); return; }
     setUploadingAvatar(true);
     const ext = file.name.split('.').pop();
     const filePath = `${user.id}/avatar.${ext}`;
-
-    // Remove old avatar if exists
     await supabase.storage.from('avatars').remove([filePath]);
-
-    const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(filePath, file, { upsert: true });
-
-    if (uploadError) {
-      toast.error('Upload failed: ' + uploadError.message);
-      setUploadingAvatar(false);
-      return;
-    }
-
+    const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, { upsert: true });
+    if (uploadError) { toast.error('Upload failed: ' + uploadError.message); setUploadingAvatar(false); return; }
     const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
-    const avatarUrl = urlData.publicUrl + '?t=' + Date.now(); // cache bust
-
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ avatar_url: avatarUrl } as any)
-      .eq('id', user.id);
-
+    const avatarUrl = urlData.publicUrl + '?t=' + Date.now();
+    const { error: updateError } = await supabase.from('profiles').update({ avatar_url: avatarUrl } as any).eq('id', user.id);
     setUploadingAvatar(false);
-    if (updateError) {
-      toast.error('Failed to save avatar');
-      return;
-    }
-    toast.success('Avatar updated!');
+    if (updateError) { toast.error('Failed to save avatar'); return; }
+    toast.success(t('profile.avatarUpdated'));
     queryClient.invalidateQueries({ queryKey: ['profile-full'] });
     queryClient.invalidateQueries({ queryKey: ['profile-completion'] });
   };
@@ -243,18 +202,12 @@ export default function Profile() {
                 <Camera className="h-5 w-5 text-white" />
               )}
             </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleAvatarUpload}
-            />
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
           </div>
           <div className="flex-1">
             {editing ? (
               <div className="space-y-2">
-                <Label className="text-xs">Full Name</Label>
+                <Label className="text-xs">{t('auth.fullName')}</Label>
                 <div className="flex gap-2">
                   <Input value={fullName} onChange={e => setFullName(e.target.value)} className="h-9" maxLength={100} autoFocus />
                   <Button size="icon" variant="ghost" className="h-9 w-9 shrink-0 text-success" onClick={handleSaveName} disabled={saving}>
@@ -284,11 +237,11 @@ export default function Profile() {
         <Card className="glass">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-base font-display flex items-center gap-2">
-              <Heart className="h-4 w-4 text-primary" /> Biometrics
+              <Heart className="h-4 w-4 text-primary" /> {t('profile.biometrics')}
             </CardTitle>
             {!editingBio && (
               <Button variant="ghost" size="sm" onClick={startEditBio}>
-                <Pencil className="h-3 w-3 mr-1" /> Edit
+                <Pencil className="h-3 w-3 mr-1" /> {t('profile.edit')}
               </Button>
             )}
           </CardHeader>
@@ -297,38 +250,38 @@ export default function Profile() {
               <div className="space-y-3">
                 <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Age</Label>
+                    <Label className="text-xs">{t('onboarding.age')}</Label>
                     <Input type="number" value={bioForm.age} onChange={e => setBioForm(f => ({ ...f, age: e.target.value }))} className="h-8" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Weight (kg)</Label>
+                    <Label className="text-xs">{t('onboarding.weightKg')}</Label>
                     <Input type="number" step="0.1" value={bioForm.weight_kg} onChange={e => setBioForm(f => ({ ...f, weight_kg: e.target.value }))} className="h-8" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Max HR</Label>
+                    <Label className="text-xs">{t('onboarding.maxHr')}</Label>
                     <Input type="number" value={bioForm.max_hr} onChange={e => setBioForm(f => ({ ...f, max_hr: e.target.value }))} className="h-8" />
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Fitness Level</Label>
+                  <Label className="text-xs">{t('onboarding.fitnessLevel')}</Label>
                   <Select value={bioForm.fitness_level} onValueChange={v => setBioForm(f => ({ ...f, fitness_level: v }))}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {FITNESS_LEVELS.map(fl => <SelectItem key={fl.value} value={fl.value}>{fl.label}</SelectItem>)}
+                      {FITNESS_LEVELS.map(fl => <SelectItem key={fl.value} value={fl.value}>{t(fl.labelKey)}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setEditingBio(false)}>Cancel</Button>
-                  <Button size="sm" className="gradient-hyrox" onClick={saveBio} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+                  <Button variant="outline" size="sm" onClick={() => setEditingBio(false)}>{t('profile.cancel')}</Button>
+                  <Button size="sm" className="gradient-hyrox" onClick={saveBio} disabled={saving}>{saving ? t('profile.saving') : t('profile.save')}</Button>
                 </div>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
-                <div><span className="text-muted-foreground text-xs">Age</span><p className="font-medium">{profile?.age || '—'}</p></div>
-                <div><span className="text-muted-foreground text-xs">Weight</span><p className="font-medium">{profile?.weight_kg ? `${profile.weight_kg} kg` : '—'}</p></div>
-                <div><span className="text-muted-foreground text-xs">Max HR</span><p className="font-medium">{profile?.max_hr ? `${profile.max_hr} bpm` : '—'}</p></div>
-                <div><span className="text-muted-foreground text-xs">Fitness Level</span><p className="font-medium capitalize">{profile?.fitness_level || '—'}</p></div>
+                <div><span className="text-muted-foreground text-xs">{t('onboarding.age')}</span><p className="font-medium">{profile?.age || '—'}</p></div>
+                <div><span className="text-muted-foreground text-xs">{t('onboarding.weightKg').replace(' (kg)', '')}</span><p className="font-medium">{profile?.weight_kg ? `${profile.weight_kg} kg` : '—'}</p></div>
+                <div><span className="text-muted-foreground text-xs">{t('onboarding.maxHr').replace(' HR', ' HR')}</span><p className="font-medium">{profile?.max_hr ? `${profile.max_hr} ${t('common.bpm')}` : '—'}</p></div>
+                <div><span className="text-muted-foreground text-xs">{t('onboarding.fitnessLevel')}</span><p className="font-medium capitalize">{profile?.fitness_level || '—'}</p></div>
               </div>
             )}
           </CardContent>
@@ -338,11 +291,11 @@ export default function Profile() {
         <Card className="glass">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-base font-display flex items-center gap-2">
-              <Flag className="h-4 w-4 text-primary" /> Goal Race
+              <Flag className="h-4 w-4 text-primary" /> {t('profile.goalRace')}
             </CardTitle>
             {!editingGoal && (
               <Button variant="ghost" size="sm" onClick={startEditGoal}>
-                <Pencil className="h-3 w-3 mr-1" /> Edit
+                <Pencil className="h-3 w-3 mr-1" /> {t('profile.edit')}
               </Button>
             )}
           </CardHeader>
@@ -350,36 +303,36 @@ export default function Profile() {
             {editingGoal ? (
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <Label className="text-xs">Race Name</Label>
+                  <Label className="text-xs">{t('onboarding.raceName')}</Label>
                   <Input value={goalForm.goal_race_name} onChange={e => setGoalForm(f => ({ ...f, goal_race_name: e.target.value }))} className="h-8" placeholder="HYROX Munich 2025" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Date</Label>
+                    <Label className="text-xs">{t('onboarding.raceDate')}</Label>
                     <Input type="date" value={goalForm.goal_race_date} onChange={e => setGoalForm(f => ({ ...f, goal_race_date: e.target.value }))} className="h-8" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Location</Label>
+                    <Label className="text-xs">{t('onboarding.location')}</Label>
                     <Input value={goalForm.goal_race_location} onChange={e => setGoalForm(f => ({ ...f, goal_race_location: e.target.value }))} className="h-8" placeholder="Munich, DE" />
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setEditingGoal(false)}>Cancel</Button>
-                  <Button size="sm" className="gradient-hyrox" onClick={saveGoal} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+                  <Button variant="outline" size="sm" onClick={() => setEditingGoal(false)}>{t('profile.cancel')}</Button>
+                  <Button size="sm" className="gradient-hyrox" onClick={saveGoal} disabled={saving}>{saving ? t('profile.saving') : t('profile.save')}</Button>
                 </div>
               </div>
             ) : (
               <div className="text-sm">
                 {profile?.goal_race_date ? (
                   <div className="space-y-1">
-                    <p className="font-medium">{profile.goal_race_name || 'Goal Race'}</p>
+                    <p className="font-medium">{profile.goal_race_name || t('profile.goalRace')}</p>
                     <p className="text-xs text-muted-foreground">
                       {new Date(profile.goal_race_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                       {profile.goal_race_location && ` · ${profile.goal_race_location}`}
                     </p>
                   </div>
                 ) : (
-                  <p className="text-muted-foreground">No goal race set. Tap Edit to add one.</p>
+                  <p className="text-muted-foreground">{t('profile.noGoalRace')}</p>
                 )}
               </div>
             )}
@@ -390,7 +343,7 @@ export default function Profile() {
         <Card className="glass">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-display flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-primary" /> Training Summary
+              <TrendingUp className="h-4 w-4 text-primary" /> {t('profile.trainingSummary')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -400,21 +353,21 @@ export default function Profile() {
                   <Activity className="h-4 w-4 text-primary" />
                 </div>
                 <p className="text-2xl font-bold font-display">{trainingStats.totalSessions}</p>
-                <p className="text-xs text-muted-foreground">Sessions</p>
+                <p className="text-xs text-muted-foreground">{t('profile.totalSessions')}</p>
               </div>
               <div className="space-y-1">
                 <div className="flex items-center justify-center">
                   <Route className="h-4 w-4 text-primary" />
                 </div>
                 <p className="text-2xl font-bold font-display">{trainingStats.totalDistance.toFixed(1)}</p>
-                <p className="text-xs text-muted-foreground">Total km</p>
+                <p className="text-xs text-muted-foreground">{t('profile.totalKm')}</p>
               </div>
               <div className="space-y-1">
                 <div className="flex items-center justify-center">
                   <Flame className="h-4 w-4 text-orange-500" />
                 </div>
                 <p className="text-2xl font-bold font-display">{trainingStats.currentStreak}</p>
-                <p className="text-xs text-muted-foreground">Day Streak</p>
+                <p className="text-xs text-muted-foreground">{t('profile.dayStreak')}</p>
               </div>
             </div>
           </CardContent>
@@ -426,30 +379,30 @@ export default function Profile() {
         {/* Quick Actions */}
         <Card className="glass">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-display">Quick Actions</CardTitle>
+            <CardTitle className="text-base font-display">{t('profile.quickActions')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
             <Button variant="ghost" className="w-full justify-start h-11" onClick={() => navigate('/plans')}>
               <Upload className="h-4 w-4 mr-3 text-muted-foreground" />
-              Import / Build Plan
+              {t('profile.importBuildPlan')}
             </Button>
             <Button variant="ghost" className="w-full justify-start h-11" onClick={() => navigate('/schedule')}>
               <Calendar className="h-4 w-4 mr-3 text-muted-foreground" />
-              Google Calendar Sync
+              {t('profile.googleCalendarSync')}
             </Button>
             <Button variant="ghost" className="w-full justify-start h-11" onClick={() => navigate('/settings')}>
               <SettingsIcon className="h-4 w-4 mr-3 text-muted-foreground" />
-              Settings
+              {t('profile.settings')}
             </Button>
             <Button variant="ghost" className="w-full justify-start h-11" onClick={() => navigate('/activity')}>
               <Activity className="h-4 w-4 mr-3 text-muted-foreground" />
-              Activity Log
+              {t('profile.activityLog')}
             </Button>
           </CardContent>
         </Card>
 
         <Button variant="outline" className="w-full text-destructive hover:bg-destructive/10" onClick={signOut}>
-          <LogOut className="h-4 w-4 mr-2" /> Sign Out
+          <LogOut className="h-4 w-4 mr-2" /> {t('profile.signOut')}
         </Button>
       </motion.div>
     </div>

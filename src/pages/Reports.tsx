@@ -5,10 +5,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronLeft, ChevronRight, Activity, Target, Flame, AlertTriangle, ArrowLeftRight, Brain, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
+import { useTranslation } from 'react-i18next';
 
 /* ─── Athlete report card ─── */
 function AthleteWeekReport({ weekNumber, planVersionId, userId, userName }: {
@@ -17,6 +17,8 @@ function AthleteWeekReport({ weekNumber, planVersionId, userId, userName }: {
   userId: string;
   userName?: string;
 }) {
+  const { t } = useTranslation();
+
   const { data: planned = [] } = useQuery({
     queryKey: ['report-planned', planVersionId, weekNumber],
     queryFn: async () => {
@@ -62,16 +64,12 @@ function AthleteWeekReport({ weekNumber, planVersionId, userId, userName }: {
 
   const stats = useMemo(() => {
     const completedIds = new Set(completed.map(c => c.planned_session_id));
-    const missedDisciplines = planned
-      .filter(p => !completedIds.has(p.id))
-      .map(p => p.discipline);
-
+    const missedDisciplines = planned.filter(p => !completedIds.has(p.id)).map(p => p.discipline);
     const totalDuration = completed.reduce((s, c) => s + (c.actual_duration_min || 0), 0);
     const totalDistance = completed.reduce((s, c) => s + (Number(c.actual_distance_km) || 0), 0);
     const rpes = completed.filter(c => c.rpe).map(c => c.rpe!);
     const hrs = completed.filter(c => c.avg_hr).map(c => c.avg_hr!);
     const painFlags = completed.filter(c => c.pain_flag).length;
-
     return {
       plannedCount: planned.length,
       completedCount: completed.length,
@@ -86,15 +84,11 @@ function AthleteWeekReport({ weekNumber, planVersionId, userId, userName }: {
     };
   }, [planned, completed, swaps]);
 
-  // AI commentary
   const { data: aiCommentary, isLoading: aiLoading } = useQuery({
     queryKey: ['ai-weekly-report', userId, weekNumber, stats.completedCount],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('weekly-report', {
-        body: {
-          athleteName: userName,
-          weekData: { weekNumber, ...stats },
-        },
+        body: { athleteName: userName, weekData: { weekNumber, ...stats } },
       });
       if (error) return 'Unable to generate AI commentary.';
       return data?.commentary || 'No commentary.';
@@ -107,53 +101,47 @@ function AthleteWeekReport({ weekNumber, planVersionId, userId, userName }: {
 
   return (
     <div className="space-y-3">
-      {/* Stats grid */}
       <div className="grid grid-cols-2 gap-2">
         <Card className="glass">
           <CardContent className="p-3 flex items-center gap-2">
             <Target className="h-4 w-4 text-primary shrink-0" />
             <div>
-              <p className="text-[10px] text-muted-foreground">Completion</p>
-              <p className={cn('text-lg font-bold font-display', completionColor)}>
-                {stats.completionPct}%
-              </p>
-              <p className="text-[10px] text-muted-foreground">{stats.completedCount}/{stats.plannedCount} sessions</p>
+              <p className="text-[10px] text-muted-foreground">{t('reports.completion')}</p>
+              <p className={cn('text-lg font-bold font-display', completionColor)}>{stats.completionPct}%</p>
+              <p className="text-[10px] text-muted-foreground">{stats.completedCount}/{stats.plannedCount} {t('dashboard.sessions').toLowerCase()}</p>
             </div>
           </CardContent>
         </Card>
-
         <Card className="glass">
           <CardContent className="p-3 flex items-center gap-2">
             <Activity className="h-4 w-4 text-primary shrink-0" />
             <div>
-              <p className="text-[10px] text-muted-foreground">Volume</p>
-              <p className="text-sm font-bold">{stats.totalDurationMin} min</p>
-              <p className="text-[10px] text-muted-foreground">{stats.totalDistanceKm} km</p>
+              <p className="text-[10px] text-muted-foreground">{t('reports.volume')}</p>
+              <p className="text-sm font-bold">{stats.totalDurationMin} {t('common.min')}</p>
+              <p className="text-[10px] text-muted-foreground">{stats.totalDistanceKm} {t('common.km')}</p>
             </div>
           </CardContent>
         </Card>
-
         <Card className="glass">
           <CardContent className="p-3 flex items-center gap-2">
             <Flame className="h-4 w-4 text-primary shrink-0" />
             <div>
-              <p className="text-[10px] text-muted-foreground">Intensity</p>
+              <p className="text-[10px] text-muted-foreground">{t('reports.intensity')}</p>
               <p className="text-sm font-bold">RPE {stats.avgRpe ?? '—'}</p>
-              <p className="text-[10px] text-muted-foreground">{stats.avgHr ? `${stats.avgHr} bpm avg` : 'No HR data'}</p>
+              <p className="text-[10px] text-muted-foreground">{stats.avgHr ? `${stats.avgHr} ${t('common.bpm')} avg` : t('reports.noHrData')}</p>
             </div>
           </CardContent>
         </Card>
-
         <Card className="glass">
           <CardContent className="p-3 flex items-center gap-2">
             <ArrowLeftRight className="h-4 w-4 text-primary shrink-0" />
             <div>
-              <p className="text-[10px] text-muted-foreground">Swaps</p>
+              <p className="text-[10px] text-muted-foreground">{t('reports.swaps')}</p>
               <p className="text-sm font-bold">{stats.swapCount}</p>
               {stats.painFlags > 0 && (
                 <div className="flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3 text-destructive" />
-                  <p className="text-[10px] text-destructive font-medium">{stats.painFlags} pain</p>
+                  <p className="text-[10px] text-destructive font-medium">{stats.painFlags} {t('history.pain').toLowerCase()}</p>
                 </div>
               )}
             </div>
@@ -161,29 +149,27 @@ function AthleteWeekReport({ weekNumber, planVersionId, userId, userName }: {
         </Card>
       </div>
 
-      {/* Missed disciplines */}
       {stats.missedDisciplines.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          <span className="text-xs text-muted-foreground">Missed:</span>
+          <span className="text-xs text-muted-foreground">{t('reports.missed')}:</span>
           {stats.missedDisciplines.map(d => (
             <Badge key={d} variant="outline" className="text-[10px] capitalize">{d.replace('_', ' ')}</Badge>
           ))}
         </div>
       )}
 
-      {/* AI Commentary */}
       <Card className="glass border-primary/20">
         <CardHeader className="pb-2 pt-3 px-3">
           <CardTitle className="text-xs flex items-center gap-1.5">
             <Brain className="h-3.5 w-3.5 text-primary" />
-            AI Coach Commentary
+            {t('reports.aiCoachCommentary')}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-3 pb-3">
           {aiLoading ? (
             <div className="flex items-center gap-2 py-2">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              <span className="text-xs text-muted-foreground">Generating analysis…</span>
+              <span className="text-xs text-muted-foreground">{t('reports.generatingAnalysis')}</span>
             </div>
           ) : (
             <div className="prose prose-sm dark:prose-invert max-w-none text-xs leading-relaxed">
@@ -203,6 +189,8 @@ function CoachAthleteRow({ athlete, weekNumber, planVersionId, onClick }: {
   planVersionId: string;
   onClick: () => void;
 }) {
+  const { t } = useTranslation();
+
   const { data: planned = [] } = useQuery({
     queryKey: ['report-planned', planVersionId, weekNumber],
     queryFn: async () => {
@@ -271,8 +259,8 @@ function CoachAthleteRow({ athlete, weekNumber, planVersionId, onClick }: {
           </span>
           <span className="text-[10px] text-muted-foreground">{completed.length}/{planned.length}</span>
           {avgRpe && <span className="text-[10px] text-muted-foreground">RPE {avgRpe}</span>}
-          {painCount > 0 && <span className="text-[10px] text-destructive">{painCount} pain</span>}
-          {swaps.length > 0 && <span className="text-[10px] text-muted-foreground">{swaps.length} swaps</span>}
+          {painCount > 0 && <span className="text-[10px] text-destructive">{painCount} {t('history.pain').toLowerCase()}</span>}
+          {swaps.length > 0 && <span className="text-[10px] text-muted-foreground">{swaps.length} {t('reports.swaps').toLowerCase()}</span>}
         </div>
       </div>
       <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -282,12 +270,12 @@ function CoachAthleteRow({ athlete, weekNumber, planVersionId, onClick }: {
 
 /* ─── Main Reports Page ─── */
 export default function Reports() {
+  const { t } = useTranslation();
   const { user, currentOrg, effectiveRole } = useAuth();
   const isCoach = effectiveRole === 'coach' || effectiveRole === 'admin' || effectiveRole === 'master_admin';
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
 
-  // Get plan + version
   const { data: plans } = useQuery({
     queryKey: ['report-plans', currentOrg?.id],
     queryFn: async () => {
@@ -332,7 +320,6 @@ export default function Reports() {
     enabled: !!version?.id,
   });
 
-  // Coach: get athletes
   const { data: athletes = [] } = useQuery({
     queryKey: ['report-athletes', user?.id, currentOrg?.id],
     queryFn: async () => {
@@ -365,7 +352,6 @@ export default function Reports() {
   const displayWeek = Math.max(1, Math.min(maxWeek, 1 + weekOffset));
   const selectedAthlete = athletes.find(a => a.id === selectedAthleteId);
 
-  // Coach detail view for a specific athlete
   if (isCoach && selectedAthleteId && selectedAthlete && version?.id) {
     return (
       <div className="px-4 py-6 max-w-lg mx-auto space-y-4">
@@ -373,37 +359,25 @@ export default function Reports() {
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedAthleteId(null)}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-lg font-display font-bold">{selectedAthlete.full_name} — Week {displayWeek}</h1>
+          <h1 className="text-lg font-display font-bold">{selectedAthlete.full_name} — {t('schedule.weekOf', { current: displayWeek, max: maxWeek }).split(' ')[0]} {displayWeek}</h1>
         </div>
-        <AthleteWeekReport
-          weekNumber={displayWeek}
-          planVersionId={version.id}
-          userId={selectedAthleteId}
-          userName={selectedAthlete.full_name}
-        />
+        <AthleteWeekReport weekNumber={displayWeek} planVersionId={version.id} userId={selectedAthleteId} userName={selectedAthlete.full_name} />
       </div>
     );
   }
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-4">
-      <h1 className="text-xl font-display font-bold">Weekly Reports</h1>
+      <h1 className="text-xl font-display font-bold">{t('reports.title')}</h1>
 
-      {/* Week navigator */}
       <div className="flex items-center justify-between">
-        <Button variant="ghost" size="icon" className="h-8 w-8"
-          onClick={() => setWeekOffset(w => Math.max(0, w - 1))}
-          disabled={displayWeek <= 1}
-        >
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => Math.max(0, w - 1))} disabled={displayWeek <= 1}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <span className="text-sm font-medium font-display">
-          Week {displayWeek} <span className="text-muted-foreground font-normal">of {maxWeek}</span>
+          {t('schedule.weekOf', { current: displayWeek, max: maxWeek })}
         </span>
-        <Button variant="ghost" size="icon" className="h-8 w-8"
-          onClick={() => setWeekOffset(w => w + 1)}
-          disabled={displayWeek >= maxWeek}
-        >
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => w + 1)} disabled={displayWeek >= maxWeek}>
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
@@ -411,41 +385,28 @@ export default function Reports() {
       {!version?.id ? (
         <Card className="glass">
           <CardContent className="p-8 text-center">
-            <p className="text-sm text-muted-foreground">No training plan found. Create a plan first.</p>
+            <p className="text-sm text-muted-foreground">{t('reports.noPlanFound')}</p>
           </CardContent>
         </Card>
       ) : isCoach ? (
-        /* Coach view: athlete list */
         <div className="space-y-4">
           <p className="text-xs text-muted-foreground">{athletes.length} athlete{athletes.length !== 1 ? 's' : ''}</p>
           {athletes.length === 0 ? (
             <Card className="glass">
               <CardContent className="p-8 text-center">
-                <p className="text-sm text-muted-foreground">No athletes assigned yet.</p>
+                <p className="text-sm text-muted-foreground">{t('reports.noAthletesAssigned')}</p>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-1">
               {athletes.map(a => (
-                <CoachAthleteRow
-                  key={a.id}
-                  athlete={a}
-                  weekNumber={displayWeek}
-                  planVersionId={version.id}
-                  onClick={() => setSelectedAthleteId(a.id)}
-                />
+                <CoachAthleteRow key={a.id} athlete={a} weekNumber={displayWeek} planVersionId={version.id} onClick={() => setSelectedAthleteId(a.id)} />
               ))}
             </div>
           )}
         </div>
       ) : (
-        /* Athlete view */
-        <AthleteWeekReport
-          weekNumber={displayWeek}
-          planVersionId={version.id}
-          userId={user!.id}
-          userName={profile?.full_name}
-        />
+        <AthleteWeekReport weekNumber={displayWeek} planVersionId={version.id} userId={user!.id} userName={profile?.full_name} />
       )}
     </div>
   );

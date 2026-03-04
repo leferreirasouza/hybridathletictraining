@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { useTranslation } from 'react-i18next';
 
 const mockAthletes = [
   { id: '1', name: 'Sarah Mitchell', compliance: 92, sessions: '5/6', flag: false, lastActive: '2h ago' },
@@ -30,18 +31,19 @@ const item = {
   show: { opacity: 1, y: 0 },
 };
 
-const reasonLabels: Record<string, string> = {
-  no_equipment: 'No equipment',
-  less_time: 'Less time',
-  other: 'Other',
-};
-
 function SwapRequestsPanel() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [approveDialog, setApproveDialog] = useState<any | null>(null);
   const [workoutDetails, setWorkoutDetails] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const reasonLabels: Record<string, string> = {
+    no_equipment: t('coachDashboard.noEquipment'),
+    less_time: t('coachDashboard.lessTime'),
+    other: t('coachDashboard.other'),
+  };
 
   const { data: pendingSwaps, isLoading } = useQuery({
     queryKey: ['coach-pending-swaps', user?.id],
@@ -52,7 +54,6 @@ function SwapRequestsPanel() {
         .select('athlete_id')
         .eq('coach_id', user.id);
       if (!assignments?.length) return [];
-
       const athleteIds = assignments.map(a => a.athlete_id);
       const { data, error } = await supabase
         .from('session_substitutions' as any)
@@ -61,17 +62,12 @@ function SwapRequestsPanel() {
         .eq('status', 'pending_coach')
         .order('created_at', { ascending: false });
       if (error) return [];
-
       const enriched = await Promise.all((data as any[]).map(async (swap) => {
         const [profileRes, sessionRes] = await Promise.all([
           supabase.from('profiles').select('full_name').eq('id', swap.athlete_id).single(),
           supabase.from('planned_sessions').select('session_name, discipline, duration_min, workout_details').eq('id', swap.original_session_id).single(),
         ]);
-        return {
-          ...swap,
-          athlete_name: profileRes.data?.full_name || 'Unknown',
-          original_session: sessionRes.data,
-        };
+        return { ...swap, athlete_name: profileRes.data?.full_name || 'Unknown', original_session: sessionRes.data };
       }));
       return enriched;
     },
@@ -90,31 +86,17 @@ function SwapRequestsPanel() {
       })
       .eq('id', swap.id);
     setSaving(false);
-    if (error) {
-      toast.error('Failed to approve: ' + error.message);
-    } else {
-      toast.success('Swap approved! ✅');
-      setApproveDialog(null);
-      setWorkoutDetails('');
-      queryClient.invalidateQueries({ queryKey: ['coach-pending-swaps'] });
-    }
+    if (error) { toast.error('Failed to approve: ' + error.message); }
+    else { toast.success('Swap approved! ✅'); setApproveDialog(null); setWorkoutDetails(''); queryClient.invalidateQueries({ queryKey: ['coach-pending-swaps'] }); }
   };
 
   const handleReject = async (swapId: string) => {
-    const { error } = await supabase
-      .from('session_substitutions' as any)
-      .update({ status: 'cancelled' })
-      .eq('id', swapId);
-    if (error) {
-      toast.error('Failed to reject');
-    } else {
-      toast.success('Swap rejected');
-      queryClient.invalidateQueries({ queryKey: ['coach-pending-swaps'] });
-    }
+    const { error } = await supabase.from('session_substitutions' as any).update({ status: 'cancelled' }).eq('id', swapId);
+    if (error) { toast.error('Failed to reject'); }
+    else { toast.success('Swap rejected'); queryClient.invalidateQueries({ queryKey: ['coach-pending-swaps'] }); }
   };
 
-  if (isLoading) return null;
-  if (!pendingSwaps?.length) return null;
+  if (isLoading || !pendingSwaps?.length) return null;
 
   return (
     <>
@@ -122,10 +104,10 @@ function SwapRequestsPanel() {
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base font-display flex items-center gap-2">
-              <ArrowLeftRight className="h-4 w-4 text-amber-500" /> Swap Requests
+              <ArrowLeftRight className="h-4 w-4 text-amber-500" /> {t('coachDashboard.swapRequests')}
             </CardTitle>
             <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 text-xs">
-              {pendingSwaps.length} pending
+              {t('coachDashboard.pendingCount', { count: pendingSwaps.length })}
             </Badge>
           </div>
         </CardHeader>
@@ -136,7 +118,7 @@ function SwapRequestsPanel() {
                 <div>
                   <p className="text-sm font-medium">{swap.athlete_name}</p>
                   <p className="text-xs text-muted-foreground">
-                    wants to swap <span className="font-medium text-foreground">{swap.original_session?.session_name || 'session'}</span>
+                    {t('coachDashboard.wantsToSwap')} <span className="font-medium text-foreground">{swap.original_session?.session_name || 'session'}</span>
                   </p>
                 </div>
                 <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-500">
@@ -148,13 +130,10 @@ function SwapRequestsPanel() {
               )}
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" className="flex-1 text-destructive" onClick={() => handleReject(swap.id)}>
-                  <X className="h-3.5 w-3.5 mr-1" /> Reject
+                  <X className="h-3.5 w-3.5 mr-1" /> {t('coachDashboard.reject')}
                 </Button>
-                <Button size="sm" className="flex-1 gradient-hyrox" onClick={() => {
-                  setApproveDialog(swap);
-                  setWorkoutDetails(swap.original_session?.workout_details || '');
-                }}>
-                  <Check className="h-3.5 w-3.5 mr-1" /> Approve
+                <Button size="sm" className="flex-1 gradient-hyrox" onClick={() => { setApproveDialog(swap); setWorkoutDetails(swap.original_session?.workout_details || ''); }}>
+                  <Check className="h-3.5 w-3.5 mr-1" /> {t('coachDashboard.approve')}
                 </Button>
               </div>
             </div>
@@ -165,7 +144,7 @@ function SwapRequestsPanel() {
       <Dialog open={!!approveDialog} onOpenChange={v => { if (!v) { setApproveDialog(null); setWorkoutDetails(''); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-display">Approve Swap</DialogTitle>
+            <DialogTitle className="font-display">{t('coachDashboard.approveSwap')}</DialogTitle>
           </DialogHeader>
           {approveDialog && (
             <div className="space-y-4 pt-2">
@@ -175,17 +154,12 @@ function SwapRequestsPanel() {
                 <p><span className="text-muted-foreground">Reason:</span> {reasonLabels[approveDialog.reason] || approveDialog.reason}</p>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Substitute workout details</Label>
-                <Textarea
-                  value={workoutDetails}
-                  onChange={e => setWorkoutDetails(e.target.value)}
-                  placeholder="Write the substitute workout here..."
-                  rows={4}
-                />
-                <p className="text-[10px] text-muted-foreground">Modify the workout to suit the athlete's constraints, or keep the original.</p>
+                <Label className="text-xs">{t('coachDashboard.substituteWorkout')}</Label>
+                <Textarea value={workoutDetails} onChange={e => setWorkoutDetails(e.target.value)} placeholder="Write the substitute workout here..." rows={4} />
+                <p className="text-[10px] text-muted-foreground">{t('coachDashboard.substituteHint')}</p>
               </div>
               <Button className="w-full gradient-hyrox" onClick={() => handleApprove(approveDialog)} disabled={saving}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Approve & Send'}
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t('coachDashboard.approveAndSend')}
               </Button>
             </div>
           )}
@@ -196,6 +170,7 @@ function SwapRequestsPanel() {
 }
 
 export default function CoachDashboard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   return (
@@ -203,61 +178,52 @@ export default function CoachDashboard() {
       <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
         <motion.div variants={item} className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-display font-bold">Coach Dashboard</h1>
-            <p className="text-sm text-muted-foreground">{mockAthletes.length} athletes</p>
+            <h1 className="text-xl font-display font-bold">{t('coachDashboard.title')}</h1>
+            <p className="text-sm text-muted-foreground">{t('coachDashboard.athletes', { count: mockAthletes.length })}</p>
           </div>
           <Button size="sm" className="gradient-hyrox">
-            <Plus className="h-4 w-4 mr-1" /> Invite
+            <Plus className="h-4 w-4 mr-1" /> {t('coachDashboard.invite')}
           </Button>
         </motion.div>
 
-        {/* Overview Cards */}
         <motion.div variants={item} className="grid grid-cols-3 gap-3">
           <Card className="glass">
             <CardContent className="p-3 text-center">
               <CheckCircle className="h-4 w-4 mx-auto text-success mb-1" />
               <p className="text-lg font-display font-bold">76%</p>
-              <p className="text-[10px] text-muted-foreground">Avg Compliance</p>
+              <p className="text-[10px] text-muted-foreground">{t('coachDashboard.avgCompliance')}</p>
             </CardContent>
           </Card>
           <Card className="glass">
             <CardContent className="p-3 text-center">
               <AlertTriangle className="h-4 w-4 mx-auto text-warning mb-1" />
               <p className="text-lg font-display font-bold">1</p>
-              <p className="text-[10px] text-muted-foreground">Pain Flags</p>
+              <p className="text-[10px] text-muted-foreground">{t('coachDashboard.painFlags')}</p>
             </CardContent>
           </Card>
           <Card className="glass">
             <CardContent className="p-3 text-center">
               <TrendingUp className="h-4 w-4 mx-auto text-accent mb-1" />
               <p className="text-lg font-display font-bold">16</p>
-              <p className="text-[10px] text-muted-foreground">Sessions/Week</p>
+              <p className="text-[10px] text-muted-foreground">{t('coachDashboard.sessionsWeek')}</p>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Swap Requests */}
-        <motion.div variants={item}>
-          <SwapRequestsPanel />
-        </motion.div>
+        <motion.div variants={item}><SwapRequestsPanel /></motion.div>
 
-        {/* Athletes List */}
         <motion.div variants={item}>
           <Card className="glass">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-display flex items-center gap-2">
-                  <Users className="h-4 w-4" /> Athletes
+                  <Users className="h-4 w-4" /> {t('nav.athletes')}
                 </CardTitle>
               </div>
             </CardHeader>
             <CardContent className="space-y-2">
               {mockAthletes.map(athlete => (
-                <button
-                  key={athlete.id}
-                  className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors text-left"
-                  onClick={() => {}}
-                >
+                <button key={athlete.id} className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors text-left" onClick={() => {}}>
                   <div className="flex items-center gap-3">
                     <Avatar className="h-9 w-9">
                       <AvatarFallback className="text-xs bg-secondary">
@@ -277,9 +243,7 @@ export default function CoachDashboard() {
                       athlete.compliance >= 80 ? 'bg-success/10 text-success' :
                       athlete.compliance >= 60 ? 'bg-warning/10 text-warning' :
                       'bg-destructive/10 text-destructive'
-                    }`}>
-                      {athlete.compliance}%
-                    </Badge>
+                    }`}>{athlete.compliance}%</Badge>
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </button>
@@ -288,35 +252,33 @@ export default function CoachDashboard() {
           </Card>
         </motion.div>
 
-        {/* Weekly Reports CTA */}
         <motion.div variants={item}>
           <Card className="glass border-primary/20 overflow-hidden cursor-pointer hover:border-primary/40 transition-colors" onClick={() => navigate('/reports')}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-display font-bold text-sm">Weekly Reports</p>
-                  <p className="text-xs text-muted-foreground">Review athlete stats, compliance & AI insights</p>
+                  <p className="font-display font-bold text-sm">{t('dashboard.weeklyReport')}</p>
+                  <p className="text-xs text-muted-foreground">{t('coachDashboard.weeklyReportsDesc')}</p>
                 </div>
                 <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); navigate('/reports'); }}>
-                  View <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                  {t('coachDashboard.view')} <ChevronRight className="h-3.5 w-3.5 ml-1" />
                 </Button>
               </div>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Plan Builder CTA */}
         <motion.div variants={item}>
           <Card className="glass border-primary/20 overflow-hidden">
             <div className="h-1 gradient-hyrox" />
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-display font-bold text-sm">Plan Builder</p>
-                  <p className="text-xs text-muted-foreground">Create or import training plans</p>
+                  <p className="font-display font-bold text-sm">{t('planBuilder.title')}</p>
+                  <p className="text-xs text-muted-foreground">{t('coachDashboard.planBuilderDesc')}</p>
                 </div>
                 <Button size="sm" className="gradient-hyrox" onClick={() => navigate('/plans')}>
-                  Open <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                  {t('coachDashboard.open')} <ChevronRight className="h-3.5 w-3.5 ml-1" />
                 </Button>
               </div>
             </CardContent>
