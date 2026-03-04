@@ -151,8 +151,8 @@
     "week": "Semana",
     "month": "Mês",
     "weekOf": "Semana {{current}} de {{max}}",
-    "exportFullPlan": "Exportar plano completo (.ics)",
-    "fullPlanExported": "{{count}} sessões exportadas para .ics"
+    "exportFullPlan": "Exportar plano completo",
+    "fullPlanExported": "{{count}} sessões exportadas"
   },
   "profile": {
     "biometrics": "Biometria",
