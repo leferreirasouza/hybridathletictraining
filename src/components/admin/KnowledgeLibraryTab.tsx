@@ -582,3 +582,101 @@ function UploadDialog({
     </Dialog>
   );
 }
+
+// ──────────────────────────────────────────────
+// Chunk Detail Dialog
+// ──────────────────────────────────────────────
+
+function ChunkDetailDialog({
+  doc,
+  onClose,
+}: {
+  doc: KnowledgeDocument | null;
+  onClose: () => void;
+}) {
+  const { data: chunks = [], isLoading } = useQuery({
+    queryKey: ['knowledge-chunks', doc?.id],
+    queryFn: async () => {
+      if (!doc) return [];
+      const { data, error } = await supabase
+        .from('knowledge_chunks')
+        .select('id, content, chunk_index, metadata')
+        .eq('document_id', doc.id)
+        .order('chunk_index', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!doc,
+  });
+
+  if (!doc) return null;
+
+  return (
+    <Dialog open={!!doc} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Eye className="h-4.5 w-4.5 text-primary" />
+            <span className="truncate">{doc.title}</span>
+          </DialogTitle>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Badge variant={statusVariant(doc.status)} className="text-[10px]">{doc.status}</Badge>
+            <Badge variant="outline" className="text-[10px] gap-1">
+              {sourceTypeIcon(doc.source_type)}
+              {doc.source_type}
+            </Badge>
+            <Badge variant="outline" className="text-[10px]">
+              {doc.total_chunks ?? 0} chunks
+            </Badge>
+            {doc.metadata?.total_characters && (
+              <Badge variant="outline" className="text-[10px]">
+                {(doc.metadata.total_characters / 1000).toFixed(1)}k chars
+              </Badge>
+            )}
+          </div>
+          {doc.source_url && (
+            <a
+              href={doc.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline flex items-center gap-1 pt-1"
+            >
+              <ExternalLink className="h-3 w-3" /> {doc.source_url}
+            </a>
+          )}
+        </DialogHeader>
+
+        <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : chunks.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+              <p className="text-sm text-muted-foreground">No chunks found for this document</p>
+            </div>
+          ) : (
+            <div className="space-y-3 pb-4">
+              {chunks.map((chunk: any) => (
+                <div key={chunk.id} className="rounded-lg border border-border bg-muted/30 p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <Badge variant="outline" className="text-[10px] font-mono">
+                      Chunk #{chunk.chunk_index}
+                    </Badge>
+                    <span className="text-[10px] text-muted-foreground">
+                      {chunk.content.length} chars
+                    </span>
+                  </div>
+                  <p className="text-xs text-foreground/90 leading-relaxed whitespace-pre-wrap font-mono">
+                    {chunk.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+  );
+}
