@@ -201,11 +201,11 @@ export default function LogSession() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Avg HR (bpm)</Label>
+                <Label>{t('logSession.avgHrBpm')}</Label>
                 <Input type="number" value={avgHr} onChange={e => setAvgHr(e.target.value)} placeholder="155" />
               </div>
               <div className="space-y-2">
-                <Label>Avg Pace (min/km)</Label>
+                <Label>{t('logSession.avgPace')}</Label>
                 <Input value={avgPace} onChange={e => setAvgPace(e.target.value)} placeholder="5:15" />
               </div>
             </div>
