@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
-import { Camera, Loader2, Upload, Check, AlertTriangle, ImagePlus } from 'lucide-react';
+import { Camera, Loader2, Upload, Check, AlertTriangle, ImagePlus, X, Images } from 'lucide-react';
 
 type ExtractedExercise = {
   name: string;
@@ -24,6 +25,15 @@ type ExtractedExercise = {
   sets?: number | null;
   reps?: number | null;
   duration_sec?: number | null;
+  _sourceIndex?: number; // track which image it came from
+};
+
+type ImageItem = {
+  dataUrl: string;
+  name: string;
+  status: 'pending' | 'parsing' | 'done' | 'error';
+  exerciseCount?: number;
+  error?: string;
 };
 
 interface Props {
@@ -31,81 +41,134 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+const MAX_IMAGES = 20;
+
 export default function ScreenshotParserDialog({ open, onOpenChange }: Props) {
   const { user, currentOrg } = useAuth();
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [images, setImages] = useState<ImageItem[]>([]);
   const [parsing, setParsing] = useState(false);
+  const [parseProgress, setParseProgress] = useState(0);
   const [exercises, setExercises] = useState<ExtractedExercise[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [confidence, setConfidence] = useState<string>('');
-  const [notes, setNotes] = useState<string>('');
   const [saving, setSaving] = useState(false);
 
   const reset = () => {
-    setPreview(null);
+    setImages([]);
     setExercises([]);
     setSelected(new Set());
-    setConfidence('');
-    setNotes('');
     setParsing(false);
+    setParseProgress(0);
     setSaving(false);
   };
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Image must be under 10MB');
-      return;
+  const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    const remaining = MAX_IMAGES - images.length;
+    if (files.length > remaining) {
+      toast.error(`You can upload up to ${MAX_IMAGES} images. ${remaining} slots remaining.`);
+    }
+    const validFiles = files.slice(0, remaining);
+
+    const oversized = validFiles.filter(f => f.size > 10 * 1024 * 1024);
+    if (oversized.length) {
+      toast.error(`${oversized.length} image(s) over 10MB were skipped`);
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      setPreview(dataUrl);
-      setExercises([]);
-      setSelected(new Set());
-    };
-    reader.readAsDataURL(file);
+    const accepted = validFiles.filter(f => f.size <= 10 * 1024 * 1024);
+    if (!accepted.length) return;
+
+    const newItems: ImageItem[] = [];
+    for (const file of accepted) {
+      const dataUrl = await readFileAsDataUrl(file);
+      newItems.push({ dataUrl, name: file.name, status: 'pending' });
+    }
+
+    setImages(prev => [...prev, ...newItems]);
+    setExercises([]);
+    setSelected(new Set());
+
+    // Reset file input
+    if (fileRef.current) fileRef.current.value = '';
   };
 
-  const handleParse = async () => {
-    if (!preview) return;
+  const readFileAsDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const removeImage = (idx: number) => {
+    setImages(prev => prev.filter((_, i) => i !== idx));
+    if (images.length <= 1) {
+      setExercises([]);
+      setSelected(new Set());
+    }
+  };
+
+  const parseOneImage = async (base64: string, token: string): Promise<{ exercises: ExtractedExercise[]; confidence: string; notes: string }> => {
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-exercise-screenshot`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ imageBase64: base64 }),
+      }
+    );
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || `Failed (${response.status})`);
+    }
+
+    const result = await response.json();
+    return result.data;
+  };
+
+  const handleParseAll = async () => {
+    if (!images.length) return;
     setParsing(true);
+    setParseProgress(0);
+    setExercises([]);
+    setSelected(new Set());
 
     try {
-      const base64 = preview.split(',')[1];
       const session_token = (await supabase.auth.getSession()).data.session?.access_token;
       if (!session_token) throw new Error('Not authenticated');
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-exercise-screenshot`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session_token}`,
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({ imageBase64: base64 }),
-        }
-      );
+      const allExercises: ExtractedExercise[] = [];
+      let completed = 0;
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to parse screenshot');
+      for (let i = 0; i < images.length; i++) {
+        setImages(prev => prev.map((img, idx) => idx === i ? { ...img, status: 'parsing' } : img));
+
+        try {
+          const base64 = images[i].dataUrl.split(',')[1];
+          const data = await parseOneImage(base64, session_token);
+          const exs = (data.exercises || []).map((ex: ExtractedExercise) => ({ ...ex, _sourceIndex: i }));
+          allExercises.push(...exs);
+
+          setImages(prev => prev.map((img, idx) => idx === i ? { ...img, status: 'done', exerciseCount: exs.length } : img));
+        } catch (err: any) {
+          setImages(prev => prev.map((img, idx) => idx === i ? { ...img, status: 'error', error: err.message } : img));
+        }
+
+        completed++;
+        setParseProgress(Math.round((completed / images.length) * 100));
       }
 
-      const result = await response.json();
-      const extracted = result.data;
-      setExercises(extracted.exercises || []);
-      setConfidence(extracted.confidence || '');
-      setNotes(extracted.notes || '');
-      // Select all by default
-      setSelected(new Set((extracted.exercises || []).map((_: any, i: number) => i)));
-      toast.success(`Found ${extracted.exercises?.length || 0} exercises`);
+      setExercises(allExercises);
+      setSelected(new Set(allExercises.map((_, i) => i)));
+      toast.success(`Found ${allExercises.length} exercises from ${images.length} images`);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -161,96 +224,123 @@ export default function ScreenshotParserDialog({ open, onOpenChange }: Props) {
     }
   };
 
+  const pendingCount = images.filter(i => i.status === 'pending').length;
+  const doneCount = images.filter(i => i.status === 'done').length;
+  const errorCount = images.filter(i => i.status === 'error').length;
+
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) reset(); }}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Camera className="h-5 w-5 text-primary" />
-            Extract Exercises from Screenshot
+            Extract Exercises from Screenshots
           </DialogTitle>
         </DialogHeader>
 
         <ScrollArea className="flex-1">
           <div className="space-y-4 pr-4 pb-4">
             {/* Upload area */}
-            {!preview ? (
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="w-full border-2 border-dashed border-muted-foreground/25 rounded-xl p-8 flex flex-col items-center gap-3 hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer"
-              >
-                <ImagePlus className="h-10 w-10 text-muted-foreground/50" />
-                <div className="text-center">
-                  <p className="text-sm font-medium">Upload a training screenshot</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Workout plans, exercise lists, session photos
-                  </p>
-                </div>
-              </button>
-            ) : (
-              <div className="space-y-3">
-                <div className="relative rounded-lg overflow-hidden border">
-                  <img src={preview} alt="Screenshot" className="w-full max-h-48 object-contain bg-muted" />
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="absolute top-2 right-2"
-                    onClick={() => { setPreview(null); setExercises([]); setSelected(new Set()); }}
-                  >
-                    Change
-                  </Button>
-                </div>
-
-                {exercises.length === 0 && (
-                  <Button onClick={handleParse} disabled={parsing} className="w-full">
-                    {parsing ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Analyzing screenshot...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Extract Exercises
-                      </>
-                    )}
-                  </Button>
-                )}
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={images.length >= MAX_IMAGES || parsing}
+              className="w-full border-2 border-dashed border-muted-foreground/25 rounded-xl p-6 flex flex-col items-center gap-2 hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ImagePlus className="h-8 w-8 text-muted-foreground/50" />
+              <div className="text-center">
+                <p className="text-sm font-medium">
+                  {images.length === 0 ? 'Upload training screenshots' : 'Add more screenshots'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Up to {MAX_IMAGES} images · {images.length}/{MAX_IMAGES} added
+                </p>
               </div>
-            )}
+            </button>
 
             <input
               ref={fileRef}
               type="file"
               accept="image/*"
+              multiple
               className="hidden"
-              onChange={handleFile}
+              onChange={handleFiles}
             />
+
+            {/* Image thumbnails */}
+            {images.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium flex items-center gap-1.5">
+                    <Images className="h-4 w-4" />
+                    {images.length} image{images.length !== 1 ? 's' : ''}
+                  </p>
+                  {(doneCount > 0 || errorCount > 0) && (
+                    <span className="text-xs text-muted-foreground">
+                      {doneCount} done{errorCount > 0 && `, ${errorCount} failed`}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-4 gap-2">
+                  {images.map((img, i) => (
+                    <div key={i} className="relative group rounded-lg overflow-hidden border aspect-square">
+                      <img src={img.dataUrl} alt={img.name} className="w-full h-full object-cover" />
+                      {/* Status overlay */}
+                      {img.status === 'parsing' && (
+                        <div className="absolute inset-0 bg-background/70 flex items-center justify-center">
+                          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                        </div>
+                      )}
+                      {img.status === 'done' && (
+                        <div className="absolute bottom-0 inset-x-0 bg-primary/90 text-primary-foreground text-[10px] text-center py-0.5">
+                          {img.exerciseCount} found
+                        </div>
+                      )}
+                      {img.status === 'error' && (
+                        <div className="absolute bottom-0 inset-x-0 bg-destructive/90 text-destructive-foreground text-[10px] text-center py-0.5">
+                          Failed
+                        </div>
+                      )}
+                      {/* Remove button */}
+                      {!parsing && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeImage(i); }}
+                          className="absolute top-1 right-1 bg-background/80 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Parse progress */}
+                {parsing && (
+                  <div className="space-y-1.5">
+                    <Progress value={parseProgress} className="h-2" />
+                    <p className="text-xs text-muted-foreground text-center">
+                      Analyzing {parseProgress}%...
+                    </p>
+                  </div>
+                )}
+
+                {/* Parse button */}
+                {exercises.length === 0 && !parsing && (
+                  <Button onClick={handleParseAll} className="w-full">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Extract from {images.length} Image{images.length !== 1 ? 's' : ''}
+                  </Button>
+                )}
+              </div>
+            )}
 
             {/* Results */}
             {exercises.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium">{exercises.length} exercises found</p>
-                  <div className="flex items-center gap-2">
-                    {confidence && (
-                      <Badge
-                        variant={confidence === 'high' ? 'default' : confidence === 'medium' ? 'secondary' : 'destructive'}
-                        className="text-[10px]"
-                      >
-                        {confidence} confidence
-                      </Badge>
-                    )}
-                    <span className="text-xs text-muted-foreground">{selected.size} selected</span>
-                  </div>
+                  <span className="text-xs text-muted-foreground">{selected.size} selected</span>
                 </div>
-
-                {notes && (
-                  <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2">
-                    <AlertTriangle className="h-3 w-3 inline mr-1" />
-                    {notes}
-                  </p>
-                )}
 
                 <div className="space-y-2">
                   {exercises.map((ex, i) => (
@@ -263,7 +353,14 @@ export default function ScreenshotParserDialog({ open, onOpenChange }: Props) {
                     >
                       <Checkbox checked={selected.has(i)} className="mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold">{ex.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold">{ex.name}</p>
+                          {ex._sourceIndex !== undefined && (
+                            <span className="text-[9px] px-1 py-0.5 rounded bg-muted text-muted-foreground">
+                              img {ex._sourceIndex + 1}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex gap-1 mt-1 flex-wrap">
                           <Badge variant="secondary" className="text-[10px]">{ex.category?.replace('_', ' ')}</Badge>
                           <Badge variant="outline" className="text-[10px]">{ex.difficulty_level}</Badge>
