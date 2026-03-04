@@ -72,6 +72,7 @@ export default function ExerciseLibrary() {
   const [screenshotOpen, setScreenshotOpen] = useState(false);
 
   const isCoachOrAdmin = effectiveRole && ['coach', 'admin', 'master_admin'].includes(effectiveRole);
+  const isMasterAdmin = effectiveRole === 'master_admin';
 
   const { data: exercises = [], isLoading } = useQuery({
     queryKey: ['exercise-library', currentOrg?.id],
