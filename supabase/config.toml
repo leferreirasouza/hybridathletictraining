@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.parse-race-screenshot]
 verify_jwt = false
+
+[functions.seed-exercise-library]
+verify_jwt = false
