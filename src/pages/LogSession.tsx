@@ -20,6 +20,7 @@ import { getDiscipline, dayLabelsFull } from '@/components/schedule/config';
 import type { Database } from '@/integrations/supabase/types';
 import ShareWorkoutDialog from '@/components/share/ShareWorkoutDialog';
 import type { ShareSessionData } from '@/components/share/types';
+import { useTranslation } from 'react-i18next';
 
 type Discipline = Database['public']['Enums']['discipline'];
 
@@ -38,6 +39,7 @@ const disciplineOptions: { value: Discipline; label: string }[] = [
 ];
 
 export default function LogSession() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { sessions, completedSessions, isLoading: scheduleLoading } = useScheduleData();
 
@@ -101,7 +103,7 @@ export default function LogSession() {
         distance: distance ? parseFloat(distance) : null,
         linked: plannedSessionId !== 'none',
       });
-      toast.success('Session logged! Great work 💪');
+      toast.success(t('logSession.sessionLogged'));
       setShareData({
         discipline,
         date: new Date().toISOString().split('T')[0],
@@ -125,7 +127,7 @@ export default function LogSession() {
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-5">
-      <h1 className="text-xl font-display font-bold">Log Session</h1>
+      <h1 className="text-xl font-display font-bold">{t('logSession.title')}</h1>
 
       <motion.form
         initial={{ opacity: 0, y: 10 }}
@@ -139,16 +141,16 @@ export default function LogSession() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-display flex items-center gap-2">
                 <Link2 className="h-4 w-4 text-primary" />
-                Link to Planned Session
+                {t('logSession.linkPlanned')}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Select value={plannedSessionId} onValueChange={setPlannedSessionId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a planned session (optional)" />
+                  <SelectValue placeholder={t('logSession.selectPlanned')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">No link — standalone session</SelectItem>
+                  <SelectItem value="none">{t('logSession.noLink')}</SelectItem>
                   {availablePlanned.map(ps => {
                     const disc = getDiscipline(ps.discipline);
                     const dayLabel = dayLabelsFull[ps.day_of_week - 1] || '';
@@ -165,7 +167,7 @@ export default function LogSession() {
               </Select>
               {plannedSessionId !== 'none' && (
                 <p className="text-[11px] text-muted-foreground mt-2">
-                  Fields below have been pre-filled from the planned session. Adjust with your actual values.
+                  {t('logSession.preFilled')}
                 </p>
               )}
             </CardContent>
@@ -175,13 +177,13 @@ export default function LogSession() {
         {/* Activity details */}
         <Card className="glass">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-display">Activity</CardTitle>
+            <CardTitle className="text-base font-display">{t('logSession.activity')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Discipline</Label>
+              <Label>{t('logSession.discipline')}</Label>
               <Select value={discipline} onValueChange={(v) => setDiscipline(v as Discipline)}>
-                <SelectTrigger><SelectValue placeholder="Select discipline" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t('logSession.discipline')} /></SelectTrigger>
                 <SelectContent>
                   {disciplineOptions.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
                 </SelectContent>
@@ -189,21 +191,21 @@ export default function LogSession() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Duration (min)</Label>
+                <Label>{t('logSession.durationMin')}</Label>
                 <Input type="number" value={duration} onChange={e => setDuration(e.target.value)} placeholder="45" />
               </div>
               <div className="space-y-2">
-                <Label>Distance (km)</Label>
+                <Label>{t('logSession.distanceKm')}</Label>
                 <Input type="number" step="0.1" value={distance} onChange={e => setDistance(e.target.value)} placeholder="8.0" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Avg HR (bpm)</Label>
+                <Label>{t('logSession.avgHrBpm')}</Label>
                 <Input type="number" value={avgHr} onChange={e => setAvgHr(e.target.value)} placeholder="155" />
               </div>
               <div className="space-y-2">
-                <Label>Avg Pace (min/km)</Label>
+                <Label>{t('logSession.avgPace')}</Label>
                 <Input value={avgPace} onChange={e => setAvgPace(e.target.value)} placeholder="5:15" />
               </div>
             </div>
@@ -213,12 +215,12 @@ export default function LogSession() {
         {/* Effort & Feedback */}
         <Card className="glass">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-display">Effort & Feedback</CardTitle>
+            <CardTitle className="text-base font-display">{t('logSession.effortFeedback')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>RPE (Rate of Perceived Exertion)</Label>
+                <Label>{t('logSession.rpe')}</Label>
                 <Badge variant="secondary" className="font-mono">{rpe[0]}/10</Badge>
               </div>
               <Slider value={rpe} onValueChange={setRpe} min={1} max={10} step={1} className="py-2" />
@@ -227,7 +229,7 @@ export default function LogSession() {
             <div className="flex items-center justify-between p-3 rounded-lg bg-destructive/5 border border-destructive/20">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-destructive" />
-                <Label htmlFor="pain-flag" className="text-sm">Pain / Injury Flag</Label>
+                <Label htmlFor="pain-flag" className="text-sm">{t('logSession.painFlag')}</Label>
               </div>
               <Switch id="pain-flag" checked={painFlag} onCheckedChange={setPainFlag} />
             </div>
@@ -237,21 +239,21 @@ export default function LogSession() {
                 <Textarea
                   value={painNotes}
                   onChange={e => setPainNotes(e.target.value)}
-                  placeholder="Describe the pain location and severity…"
+                  placeholder={t('logSession.painDesc')}
                   rows={2}
                 />
               </motion.div>
             )}
 
             <div className="space-y-2">
-              <Label>Notes</Label>
-              <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="How did the session feel?" rows={3} />
+              <Label>{t('logSession.notes')}</Label>
+              <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder={t('logSession.notesPlaceholder')} rows={3} />
             </div>
           </CardContent>
         </Card>
 
         <Button type="submit" className="w-full gradient-hyrox" size="lg" disabled={saving}>
-          <Check className="h-4 w-4 mr-2" /> {saving ? 'Saving…' : 'Log Session'}
+          <Check className="h-4 w-4 mr-2" /> {saving ? t('logSession.savingSession') : t('logSession.logSessionBtn')}
         </Button>
       </motion.form>
 

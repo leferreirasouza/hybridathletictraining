@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Upload, Plus, Trophy, Clock, TrendingUp, Loader2, Camera, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import RaceComparisonChart from '@/components/races/RaceComparisonChart';
+import { useTranslation } from 'react-i18next';
 
 const STATIONS = [
   'SkiErg', 'Sled Push', 'Sled Pull', 'Burpee Broad Jumps',
@@ -56,6 +57,7 @@ const item = {
 };
 
 export default function RaceResults() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -78,18 +80,18 @@ export default function RaceResults() {
     <div className="px-4 py-6 max-w-lg mx-auto space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-display font-bold">Race Results</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{races?.length || 0} races recorded</p>
+          <h1 className="text-xl font-display font-bold">{t('raceResults.title')}</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{t('raceResults.racesRecorded', { count: races?.length || 0 })}</p>
         </div>
         <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gradient-hyrox" size="sm">
-              <Plus className="h-4 w-4 mr-1" /> Add Race
+              <Plus className="h-4 w-4 mr-1" /> {t('raceResults.addRace')}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="font-display">Add Race Result</DialogTitle>
+              <DialogTitle className="font-display">{t('raceResults.addRaceResult')}</DialogTitle>
             </DialogHeader>
             <AddRaceForm
               onSuccess={() => {
@@ -110,20 +112,16 @@ export default function RaceResults() {
           <div className="h-1 gradient-hyrox" />
           <CardContent className="p-8 text-center space-y-3">
             <Trophy className="h-10 w-10 mx-auto text-muted-foreground" />
-            <p className="font-display font-bold">No Race Results Yet</p>
-            <p className="text-sm text-muted-foreground">
-              Add your past HYROX results to get a personalized training plan based on your strengths and weaknesses.
-            </p>
+            <p className="font-display font-bold">{t('raceResults.noRaces')}</p>
+            <p className="text-sm text-muted-foreground">{t('raceResults.noRacesDesc')}</p>
             <Button className="gradient-hyrox" onClick={() => setAddDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" /> Add Your First Race
+              <Plus className="h-4 w-4 mr-2" /> {t('raceResults.addFirstRace')}
             </Button>
           </CardContent>
         </Card>
       ) : (
         <motion.div variants={container} initial="hidden" animate="show" className="space-y-3">
-          {/* Comparison Chart */}
           <RaceComparisonChart races={races} />
-
           {races.map((race: any) => (
             <RaceCard key={race.id} race={race} onDelete={() => queryClient.invalidateQueries({ queryKey: ['race-results'] })} />
           ))}
@@ -134,6 +132,7 @@ export default function RaceResults() {
 }
 
 function RaceCard({ race, onDelete }: { race: any; onDelete: () => void }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const { user } = useAuth();
 
@@ -145,7 +144,7 @@ function RaceCard({ race, onDelete }: { race: any; onDelete: () => void }) {
   const handleDelete = async () => {
     const { error } = await supabase.from('race_results' as any).delete().eq('id', race.id);
     if (error) toast.error('Failed to delete');
-    else { toast.success('Race deleted'); onDelete(); }
+    else { toast.success(t('raceResults.raceDeleted')); onDelete(); }
   };
 
   return (
@@ -167,29 +166,28 @@ function RaceCard({ race, onDelete }: { race: any; onDelete: () => void }) {
             </div>
             <div className="text-right">
               <p className="text-lg font-display font-bold text-primary">{formatTime(race.total_time_seconds)}</p>
-              <p className="text-[10px] text-muted-foreground">Total Time</p>
+              <p className="text-[10px] text-muted-foreground">{t('raceResults.totalTime')}</p>
             </div>
           </div>
 
-          {/* Summary bar */}
           <div className="grid grid-cols-3 gap-2 mt-3">
             <div className="text-center p-2 rounded-lg bg-blue-500/10">
               <p className="text-xs font-bold text-blue-500">{formatTime(totalRun || null)}</p>
-              <p className="text-[9px] text-muted-foreground">Running</p>
+              <p className="text-[9px] text-muted-foreground">{t('raceResults.running')}</p>
             </div>
             <div className="text-center p-2 rounded-lg bg-primary/10">
               <p className="text-xs font-bold text-primary">{formatTime(totalStation || null)}</p>
-              <p className="text-[9px] text-muted-foreground">Stations</p>
+              <p className="text-[9px] text-muted-foreground">{t('raceResults.stations')}</p>
             </div>
             <div className="text-center p-2 rounded-lg bg-muted/60">
               <p className="text-xs font-bold text-muted-foreground">{formatTime(race.total_transition_seconds)}</p>
-              <p className="text-[9px] text-muted-foreground">Transitions</p>
+              <p className="text-[9px] text-muted-foreground">{t('raceResults.transitions')}</p>
             </div>
           </div>
 
           <Button variant="ghost" size="sm" className="w-full mt-2 text-xs" onClick={() => setExpanded(!expanded)}>
             {expanded ? <ChevronUp className="h-3 w-3 mr-1" /> : <ChevronDown className="h-3 w-3 mr-1" />}
-            {expanded ? 'Hide Splits' : 'View Splits'}
+            {expanded ? t('raceResults.hideSplits') : t('raceResults.viewSplits')}
           </Button>
 
           {expanded && (
@@ -209,7 +207,7 @@ function RaceCard({ race, onDelete }: { race: any; onDelete: () => void }) {
                 </div>
               </div>
               <Button variant="ghost" size="sm" className="w-full text-destructive text-xs mt-2" onClick={handleDelete}>
-                <Trash2 className="h-3 w-3 mr-1" /> Delete Race
+                <Trash2 className="h-3 w-3 mr-1" /> {t('raceResults.deleteRace')}
               </Button>
             </motion.div>
           )}
@@ -220,12 +218,12 @@ function RaceCard({ race, onDelete }: { race: any; onDelete: () => void }) {
 }
 
 function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [tab, setTab] = useState<'upload' | 'manual'>('upload');
   const [parsing, setParsing] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Form state
   const [raceName, setRaceName] = useState('');
   const [raceLocation, setRaceLocation] = useState('');
   const [raceDate, setRaceDate] = useState('');
@@ -243,7 +241,6 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
 
     setParsing(true);
     try {
-      // Convert to base64
       const buffer = await file.arrayBuffer();
       const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
 
@@ -285,7 +282,7 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
 
   const handleSave = async () => {
     if (!user) return;
-    if (!raceDate) { toast.error('Race date is required'); return; }
+    if (!raceDate) { toast.error(t('raceResults.raceDateRequired')); return; }
 
     setSaving(true);
     try {
@@ -309,7 +306,7 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
       const { error } = await supabase.from('race_results' as any).insert(row);
       if (error) throw error;
 
-      toast.success('Race result saved!');
+      toast.success(t('raceResults.raceSaved'));
       onSuccess();
     } catch (err: any) {
       toast.error(err.message || 'Failed to save');
@@ -323,10 +320,10 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
       <Tabs value={tab} onValueChange={v => setTab(v as any)}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="upload">
-            <Camera className="h-3.5 w-3.5 mr-1" /> Upload Screenshot
+            <Camera className="h-3.5 w-3.5 mr-1" /> {t('raceResults.uploadScreenshot')}
           </TabsTrigger>
           <TabsTrigger value="manual">
-            <Plus className="h-3.5 w-3.5 mr-1" /> Manual Entry
+            <Plus className="h-3.5 w-3.5 mr-1" /> {t('raceResults.manualEntry')}
           </TabsTrigger>
         </TabsList>
 
@@ -334,22 +331,14 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
           <Card className="glass">
             <CardContent className="p-6 text-center space-y-3">
               <Upload className="h-10 w-10 mx-auto text-primary" />
-              <p className="text-sm font-medium">Upload ROX Fit Screenshot</p>
-              <p className="text-xs text-muted-foreground">
-                Upload a screenshot of your race results from the ROX Fit app and AI will extract your splits automatically.
-              </p>
+              <p className="text-sm font-medium">{t('raceResults.uploadRoxFit')}</p>
+              <p className="text-xs text-muted-foreground">{t('raceResults.uploadRoxFitDesc')}</p>
               <label className="block">
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleScreenshotUpload}
-                  disabled={parsing}
-                />
+                <input type="file" accept="image/*" className="hidden" onChange={handleScreenshotUpload} disabled={parsing} />
                 <Button className="gradient-hyrox" disabled={parsing} asChild>
                   <span>
                     {parsing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Camera className="h-4 w-4 mr-2" />}
-                    {parsing ? 'Analyzing…' : 'Choose Image'}
+                    {parsing ? t('raceResults.analyzing') : t('raceResults.chooseImage')}
                   </span>
                 </Button>
               </label>
@@ -358,24 +347,23 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
         </TabsContent>
 
         <TabsContent value="manual" className="mt-3 space-y-4">
-          {/* Race Info */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Race Name</Label>
+              <Label className="text-xs">{t('onboarding.raceName')}</Label>
               <Input value={raceName} onChange={e => setRaceName(e.target.value)} placeholder="HYROX Munich" className="h-8 text-xs" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Location</Label>
+              <Label className="text-xs">{t('onboarding.location')}</Label>
               <Input value={raceLocation} onChange={e => setRaceLocation(e.target.value)} placeholder="Munich, DE" className="h-8 text-xs" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Race Date *</Label>
+              <Label className="text-xs">{t('onboarding.raceDate')} *</Label>
               <Input type="date" value={raceDate} onChange={e => setRaceDate(e.target.value)} className="h-8 text-xs" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Category</Label>
+              <Label className="text-xs">{t('raceResults.category')}</Label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -386,52 +374,38 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Total Time (H:MM:SS)</Label>
+              <Label className="text-xs">{t('raceResults.totalTimeLabel')}</Label>
               <Input value={totalTime} onChange={e => setTotalTime(e.target.value)} placeholder="1:25:30" className="h-8 text-xs font-mono" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Transitions (MM:SS)</Label>
+              <Label className="text-xs">{t('raceResults.transitionsLabel')}</Label>
               <Input value={transitionTime} onChange={e => setTransitionTime(e.target.value)} placeholder="8:00" className="h-8 text-xs font-mono" />
             </div>
           </div>
 
-          {/* Splits */}
           <div className="space-y-2">
-            <Label className="text-xs font-semibold">Splits (MM:SS)</Label>
+            <Label className="text-xs font-semibold">{t('raceResults.splitsLabel')}</Label>
             <div className="grid grid-cols-[1fr_80px_80px] gap-x-2 gap-y-1.5 items-center">
               <span className="text-[10px] font-semibold text-muted-foreground uppercase">Station</span>
               <span className="text-[10px] font-semibold text-blue-500 text-center uppercase">Run</span>
               <span className="text-[10px] font-semibold text-primary text-center uppercase">Station</span>
               {STATIONS.map((station, i) => (
                 <>
-                  <span key={`label-${i}`} className="text-xs text-muted-foreground">{i + 1}. {station}</span>
-                  <Input
-                    key={`run-${i}`}
-                    value={runSplits[i]}
-                    onChange={e => { const n = [...runSplits]; n[i] = e.target.value; setRunSplits(n); }}
-                    placeholder="5:23"
-                    className="h-7 text-[11px] font-mono text-center"
-                  />
-                  <Input
-                    key={`station-${i}`}
-                    value={stationSplits[i]}
-                    onChange={e => { const n = [...stationSplits]; n[i] = e.target.value; setStationSplits(n); }}
-                    placeholder="4:15"
-                    className="h-7 text-[11px] font-mono text-center"
-                  />
+                  <span className="text-[10px] text-muted-foreground">{station}</span>
+                  <Input value={runSplits[i]} onChange={e => { const n = [...runSplits]; n[i] = e.target.value; setRunSplits(n); }} className="h-7 text-xs font-mono text-center" placeholder="Run" />
+                  <Input value={stationSplits[i]} onChange={e => { const n = [...stationSplits]; n[i] = e.target.value; setStationSplits(n); }} className="h-7 text-xs font-mono text-center" placeholder="Station" />
                 </>
               ))}
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs">Notes (optional)</Label>
-            <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="How did you feel? Any issues?" rows={2} className="text-xs" />
+            <Label className="text-xs">{t('raceResults.raceNotes')}</Label>
+            <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} className="text-xs" />
           </div>
 
           <Button className="w-full gradient-hyrox" onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trophy className="h-4 w-4 mr-2" />}
-            {saving ? 'Saving…' : 'Save Race Result'}
+            {saving ? t('common.saving') : t('raceResults.saveRace')}
           </Button>
         </TabsContent>
       </Tabs>
