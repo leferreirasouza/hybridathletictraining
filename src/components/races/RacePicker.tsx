@@ -63,13 +63,22 @@ const COUNTRIES = [
   'United Kingdom', 'USA',
 ];
 
-export default function RacePicker({ onSelect, selectedRaceId }: RacePickerProps) {
+export default function RacePicker({ onSelect, selectedRaceId, planType }: RacePickerProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [showScrollHint, setShowScrollHint] = useState(true);
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
+
+  // Determine allowed types based on planType
+  const allowedTypes = useMemo(() => {
+    if (planType === 'hyrox') return HYROX_TYPES;
+    if (planType === 'running') return RUNNING_TYPES;
+    return null; // all types
+  }, [planType]);
+
+  const defaultTypeFilter = planType === 'hyrox' ? 'hyrox' : 'all';
+  const [typeFilter, setTypeFilter] = useState(defaultTypeFilter);
   const [countryFilter, setCountryFilter] = useState('All');
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [customRace, setCustomRace] = useState({
