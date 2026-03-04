@@ -424,6 +424,8 @@ export default function ExerciseLibrary() {
           ))}
         </div>
       )}
+
+      <ScreenshotParserDialog open={screenshotOpen} onOpenChange={setScreenshotOpen} />
     </div>
   );
 }
