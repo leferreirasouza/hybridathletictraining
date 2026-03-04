@@ -73,8 +73,8 @@ export default function RacePicker({ onSelect, selectedRaceId }: RacePickerProps
   const { data: races = [], refetch } = useQuery({
     queryKey: ['races-calendar'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('races_calendar' as any)
+      const { data, error } = await (supabase as any)
+        .from('races_calendar')
         .select('*')
         .gte('race_date', new Date().toISOString().split('T')[0])
         .order('race_date', { ascending: true });
