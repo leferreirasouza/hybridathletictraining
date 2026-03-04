@@ -316,6 +316,10 @@ export default function Profile() {
             {editingGoal ? (
               <div className="space-y-3">
                 <div className="space-y-1">
+                  <Label className="text-xs">{t('racePicker.orSelectFromCalendar')}</Label>
+                  <RacePicker onSelect={handleRaceSelected} selectedRaceId={goalForm.goal_race_id} />
+                </div>
+                <div className="space-y-1">
                   <Label className="text-xs">{t('onboarding.raceName')}</Label>
                   <Input value={goalForm.goal_race_name} onChange={e => setGoalForm(f => ({ ...f, goal_race_name: e.target.value }))} className="h-8" placeholder="HYROX Munich 2025" />
                 </div>
