@@ -147,7 +147,7 @@ export default function LogSession() {
             <CardContent>
               <Select value={plannedSessionId} onValueChange={setPlannedSessionId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a planned session (optional)" />
+                  <SelectValue placeholder={t('logSession.selectPlanned')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">No link — standalone session</SelectItem>
