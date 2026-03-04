@@ -218,12 +218,69 @@ function RaceCard({ race, onDelete }: { race: any; onDelete: () => void }) {
   );
 }
 
+const MAX_RACE_IMAGES = 20;
+
+type RaceImageItem = {
+  dataUrl: string;
+  name: string;
+  status: 'pending' | 'parsing' | 'done' | 'error';
+  error?: string;
+};
+
+type ExtractedRaceData = {
+  race_name?: string | null;
+  race_location?: string | null;
+  race_date?: string | null;
+  category?: string | null;
+  total_time_seconds?: number | null;
+  total_transition_seconds?: number | null;
+  confidence?: string;
+  notes?: string;
+  [key: string]: any;
+};
+
+function mergeRaceData(results: ExtractedRaceData[]): ExtractedRaceData {
+  const merged: ExtractedRaceData = {};
+  const fields = [
+    'race_name', 'race_location', 'race_date', 'category',
+    'total_time_seconds', 'total_transition_seconds',
+    ...Array.from({ length: 8 }, (_, i) => `run_${i + 1}_seconds`),
+    ...Array.from({ length: 8 }, (_, i) => `station_${i + 1}_seconds`),
+  ];
+
+  for (const field of fields) {
+    // Take the first non-null value across all results
+    for (const r of results) {
+      if (r[field] != null) {
+        merged[field] = r[field];
+        break;
+      }
+    }
+  }
+
+  // Confidence: worst of all
+  const confidenceLevels = ['low', 'medium', 'high'];
+  const worstConfidence = results.reduce((worst, r) => {
+    const idx = confidenceLevels.indexOf(r.confidence || 'high');
+    return idx < worst ? idx : worst;
+  }, 2);
+  merged.confidence = confidenceLevels[worstConfidence];
+
+  return merged;
+}
+
 function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<'upload' | 'manual'>('upload');
   const [parsing, setParsing] = useState(false);
+  const [parseProgress, setParseProgress] = useState(0);
+  const [parseCurrent, setParseCurrent] = useState(0);
   const [saving, setSaving] = useState(false);
+
+  const [images, setImages] = useState<RaceImageItem[]>([]);
+  const [extracted, setExtracted] = useState(false);
 
   const [raceName, setRaceName] = useState('');
   const [raceLocation, setRaceLocation] = useState('');
@@ -236,49 +293,104 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
   const [notes, setNotes] = useState('');
   const [inputMethod, setInputMethod] = useState('manual');
 
-  const handleScreenshotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const readFileAsDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
 
+  const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    const remaining = MAX_RACE_IMAGES - images.length;
+    const accepted = files.slice(0, remaining).filter(f => f.size <= 10 * 1024 * 1024);
+    if (files.length > remaining) {
+      toast.error(`Max ${MAX_RACE_IMAGES} images. ${remaining} slots remaining.`);
+    }
+
+    const newItems: RaceImageItem[] = [];
+    for (const file of accepted) {
+      const dataUrl = await readFileAsDataUrl(file);
+      newItems.push({ dataUrl, name: file.name, status: 'pending' });
+    }
+
+    setImages(prev => [...prev, ...newItems]);
+    setExtracted(false);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const removeImage = (idx: number) => {
+    setImages(prev => prev.filter((_, i) => i !== idx));
+    setExtracted(false);
+  };
+
+  const parseOneImage = async (base64: string): Promise<ExtractedRaceData> => {
+    const { data, error } = await supabase.functions.invoke('parse-race-screenshot', {
+      body: { imageBase64: base64 },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data.data;
+  };
+
+  const handleParseAll = async () => {
+    if (!images.length) return;
     setParsing(true);
-    try {
-      const buffer = await file.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    setParseProgress(0);
+    setParseCurrent(0);
 
-      const { data, error } = await supabase.functions.invoke('parse-race-screenshot', {
-        body: { imageBase64: base64 },
-      });
+    const results: ExtractedRaceData[] = [];
+    let completed = 0;
 
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+    for (let i = 0; i < images.length; i++) {
+      setParseCurrent(i + 1);
+      setImages(prev => prev.map((img, idx) => idx === i ? { ...img, status: 'parsing' } : img));
 
-      const d = data.data;
-      if (d.race_name) setRaceName(d.race_name);
-      if (d.race_location) setRaceLocation(d.race_location);
-      if (d.race_date) setRaceDate(d.race_date);
-      if (d.category) setCategory(d.category);
-      if (d.total_time_seconds) setTotalTime(formatTime(d.total_time_seconds));
-      if (d.total_transition_seconds) setTransitionTime(formatTime(d.total_transition_seconds));
+      try {
+        const base64 = images[i].dataUrl.split(',')[1];
+        const data = await parseOneImage(base64);
+        results.push(data);
+        setImages(prev => prev.map((img, idx) => idx === i ? { ...img, status: 'done' } : img));
+      } catch (err: any) {
+        setImages(prev => prev.map((img, idx) => idx === i ? { ...img, status: 'error', error: err.message } : img));
+      }
+
+      completed++;
+      setParseProgress(Math.round((completed / images.length) * 100));
+    }
+
+    // Merge all successful results
+    if (results.length > 0) {
+      const merged = mergeRaceData(results);
+
+      if (merged.race_name) setRaceName(merged.race_name);
+      if (merged.race_location) setRaceLocation(merged.race_location);
+      if (merged.race_date) setRaceDate(merged.race_date);
+      if (merged.category) setCategory(merged.category);
+      if (merged.total_time_seconds) setTotalTime(formatTime(merged.total_time_seconds));
+      if (merged.total_transition_seconds) setTransitionTime(formatTime(merged.total_transition_seconds));
 
       const newRunSplits = [...runSplits];
       const newStationSplits = [...stationSplits];
       for (let i = 0; i < 8; i++) {
-        const runKey = `run_${i + 1}_seconds`;
-        const stationKey = `station_${i + 1}_seconds`;
-        if (d[runKey]) newRunSplits[i] = formatTime(d[runKey]);
-        if (d[stationKey]) newStationSplits[i] = formatTime(d[stationKey]);
+        if (merged[`run_${i + 1}_seconds`]) newRunSplits[i] = formatTime(merged[`run_${i + 1}_seconds`]);
+        if (merged[`station_${i + 1}_seconds`]) newStationSplits[i] = formatTime(merged[`station_${i + 1}_seconds`]);
       }
       setRunSplits(newRunSplits);
       setStationSplits(newStationSplits);
       setInputMethod('screenshot');
+      setExtracted(true);
 
-      toast.success(`Race data extracted (${d.confidence} confidence). Please review and adjust.`);
+      const doneCount = images.filter((_, idx) => idx < images.length).length;
+      const failedCount = images.filter(img => img.status === 'error').length;
+      toast.success(t('raceResults.parseDone', { done: results.length, total: images.length }));
       setTab('manual');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to parse screenshot');
-    } finally {
-      setParsing(false);
     }
+
+    setParsing(false);
   };
 
   const handleSave = async () => {
@@ -316,6 +428,9 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
     }
   };
 
+  const doneCount = images.filter(i => i.status === 'done').length;
+  const errorCount = images.filter(i => i.status === 'error').length;
+
   return (
     <div className="space-y-4 pt-2">
       <Tabs value={tab} onValueChange={v => setTab(v as any)}>
@@ -328,23 +443,109 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="upload" className="mt-3">
-          <Card className="glass">
-            <CardContent className="p-6 text-center space-y-3">
-              <Upload className="h-10 w-10 mx-auto text-primary" />
-              <p className="text-sm font-medium">{t('raceResults.uploadRoxFit')}</p>
-              <p className="text-xs text-muted-foreground">{t('raceResults.uploadRoxFitDesc')}</p>
-              <label className="block">
-                <input type="file" accept="image/*" className="hidden" onChange={handleScreenshotUpload} disabled={parsing} />
-                <Button className="gradient-hyrox" disabled={parsing} asChild>
-                  <span>
-                    {parsing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Camera className="h-4 w-4 mr-2" />}
-                    {parsing ? t('raceResults.analyzing') : t('raceResults.chooseImage')}
+        <TabsContent value="upload" className="mt-3 space-y-3">
+          {/* Upload area */}
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={images.length >= MAX_RACE_IMAGES || parsing}
+            className="w-full border-2 border-dashed border-muted-foreground/25 rounded-xl p-6 flex flex-col items-center gap-2 hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ImagePlus className="h-8 w-8 text-muted-foreground/50" />
+            <div className="text-center">
+              <p className="text-sm font-medium">
+                {images.length === 0 ? t('raceResults.uploadRoxFit') : t('raceResults.addMore')}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {t('raceResults.imagesAdded', { count: images.length, max: MAX_RACE_IMAGES })}
+              </p>
+              {images.length === 0 && (
+                <p className="text-xs text-muted-foreground mt-1">{t('raceResults.uploadRoxFitDesc')}</p>
+              )}
+            </div>
+          </button>
+
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handleFiles}
+          />
+
+          {/* Thumbnails */}
+          {images.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium flex items-center gap-1.5">
+                  <Images className="h-4 w-4" />
+                  {images.length} image{images.length !== 1 ? 's' : ''}
+                </p>
+                {(doneCount > 0 || errorCount > 0) && (
+                  <span className="text-xs text-muted-foreground">
+                    {doneCount} done{errorCount > 0 && `, ${errorCount} failed`}
                   </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-5 gap-1.5">
+                {images.map((img, i) => (
+                  <div key={i} className="relative group rounded-lg overflow-hidden border aspect-square">
+                    <img src={img.dataUrl} alt={img.name} className="w-full h-full object-cover" />
+                    {img.status === 'parsing' && (
+                      <div className="absolute inset-0 bg-background/70 flex items-center justify-center">
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      </div>
+                    )}
+                    {img.status === 'done' && (
+                      <div className="absolute bottom-0 inset-x-0 bg-primary/90 text-primary-foreground text-[9px] text-center py-0.5">
+                        <Check className="h-2.5 w-2.5 inline" />
+                      </div>
+                    )}
+                    {img.status === 'error' && (
+                      <div className="absolute bottom-0 inset-x-0 bg-destructive/90 text-destructive-foreground text-[9px] text-center py-0.5">
+                        {t('raceResults.parseFailed')}
+                      </div>
+                    )}
+                    {!parsing && (
+                      <button
+                        onClick={() => removeImage(i)}
+                        className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-2.5 w-2.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Progress */}
+              {parsing && (
+                <div className="space-y-1.5">
+                  <Progress value={parseProgress} className="h-2" />
+                  <p className="text-xs text-muted-foreground text-center">
+                    {t('raceResults.parsing', { current: parseCurrent, total: images.length })}
+                  </p>
+                </div>
+              )}
+
+              {/* Extract button */}
+              {!parsing && !extracted && (
+                <Button onClick={handleParseAll} className="w-full gradient-hyrox">
+                  <Upload className="h-4 w-4 mr-2" />
+                  {t('raceResults.parseAll', { count: images.length })}
                 </Button>
-              </label>
-            </CardContent>
-          </Card>
+              )}
+
+              {/* Post-extraction message */}
+              {extracted && (
+                <div className="text-center text-xs text-muted-foreground p-2 rounded-lg bg-primary/5 border border-primary/20">
+                  <Check className="h-4 w-4 inline mr-1 text-primary" />
+                  {t('raceResults.reviewExtracted')}
+                </div>
+              )}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="manual" className="mt-3 space-y-4">
@@ -392,9 +593,9 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
               <span className="text-[10px] font-semibold text-primary text-center uppercase">Station</span>
               {STATIONS.map((station, i) => (
                 <>
-                  <span className="text-[10px] text-muted-foreground">{station}</span>
-                  <Input value={runSplits[i]} onChange={e => { const n = [...runSplits]; n[i] = e.target.value; setRunSplits(n); }} className="h-7 text-xs font-mono text-center" placeholder="Run" />
-                  <Input value={stationSplits[i]} onChange={e => { const n = [...stationSplits]; n[i] = e.target.value; setStationSplits(n); }} className="h-7 text-xs font-mono text-center" placeholder="Station" />
+                  <span key={`label-${i}`} className="text-[10px] text-muted-foreground">{station}</span>
+                  <Input key={`run-${i}`} value={runSplits[i]} onChange={e => { const n = [...runSplits]; n[i] = e.target.value; setRunSplits(n); }} className="h-7 text-xs font-mono text-center" placeholder="Run" />
+                  <Input key={`station-${i}`} value={stationSplits[i]} onChange={e => { const n = [...stationSplits]; n[i] = e.target.value; setStationSplits(n); }} className="h-7 text-xs font-mono text-center" placeholder="Station" />
                 </>
               ))}
             </div>
