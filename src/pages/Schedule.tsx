@@ -11,6 +11,7 @@ import WeeklyView from '@/components/schedule/WeeklyView';
 import MonthlyView from '@/components/schedule/MonthlyView';
 import DailyView from '@/components/schedule/DailyView';
 import TargetsPanel from '@/components/schedule/TargetsPanel';
+import TrainingLoadCard from '@/components/schedule/TrainingLoadCard';
 import { dayLabels } from '@/components/schedule/config';
 import { exportWeekToCalendar, exportFullPlanToCalendar, CalendarProvider } from '@/lib/calendarExport';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
