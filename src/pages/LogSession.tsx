@@ -229,7 +229,7 @@ export default function LogSession() {
             <div className="flex items-center justify-between p-3 rounded-lg bg-destructive/5 border border-destructive/20">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-destructive" />
-                <Label htmlFor="pain-flag" className="text-sm">Pain / Injury Flag</Label>
+                <Label htmlFor="pain-flag" className="text-sm">{t('logSession.painFlag')}</Label>
               </div>
               <Switch id="pain-flag" checked={painFlag} onCheckedChange={setPainFlag} />
             </div>
