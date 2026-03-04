@@ -54,6 +54,7 @@ export default function Settings() {
 
   const [theme, setTheme] = useState<ThemeMode>(getStoredTheme);
   const [units, setUnits] = useState<Units>(getStoredUnits);
+  const [calendarPref, setCalendarPref] = useState<CalendarPref>(getStoredCalendar);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const [notifPrefs, setNotifPrefs] = useState(getNotifPrefs);
