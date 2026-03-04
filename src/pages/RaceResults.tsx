@@ -239,6 +239,21 @@ type ExtractedRaceData = {
   [key: string]: any;
 };
 
+type DetectedRace = {
+  key: string;
+  data: ExtractedRaceData;
+  raceName: string;
+  raceLocation: string;
+  raceDate: string;
+  category: string;
+  totalTime: string;
+  transitionTime: string;
+  runSplits: string[];
+  stationSplits: string[];
+  notes: string;
+  selected: boolean;
+};
+
 function mergeRaceData(results: ExtractedRaceData[]): ExtractedRaceData {
   const merged: ExtractedRaceData = {};
   const fields = [
@@ -249,7 +264,6 @@ function mergeRaceData(results: ExtractedRaceData[]): ExtractedRaceData {
   ];
 
   for (const field of fields) {
-    // Take the first non-null value across all results
     for (const r of results) {
       if (r[field] != null) {
         merged[field] = r[field];
@@ -258,7 +272,6 @@ function mergeRaceData(results: ExtractedRaceData[]): ExtractedRaceData {
     }
   }
 
-  // Confidence: worst of all
   const confidenceLevels = ['low', 'medium', 'high'];
   const worstConfidence = results.reduce((worst, r) => {
     const idx = confidenceLevels.indexOf(r.confidence || 'high');
@@ -267,6 +280,48 @@ function mergeRaceData(results: ExtractedRaceData[]): ExtractedRaceData {
   merged.confidence = confidenceLevels[worstConfidence];
 
   return merged;
+}
+
+function getRaceKey(data: ExtractedRaceData): string {
+  const name = (data.race_name || '').toLowerCase().trim();
+  const date = data.race_date || '';
+  // Group by name+date; if both empty, use 'unknown'
+  if (!name && !date) return 'unknown';
+  return `${name}||${date}`;
+}
+
+function groupByRace(results: ExtractedRaceData[]): Map<string, ExtractedRaceData[]> {
+  const groups = new Map<string, ExtractedRaceData[]>();
+  for (const r of results) {
+    const key = getRaceKey(r);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(r);
+  }
+  return groups;
+}
+
+function extractedToDetected(key: string, merged: ExtractedRaceData): DetectedRace {
+  const runSplits = Array.from({ length: 8 }, (_, i) =>
+    merged[`run_${i + 1}_seconds`] ? formatTime(merged[`run_${i + 1}_seconds`]) : ''
+  );
+  const stationSplits = Array.from({ length: 8 }, (_, i) =>
+    merged[`station_${i + 1}_seconds`] ? formatTime(merged[`station_${i + 1}_seconds`]) : ''
+  );
+
+  return {
+    key,
+    data: merged,
+    raceName: merged.race_name || '',
+    raceLocation: merged.race_location || '',
+    raceDate: merged.race_date || '',
+    category: merged.category || 'open',
+    totalTime: merged.total_time_seconds ? formatTime(merged.total_time_seconds) : '',
+    transitionTime: merged.total_transition_seconds ? formatTime(merged.total_transition_seconds) : '',
+    runSplits,
+    stationSplits,
+    notes: '',
+    selected: true,
+  };
 }
 
 function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
@@ -282,6 +337,11 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
   const [images, setImages] = useState<RaceImageItem[]>([]);
   const [extracted, setExtracted] = useState(false);
 
+  // Multi-race state
+  const [detectedRaces, setDetectedRaces] = useState<DetectedRace[]>([]);
+  const [expandedRace, setExpandedRace] = useState<string | null>(null);
+
+  // Single manual entry state (for manual tab when no screenshots)
   const [raceName, setRaceName] = useState('');
   const [raceLocation, setRaceLocation] = useState('');
   const [raceDate, setRaceDate] = useState('');
@@ -304,27 +364,26 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
   const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-
     const remaining = MAX_RACE_IMAGES - images.length;
     const accepted = files.slice(0, remaining).filter(f => f.size <= 10 * 1024 * 1024);
     if (files.length > remaining) {
       toast.error(`Max ${MAX_RACE_IMAGES} images. ${remaining} slots remaining.`);
     }
-
     const newItems: RaceImageItem[] = [];
     for (const file of accepted) {
       const dataUrl = await readFileAsDataUrl(file);
       newItems.push({ dataUrl, name: file.name, status: 'pending' });
     }
-
     setImages(prev => [...prev, ...newItems]);
     setExtracted(false);
+    setDetectedRaces([]);
     if (fileRef.current) fileRef.current.value = '';
   };
 
   const removeImage = (idx: number) => {
     setImages(prev => prev.filter((_, i) => i !== idx));
     setExtracted(false);
+    setDetectedRaces([]);
   };
 
   const parseOneImage = async (base64: string): Promise<ExtractedRaceData> => {
@@ -362,38 +421,101 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
       setParseProgress(Math.round((completed / images.length) * 100));
     }
 
-    // Merge all successful results
     if (results.length > 0) {
-      const merged = mergeRaceData(results);
+      // Group by distinct race
+      const groups = groupByRace(results);
 
-      if (merged.race_name) setRaceName(merged.race_name);
-      if (merged.race_location) setRaceLocation(merged.race_location);
-      if (merged.race_date) setRaceDate(merged.race_date);
-      if (merged.category) setCategory(merged.category);
-      if (merged.total_time_seconds) setTotalTime(formatTime(merged.total_time_seconds));
-      if (merged.total_transition_seconds) setTransitionTime(formatTime(merged.total_transition_seconds));
-
-      const newRunSplits = [...runSplits];
-      const newStationSplits = [...stationSplits];
-      for (let i = 0; i < 8; i++) {
-        if (merged[`run_${i + 1}_seconds`]) newRunSplits[i] = formatTime(merged[`run_${i + 1}_seconds`]);
-        if (merged[`station_${i + 1}_seconds`]) newStationSplits[i] = formatTime(merged[`station_${i + 1}_seconds`]);
+      if (groups.size === 1) {
+        // Single race — legacy behavior: merge and populate single form
+        const merged = mergeRaceData(results);
+        if (merged.race_name) setRaceName(merged.race_name);
+        if (merged.race_location) setRaceLocation(merged.race_location);
+        if (merged.race_date) setRaceDate(merged.race_date);
+        if (merged.category) setCategory(merged.category);
+        if (merged.total_time_seconds) setTotalTime(formatTime(merged.total_time_seconds));
+        if (merged.total_transition_seconds) setTransitionTime(formatTime(merged.total_transition_seconds));
+        const newRunSplits = [...runSplits];
+        const newStationSplits = [...stationSplits];
+        for (let i = 0; i < 8; i++) {
+          if (merged[`run_${i + 1}_seconds`]) newRunSplits[i] = formatTime(merged[`run_${i + 1}_seconds`]);
+          if (merged[`station_${i + 1}_seconds`]) newStationSplits[i] = formatTime(merged[`station_${i + 1}_seconds`]);
+        }
+        setRunSplits(newRunSplits);
+        setStationSplits(newStationSplits);
+        setInputMethod('screenshot');
+        setDetectedRaces([]);
+      } else {
+        // Multiple distinct races detected
+        const detected: DetectedRace[] = [];
+        for (const [key, groupResults] of groups) {
+          const merged = mergeRaceData(groupResults);
+          detected.push(extractedToDetected(key, merged));
+        }
+        setDetectedRaces(detected);
+        setExpandedRace(detected[0]?.key || null);
+        setInputMethod('screenshot');
       }
-      setRunSplits(newRunSplits);
-      setStationSplits(newStationSplits);
-      setInputMethod('screenshot');
-      setExtracted(true);
 
-      const doneCount = images.filter((_, idx) => idx < images.length).length;
-      const failedCount = images.filter(img => img.status === 'error').length;
-      toast.success(t('raceResults.parseDone', { done: results.length, total: images.length }));
+      setExtracted(true);
+      toast.success(
+        groups.size > 1
+          ? t('raceResults.multipleRacesDetected', { count: groups.size })
+          : t('raceResults.parseDone', { done: results.length, total: images.length })
+      );
       setTab('manual');
     }
 
     setParsing(false);
   };
 
-  const handleSave = async () => {
+  const updateDetectedRace = (key: string, updates: Partial<DetectedRace>) => {
+    setDetectedRaces(prev =>
+      prev.map(r => r.key === key ? { ...r, ...updates } : r)
+    );
+  };
+
+  const handleSaveMultiple = async () => {
+    if (!user) return;
+    const selected = detectedRaces.filter(r => r.selected);
+    if (!selected.length) { toast.error('Select at least one race to save'); return; }
+
+    const missing = selected.filter(r => !r.raceDate);
+    if (missing.length) { toast.error(t('raceResults.raceDateRequired')); return; }
+
+    setSaving(true);
+    try {
+      const rows = selected.map(r => {
+        const row: any = {
+          athlete_id: user.id,
+          race_date: r.raceDate,
+          race_name: r.raceName.trim() || null,
+          race_location: r.raceLocation.trim() || null,
+          category: r.category,
+          total_time_seconds: parseTimeToSeconds(r.totalTime),
+          total_transition_seconds: parseTimeToSeconds(r.transitionTime),
+          input_method: 'screenshot',
+          notes: r.notes.trim() || null,
+        };
+        for (let i = 0; i < 8; i++) {
+          row[`run_${i + 1}_seconds`] = parseTimeToSeconds(r.runSplits[i]);
+          row[`station_${i + 1}_seconds`] = parseTimeToSeconds(r.stationSplits[i]);
+        }
+        return row;
+      });
+
+      const { error } = await supabase.from('race_results' as any).insert(rows);
+      if (error) throw error;
+
+      toast.success(t('raceResults.multiSaved', { count: rows.length }));
+      onSuccess();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveSingle = async () => {
     if (!user) return;
     if (!raceDate) { toast.error(t('raceResults.raceDateRequired')); return; }
 
@@ -410,15 +532,12 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
         input_method: inputMethod,
         notes: notes.trim() || null,
       };
-
       for (let i = 0; i < 8; i++) {
         row[`run_${i + 1}_seconds`] = parseTimeToSeconds(runSplits[i]);
         row[`station_${i + 1}_seconds`] = parseTimeToSeconds(stationSplits[i]);
       }
-
       const { error } = await supabase.from('race_results' as any).insert(row);
       if (error) throw error;
-
       toast.success(t('raceResults.raceSaved'));
       onSuccess();
     } catch (err: any) {
@@ -430,6 +549,7 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
 
   const doneCount = images.filter(i => i.status === 'done').length;
   const errorCount = images.filter(i => i.status === 'error').length;
+  const showMultiRaceView = detectedRaces.length > 0;
 
   return (
     <div className="space-y-4 pt-2">
@@ -444,7 +564,6 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
         </TabsList>
 
         <TabsContent value="upload" className="mt-3 space-y-3">
-          {/* Upload area */}
           <button
             onClick={() => fileRef.current?.click()}
             disabled={images.length >= MAX_RACE_IMAGES || parsing}
@@ -464,16 +583,8 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
             </div>
           </button>
 
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={handleFiles}
-          />
+          <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} />
 
-          {/* Thumbnails */}
           {images.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -519,7 +630,6 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
                 ))}
               </div>
 
-              {/* Progress */}
               {parsing && (
                 <div className="space-y-1.5">
                   <Progress value={parseProgress} className="h-2" />
@@ -529,7 +639,6 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
                 </div>
               )}
 
-              {/* Extract button */}
               {!parsing && !extracted && (
                 <Button onClick={handleParseAll} className="w-full gradient-hyrox">
                   <Upload className="h-4 w-4 mr-2" />
@@ -537,11 +646,12 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
                 </Button>
               )}
 
-              {/* Post-extraction message */}
               {extracted && (
                 <div className="text-center text-xs text-muted-foreground p-2 rounded-lg bg-primary/5 border border-primary/20">
                   <Check className="h-4 w-4 inline mr-1 text-primary" />
-                  {t('raceResults.reviewExtracted')}
+                  {showMultiRaceView
+                    ? t('raceResults.multipleRacesDetected', { count: detectedRaces.length })
+                    : t('raceResults.reviewExtracted')}
                 </div>
               )}
             </div>
@@ -549,68 +659,239 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
         </TabsContent>
 
         <TabsContent value="manual" className="mt-3 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t('onboarding.raceName')}</Label>
-              <Input value={raceName} onChange={e => setRaceName(e.target.value)} placeholder="HYROX Munich" className="h-8 text-xs" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t('onboarding.location')}</Label>
-              <Input value={raceLocation} onChange={e => setRaceLocation(e.target.value)} placeholder="Munich, DE" className="h-8 text-xs" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t('onboarding.raceDate')} *</Label>
-              <Input type="date" value={raceDate} onChange={e => setRaceDate(e.target.value)} className="h-8 text-xs" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t('raceResults.category')}</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t('raceResults.totalTimeLabel')}</Label>
-              <Input value={totalTime} onChange={e => setTotalTime(e.target.value)} placeholder="1:25:30" className="h-8 text-xs font-mono" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t('raceResults.transitionsLabel')}</Label>
-              <Input value={transitionTime} onChange={e => setTransitionTime(e.target.value)} placeholder="8:00" className="h-8 text-xs font-mono" />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs font-semibold">{t('raceResults.splitsLabel')}</Label>
-            <div className="grid grid-cols-[1fr_80px_80px] gap-x-2 gap-y-1.5 items-center">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase">Station</span>
-              <span className="text-[10px] font-semibold text-blue-500 text-center uppercase">Run</span>
-              <span className="text-[10px] font-semibold text-primary text-center uppercase">Station</span>
-              {STATIONS.map((station, i) => (
-                <>
-                  <span key={`label-${i}`} className="text-[10px] text-muted-foreground">{station}</span>
-                  <Input key={`run-${i}`} value={runSplits[i]} onChange={e => { const n = [...runSplits]; n[i] = e.target.value; setRunSplits(n); }} className="h-7 text-xs font-mono text-center" placeholder="Run" />
-                  <Input key={`station-${i}`} value={stationSplits[i]} onChange={e => { const n = [...stationSplits]; n[i] = e.target.value; setStationSplits(n); }} className="h-7 text-xs font-mono text-center" placeholder="Station" />
-                </>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t('raceResults.raceNotes')}</Label>
-            <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} className="text-xs" />
-          </div>
-
-          <Button className="w-full gradient-hyrox" onClick={handleSave} disabled={saving}>
-            {saving ? t('common.saving') : t('raceResults.saveRace')}
-          </Button>
+          {showMultiRaceView ? (
+            <MultiRaceReview
+              detectedRaces={detectedRaces}
+              expandedRace={expandedRace}
+              setExpandedRace={setExpandedRace}
+              updateDetectedRace={updateDetectedRace}
+              onSave={handleSaveMultiple}
+              saving={saving}
+            />
+          ) : (
+            <SingleRaceForm
+              raceName={raceName} setRaceName={setRaceName}
+              raceLocation={raceLocation} setRaceLocation={setRaceLocation}
+              raceDate={raceDate} setRaceDate={setRaceDate}
+              category={category} setCategory={setCategory}
+              totalTime={totalTime} setTotalTime={setTotalTime}
+              transitionTime={transitionTime} setTransitionTime={setTransitionTime}
+              runSplits={runSplits} setRunSplits={setRunSplits}
+              stationSplits={stationSplits} setStationSplits={setStationSplits}
+              notes={notes} setNotes={setNotes}
+              onSave={handleSaveSingle}
+              saving={saving}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function MultiRaceReview({
+  detectedRaces, expandedRace, setExpandedRace, updateDetectedRace, onSave, saving,
+}: {
+  detectedRaces: DetectedRace[];
+  expandedRace: string | null;
+  setExpandedRace: (k: string | null) => void;
+  updateDetectedRace: (key: string, updates: Partial<DetectedRace>) => void;
+  onSave: () => void;
+  saving: boolean;
+}) {
+  const { t } = useTranslation();
+  const selectedCount = detectedRaces.filter(r => r.selected).length;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-display font-bold flex items-center gap-1.5">
+          <Trophy className="h-4 w-4 text-primary" />
+          {t('raceResults.racesDetected', { count: detectedRaces.length })}
+        </p>
+        <Badge variant="secondary" className="text-[10px]">
+          {selectedCount} selected
+        </Badge>
+      </div>
+
+      {detectedRaces.map((race) => {
+        const isExpanded = expandedRace === race.key;
+        return (
+          <Card key={race.key} className={`overflow-hidden border transition-colors ${race.selected ? 'border-primary/30' : 'border-border opacity-60'}`}>
+            <div
+              className="p-3 flex items-center gap-3 cursor-pointer hover:bg-accent/30 transition-colors"
+              onClick={() => setExpandedRace(isExpanded ? null : race.key)}
+            >
+              <button
+                onClick={e => { e.stopPropagation(); updateDetectedRace(race.key, { selected: !race.selected }); }}
+                className={`h-5 w-5 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                  race.selected ? 'bg-primary border-primary' : 'border-muted-foreground/40'
+                }`}
+              >
+                {race.selected && <Check className="h-3 w-3 text-primary-foreground" />}
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{race.raceName || 'Unknown Race'}</p>
+                <p className="text-xs text-muted-foreground">
+                  {race.raceDate || 'No date'}{race.raceLocation ? ` · ${race.raceLocation}` : ''}
+                  {race.totalTime ? ` · ${race.totalTime}` : ''}
+                </p>
+              </div>
+              {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
+            </div>
+
+            {isExpanded && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-3 pb-3 space-y-3 border-t border-border/50 pt-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">{t('onboarding.raceName')}</Label>
+                    <Input value={race.raceName} onChange={e => updateDetectedRace(race.key, { raceName: e.target.value })} className="h-8 text-xs" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">{t('onboarding.location')}</Label>
+                    <Input value={race.raceLocation} onChange={e => updateDetectedRace(race.key, { raceLocation: e.target.value })} className="h-8 text-xs" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">{t('onboarding.raceDate')} *</Label>
+                    <Input type="date" value={race.raceDate} onChange={e => updateDetectedRace(race.key, { raceDate: e.target.value })} className="h-8 text-xs" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">{t('raceResults.category')}</Label>
+                    <Select value={race.category} onValueChange={v => updateDetectedRace(race.key, { category: v })}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">{t('raceResults.totalTimeLabel')}</Label>
+                    <Input value={race.totalTime} onChange={e => updateDetectedRace(race.key, { totalTime: e.target.value })} className="h-8 text-xs font-mono" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">{t('raceResults.transitionsLabel')}</Label>
+                    <Input value={race.transitionTime} onChange={e => updateDetectedRace(race.key, { transitionTime: e.target.value })} className="h-8 text-xs font-mono" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">{t('raceResults.splitsLabel')}</Label>
+                  <div className="grid grid-cols-[1fr_80px_80px] gap-x-2 gap-y-1.5 items-center">
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase">Station</span>
+                    <span className="text-[10px] font-semibold text-blue-500 text-center uppercase">Run</span>
+                    <span className="text-[10px] font-semibold text-primary text-center uppercase">Station</span>
+                    {STATIONS.map((station, i) => (
+                      <>
+                        <span key={`label-${i}`} className="text-[10px] text-muted-foreground">{station}</span>
+                        <Input key={`run-${i}`} value={race.runSplits[i]} onChange={e => {
+                          const n = [...race.runSplits]; n[i] = e.target.value;
+                          updateDetectedRace(race.key, { runSplits: n });
+                        }} className="h-7 text-xs font-mono text-center" placeholder="Run" />
+                        <Input key={`station-${i}`} value={race.stationSplits[i]} onChange={e => {
+                          const n = [...race.stationSplits]; n[i] = e.target.value;
+                          updateDetectedRace(race.key, { stationSplits: n });
+                        }} className="h-7 text-xs font-mono text-center" placeholder="Station" />
+                      </>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </Card>
+        );
+      })}
+
+      <Button className="w-full gradient-hyrox" onClick={onSave} disabled={saving || selectedCount === 0}>
+        {saving ? t('common.saving') : t('raceResults.saveAllRaces', { count: selectedCount })}
+      </Button>
+    </div>
+  );
+}
+
+function SingleRaceForm({
+  raceName, setRaceName, raceLocation, setRaceLocation, raceDate, setRaceDate,
+  category, setCategory, totalTime, setTotalTime, transitionTime, setTransitionTime,
+  runSplits, setRunSplits, stationSplits, setStationSplits, notes, setNotes,
+  onSave, saving,
+}: {
+  raceName: string; setRaceName: (v: string) => void;
+  raceLocation: string; setRaceLocation: (v: string) => void;
+  raceDate: string; setRaceDate: (v: string) => void;
+  category: string; setCategory: (v: string) => void;
+  totalTime: string; setTotalTime: (v: string) => void;
+  transitionTime: string; setTransitionTime: (v: string) => void;
+  runSplits: string[]; setRunSplits: (v: string[]) => void;
+  stationSplits: string[]; setStationSplits: (v: string[]) => void;
+  notes: string; setNotes: (v: string) => void;
+  onSave: () => void; saving: boolean;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs">{t('onboarding.raceName')}</Label>
+          <Input value={raceName} onChange={e => setRaceName(e.target.value)} placeholder="HYROX Munich" className="h-8 text-xs" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">{t('onboarding.location')}</Label>
+          <Input value={raceLocation} onChange={e => setRaceLocation(e.target.value)} placeholder="Munich, DE" className="h-8 text-xs" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs">{t('onboarding.raceDate')} *</Label>
+          <Input type="date" value={raceDate} onChange={e => setRaceDate(e.target.value)} className="h-8 text-xs" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">{t('raceResults.category')}</Label>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs">{t('raceResults.totalTimeLabel')}</Label>
+          <Input value={totalTime} onChange={e => setTotalTime(e.target.value)} placeholder="1:25:30" className="h-8 text-xs font-mono" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">{t('raceResults.transitionsLabel')}</Label>
+          <Input value={transitionTime} onChange={e => setTransitionTime(e.target.value)} placeholder="8:00" className="h-8 text-xs font-mono" />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold">{t('raceResults.splitsLabel')}</Label>
+        <div className="grid grid-cols-[1fr_80px_80px] gap-x-2 gap-y-1.5 items-center">
+          <span className="text-[10px] font-semibold text-muted-foreground uppercase">Station</span>
+          <span className="text-[10px] font-semibold text-blue-500 text-center uppercase">Run</span>
+          <span className="text-[10px] font-semibold text-primary text-center uppercase">Station</span>
+          {STATIONS.map((station, i) => (
+            <>
+              <span key={`label-${i}`} className="text-[10px] text-muted-foreground">{station}</span>
+              <Input key={`run-${i}`} value={runSplits[i]} onChange={e => { const n = [...runSplits]; n[i] = e.target.value; setRunSplits(n); }} className="h-7 text-xs font-mono text-center" placeholder="Run" />
+              <Input key={`station-${i}`} value={stationSplits[i]} onChange={e => { const n = [...stationSplits]; n[i] = e.target.value; setStationSplits(n); }} className="h-7 text-xs font-mono text-center" placeholder="Station" />
+            </>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs">{t('raceResults.raceNotes')}</Label>
+        <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} className="text-xs" />
+      </div>
+
+      <Button className="w-full gradient-hyrox" onClick={onSave} disabled={saving}>
+        {saving ? t('common.saving') : t('raceResults.saveRace')}
+      </Button>
+    </>
   );
 }
