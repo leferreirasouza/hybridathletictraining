@@ -99,6 +99,14 @@ export default function Settings() {
     localStorage.setItem('ha-units', units);
   }, [units]);
 
+  useEffect(() => {
+    if (calendarPref === 'none') {
+      localStorage.removeItem('ha-default-calendar');
+    } else {
+      localStorage.setItem('ha-default-calendar', calendarPref);
+    }
+  }, [calendarPref]);
+
   const handleDeleteAccount = () => {
     if (!confirmDelete) {
       setConfirmDelete(true);
