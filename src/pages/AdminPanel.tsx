@@ -57,6 +57,7 @@ export default function AdminPanel() {
         <TabsList>
           {isMasterAdmin && <TabsTrigger value="orgs">{t('admin.organizations')}</TabsTrigger>}
           <TabsTrigger value="users">{t('admin.userManagement')}</TabsTrigger>
+          {isMasterAdmin && <TabsTrigger value="knowledge" className="gap-1.5"><BookOpen className="h-3.5 w-3.5" /> Knowledge</TabsTrigger>}
           <TabsTrigger value="activity">{t('admin.activityLogTab')}</TabsTrigger>
         </TabsList>
         {isMasterAdmin && (
