@@ -71,8 +71,8 @@ export default function Onboarding() {
   }, [step]);
 
   const fetchOrgs = async () => {
-    const { data, error } = await supabase.from('organizations').select('id, name').eq('is_active', true);
-    if (!error && data) setOrgs(data);
+    const { data, error } = await supabase.rpc('list_active_organizations');
+    if (!error && data) setOrgs(data as Org[]);
     else setOrgs([]);
   };
 
@@ -83,10 +83,9 @@ export default function Onboarding() {
     }
     setLoading(true);
     try {
-      const { error } = await supabase.from('user_roles').insert({
-        user_id: user.id,
-        organization_id: selectedOrgId,
-        role,
+      const { error } = await supabase.rpc('assign_onboarding_role', {
+        _org_id: selectedOrgId,
+        _role: role,
       });
       if (error) throw error;
 
