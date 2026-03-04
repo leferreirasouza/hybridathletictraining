@@ -163,20 +163,22 @@ export default function PlanBuilder() {
       setImporting(true);
       try {
         const data = await file.arrayBuffer();
-        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(data);
         const importName = planName.trim() || file.name.replace(/\.(xlsx|xls|csv)$/i, '');
 
         // Extract all sheets as JSON arrays (array of arrays)
         const sheets: Record<string, any[][]> = {};
-        for (const sheetName of workbook.SheetNames) {
-          const sheet = workbook.Sheets[sheetName];
-          // Use sheet_to_json with header:1 to get array of arrays
-          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false }) as any[][];
-          // Skip empty sheets
+        workbook.eachSheet((worksheet) => {
+          const rows: any[][] = [];
+          worksheet.eachRow({ includeEmpty: false }, (row) => {
+            const values = (row.values as any[]).slice(1); // ExcelJS row.values is 1-indexed
+            rows.push(values.map(v => (v == null ? '' : String(v))));
+          });
           if (rows.length > 1) {
-            sheets[sheetName] = rows;
+            sheets[worksheet.name] = rows;
           }
-        }
+        });
 
         if (Object.keys(sheets).length === 0) {
           throw new Error('No data found in the spreadsheet');
