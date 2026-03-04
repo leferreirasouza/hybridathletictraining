@@ -39,7 +39,7 @@ export default function AdminPanel() {
   }
 
   return (
-    <div className="p-4 max-w-4xl mx-auto space-y-6">
+    <div className="page-container py-6 space-y-6">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3">
         <div className="h-10 w-10 rounded-xl gradient-hyrox flex items-center justify-center">
           <Shield className="h-5 w-5 text-primary-foreground" />

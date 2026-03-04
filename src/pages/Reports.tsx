@@ -354,7 +354,7 @@ export default function Reports() {
 
   if (isCoach && selectedAthleteId && selectedAthlete && version?.id) {
     return (
-      <div className="px-4 py-6 max-w-lg mx-auto space-y-4">
+      <div className="page-container py-6 space-y-4">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedAthleteId(null)}>
             <ChevronLeft className="h-4 w-4" />
@@ -367,7 +367,7 @@ export default function Reports() {
   }
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto space-y-4">
+    <div className="page-container py-6 space-y-4">
       <h1 className="text-xl font-display font-bold">{t('reports.title')}</h1>
 
       <div className="flex items-center justify-between">

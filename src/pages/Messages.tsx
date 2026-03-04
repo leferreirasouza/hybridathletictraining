@@ -225,7 +225,7 @@ export default function Messages() {
   // Chat view
   if (activeContactId && activeContact) {
     return (
-      <div className="flex flex-col h-[calc(100vh-5rem)] max-w-lg mx-auto">
+      <div className="flex flex-col h-[calc(100vh-5rem)] page-container-narrow">
         {/* Chat header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b bg-card">
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setActiveContactId(null)}>
@@ -312,7 +312,7 @@ export default function Messages() {
 
   // Contact list view
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto space-y-4">
+    <div className="page-container py-6 space-y-4">
       <h1 className="text-xl font-display font-bold">{t('messages.title')}</h1>
 
       {contacts.length === 0 ? (

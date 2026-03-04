@@ -112,4 +112,10 @@
   .safe-top {
     padding-top: env(safe-area-inset-top, 0px);
   }
+  .page-container {
+    @apply max-w-lg mx-auto px-4 md:max-w-3xl lg:max-w-5xl md:px-6 lg:px-8;
+  }
+  .page-container-narrow {
+    @apply max-w-lg mx-auto px-4 md:max-w-2xl md:px-6;
+  }
 }

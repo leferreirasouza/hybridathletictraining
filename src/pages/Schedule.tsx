@@ -52,7 +52,7 @@ export default function Schedule() {
   const weeklySummary = weeklySummaries.find((ws: any) => ws.week_number === displayWeek);
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto space-y-4">
+    <div className="page-container py-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-display font-bold">{t('schedule.title')}</h1>
         <div className="flex items-center gap-2">

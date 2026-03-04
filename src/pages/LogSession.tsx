@@ -126,7 +126,7 @@ export default function LogSession() {
   };
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto space-y-5">
+    <div className="page-container py-6 space-y-5">
       <h1 className="text-xl font-display font-bold">{t('logSession.title')}</h1>
 
       <motion.form
