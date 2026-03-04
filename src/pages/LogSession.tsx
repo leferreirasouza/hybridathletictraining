@@ -191,11 +191,11 @@ export default function LogSession() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Duration (min)</Label>
+                <Label>{t('logSession.durationMin')}</Label>
                 <Input type="number" value={duration} onChange={e => setDuration(e.target.value)} placeholder="45" />
               </div>
               <div className="space-y-2">
-                <Label>Distance (km)</Label>
+                <Label>{t('logSession.distanceKm')}</Label>
                 <Input type="number" step="0.1" value={distance} onChange={e => setDistance(e.target.value)} placeholder="8.0" />
               </div>
             </div>
