@@ -34,7 +34,21 @@ export default function Schedule() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDay, setSelectedDay] = useState(1);
   const [view, setView] = useState<'day' | 'week' | 'month'>('week');
+  const [hiddenPlanIds, setHiddenPlanIds] = useState<Set<string>>(new Set());
   const defaultProvider = getDefaultCalendarProvider();
+
+  const togglePlanVisibility = (planId: string) => {
+    setHiddenPlanIds(prev => {
+      const next = new Set(prev);
+      if (next.has(planId)) next.delete(planId); else next.add(planId);
+      return next;
+    });
+  };
+
+  const visibleSessions = useMemo(() => {
+    if (!isAllPlans || hiddenPlanIds.size === 0) return sessions;
+    return sessions.filter((s: any) => !hiddenPlanIds.has(s._planId));
+  }, [sessions, isAllPlans, hiddenPlanIds]);
 
   const handleCalendarExport = (provider: CalendarProvider) => {
     exportWeekToCalendar(provider, sessions, displayWeek);
