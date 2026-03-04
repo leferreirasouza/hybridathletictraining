@@ -360,6 +360,14 @@ export default function AppLayout() {
                       <DropdownMenuItem onClick={() => navigate('/profile')}>
                         <User className="h-4 w-4 mr-2" /> {t('nav.profile')}
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/messages')} className="relative">
+                        <Mail className="h-4 w-4 mr-2" /> {t('nav.chat')}
+                        {unreadCount > 0 && (
+                          <Badge variant="secondary" className="ml-auto text-[9px] px-1.5 py-0 bg-primary/10 text-primary border-0">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                          </Badge>
+                        )}
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-1.5">
                         <Eye className="h-3 w-3" /> {t('nav.switchView')}
