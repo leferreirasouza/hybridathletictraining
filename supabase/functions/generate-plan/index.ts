@@ -20,8 +20,10 @@ TRAINING RULES:
 - For HYROX: Include a mix of running (easy, tempo, intervals), strength, HYROX station practice, mobility/prehab.
 - For running-only: Focus on running with supporting strength/mobility work.
 - Apply progressive overload (max 10% weekly volume increase).
+- COMBINED load across ALL of the athlete's active plans must not exceed safety limits.
 - Include a taper week as the final week if a race date is specified.
 - If athlete has injury concerns, be CONSERVATIVE: reduce intensity, add extra prehab/mobility, avoid aggravating movements.
+- ALWAYS include at least 1 strength/prehab session per week for injury prevention.
 - Prioritize weak stations/areas with extra practice sessions.
 - Keep sessions realistic (30-90 min).
 - Vary session names and content across weeks.
