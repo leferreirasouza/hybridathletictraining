@@ -212,13 +212,13 @@ export default function Schedule() {
                 ) : (
                   <>
                     <TabsContent value="day" className="mt-3">
-                      <DailyView sessions={sessions} weekNumber={displayWeek} dayOfWeek={selectedDay} completedSessions={completedSessions} substitutionMap={substitutionMap} />
+                      <DailyView sessions={visibleSessions} weekNumber={displayWeek} dayOfWeek={selectedDay} completedSessions={completedSessions} substitutionMap={substitutionMap} />
                     </TabsContent>
                     <TabsContent value="week" className="mt-3">
-                      <WeeklyView sessions={sessions} weekNumber={displayWeek} weeklySummary={weeklySummary} completedSessions={completedSessions} substitutionMap={substitutionMap} />
+                      <WeeklyView sessions={visibleSessions} weekNumber={displayWeek} weeklySummary={weeklySummary} completedSessions={completedSessions} substitutionMap={substitutionMap} />
                     </TabsContent>
                     <TabsContent value="month" className="mt-3">
-                      <MonthlyView sessions={sessions} completedSessions={completedSessions} maxWeek={maxWeek} currentWeek={displayWeek} onSelectWeek={(w) => { setWeekOffset(w - 1); setView('week'); }} />
+                      <MonthlyView sessions={visibleSessions} completedSessions={completedSessions} maxWeek={maxWeek} currentWeek={displayWeek} onSelectWeek={(w) => { setWeekOffset(w - 1); setView('week'); }} />
                     </TabsContent>
                   </>
                 )}
