@@ -259,7 +259,7 @@ export default function ExerciseLibrary() {
               </DialogTrigger>
               <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
                 <DialogHeader>
-                  <DialogTitle>{editingId ? 'Edit Exercise' : 'Add Exercise'}</DialogTitle>
+                  <DialogTitle>{editingId ? t('exerciseLibrary.editExercise') : t('exerciseLibrary.addExercise')}</DialogTitle>
                 </DialogHeader>
                 <ScrollArea className="flex-1 pr-4">
                   <div className="space-y-3 pb-4">
