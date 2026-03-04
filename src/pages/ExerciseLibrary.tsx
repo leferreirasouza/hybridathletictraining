@@ -61,6 +61,7 @@ const emptyExercise = {
 };
 
 export default function ExerciseLibrary() {
+  const { t } = useTranslation();
   const { user, currentOrg, effectiveRole } = useAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
