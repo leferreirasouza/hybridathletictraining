@@ -177,7 +177,7 @@ export default function LogSession() {
         {/* Activity details */}
         <Card className="glass">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-display">Activity</CardTitle>
+            <CardTitle className="text-base font-display">{t('logSession.activity')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
