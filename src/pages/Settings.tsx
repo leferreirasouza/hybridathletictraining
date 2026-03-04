@@ -203,6 +203,33 @@ export default function Settings() {
           </CardContent>
         </Card>
 
+        {/* Default Calendar */}
+        <Card className="glass">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <CalendarPlus className="h-4 w-4 text-primary" />
+              {t('settings.defaultCalendar')}
+            </CardTitle>
+            <CardDescription>{t('settings.defaultCalendarDesc')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="cal-select">{t('settings.calendarProvider')}</Label>
+              <Select value={calendarPref} onValueChange={(v) => setCalendarPref(v as CalendarPref)}>
+                <SelectTrigger className="w-40" id="cal-select">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t('settings.askEveryTime')}</SelectItem>
+                  <SelectItem value="google">Google Calendar</SelectItem>
+                  <SelectItem value="outlook">Outlook Calendar</SelectItem>
+                  <SelectItem value="apple">Apple Calendar</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Notifications */}
         <Card className="glass">
           <CardHeader className="pb-2">
