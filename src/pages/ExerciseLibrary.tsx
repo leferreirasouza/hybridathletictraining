@@ -242,6 +242,10 @@ export default function ExerciseLibrary() {
         </div>
         {isCoachOrAdmin && (
           <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setScreenshotOpen(true)}>
+              <Camera className="h-4 w-4 mr-1" />
+              Scan
+            </Button>
             <Button variant="outline" size="sm" onClick={handleSeedAI} disabled={seedLoading}>
               {seedLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Sparkles className="h-4 w-4 mr-1" />}
               AI Seed
