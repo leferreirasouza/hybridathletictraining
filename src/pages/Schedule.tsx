@@ -142,6 +142,10 @@ export default function Schedule() {
             </div>
           )}
 
+          <div className="lg:hidden">
+            <TrainingLoadBanner sessions={sessions} weekNumber={displayWeek} />
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             {/* Main schedule area */}
             <div className="lg:col-span-3">
