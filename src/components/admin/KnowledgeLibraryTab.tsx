@@ -12,7 +12,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { BookOpen, Search, FileText, Globe, Upload, Trash2, ExternalLink, Plus, Loader2, Link, FileUp } from 'lucide-react';
+import { BookOpen, Search, FileText, Globe, Upload, Trash2, ExternalLink, Plus, Loader2, Link, FileUp, ChevronRight, Eye } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 import {
@@ -69,6 +70,7 @@ export default function KnowledgeLibraryTab() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [viewDoc, setViewDoc] = useState<KnowledgeDocument | null>(null);
 
   const { data: documents = [], isLoading, refetch } = useQuery({
     queryKey: ['admin-knowledge-documents'],
@@ -186,7 +188,11 @@ export default function KnowledgeLibraryTab() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((doc) => (
-                    <TableRow key={doc.id}>
+                    <TableRow
+                      key={doc.id}
+                      className="cursor-pointer hover:bg-muted/60"
+                      onClick={() => setViewDoc(doc)}
+                    >
                       <TableCell>
                         <div className="max-w-[200px]">
                           <p className="font-medium text-sm truncate">{doc.title}</p>
@@ -208,6 +214,7 @@ export default function KnowledgeLibraryTab() {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-[10px] text-primary hover:underline flex items-center gap-0.5 mt-0.5"
+                            onClick={(e) => e.stopPropagation()}
                           >
                             <ExternalLink className="h-2.5 w-2.5" /> Link
                           </a>
@@ -231,14 +238,17 @@ export default function KnowledgeLibraryTab() {
                         {formatDistanceToNow(new Date(doc.created_at), { addSuffix: true })}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => setDeleteId(doc.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={(e) => { e.stopPropagation(); setDeleteId(doc.id); }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -256,6 +266,8 @@ export default function KnowledgeLibraryTab() {
         orgId={currentOrg?.id}
         onComplete={() => { refetch(); setUploadOpen(false); }}
       />
+
+      <ChunkDetailDialog doc={viewDoc} onClose={() => setViewDoc(null)} />
 
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
@@ -566,6 +578,104 @@ function UploadDialog({
             <p className="text-xs text-muted-foreground text-center">{progressLabel || `${progress}% complete`}</p>
           </div>
         )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Chunk Detail Dialog
+// ──────────────────────────────────────────────
+
+function ChunkDetailDialog({
+  doc,
+  onClose,
+}: {
+  doc: KnowledgeDocument | null;
+  onClose: () => void;
+}) {
+  const { data: chunks = [], isLoading } = useQuery({
+    queryKey: ['knowledge-chunks', doc?.id],
+    queryFn: async () => {
+      if (!doc) return [];
+      const { data, error } = await supabase
+        .from('knowledge_chunks')
+        .select('id, content, chunk_index, metadata')
+        .eq('document_id', doc.id)
+        .order('chunk_index', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!doc,
+  });
+
+  if (!doc) return null;
+
+  return (
+    <Dialog open={!!doc} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Eye className="h-4.5 w-4.5 text-primary" />
+            <span className="truncate">{doc.title}</span>
+          </DialogTitle>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Badge variant={statusVariant(doc.status)} className="text-[10px]">{doc.status}</Badge>
+            <Badge variant="outline" className="text-[10px] gap-1">
+              {sourceTypeIcon(doc.source_type)}
+              {doc.source_type}
+            </Badge>
+            <Badge variant="outline" className="text-[10px]">
+              {doc.total_chunks ?? 0} chunks
+            </Badge>
+            {doc.metadata?.total_characters && (
+              <Badge variant="outline" className="text-[10px]">
+                {(doc.metadata.total_characters / 1000).toFixed(1)}k chars
+              </Badge>
+            )}
+          </div>
+          {doc.source_url && (
+            <a
+              href={doc.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline flex items-center gap-1 pt-1"
+            >
+              <ExternalLink className="h-3 w-3" /> {doc.source_url}
+            </a>
+          )}
+        </DialogHeader>
+
+        <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : chunks.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+              <p className="text-sm text-muted-foreground">No chunks found for this document</p>
+            </div>
+          ) : (
+            <div className="space-y-3 pb-4">
+              {chunks.map((chunk: any) => (
+                <div key={chunk.id} className="rounded-lg border border-border bg-muted/30 p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <Badge variant="outline" className="text-[10px] font-mono">
+                      Chunk #{chunk.chunk_index}
+                    </Badge>
+                    <span className="text-[10px] text-muted-foreground">
+                      {chunk.content.length} chars
+                    </span>
+                  </div>
+                  <p className="text-xs text-foreground/90 leading-relaxed whitespace-pre-wrap font-mono">
+                    {chunk.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
