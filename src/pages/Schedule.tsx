@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, Calendar, Loader2, CalendarPlus, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -95,113 +95,171 @@ export default function Schedule() {
             <p className="text-xs text-muted-foreground">{plans[0].name}</p>
           )}
 
-          <Tabs value={view} onValueChange={v => setView(v as any)}>
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="day">{t('schedule.day')}</TabsTrigger>
-              <TabsTrigger value="week">{t('schedule.week')}</TabsTrigger>
-              <TabsTrigger value="month">{t('schedule.month')}</TabsTrigger>
-            </TabsList>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            {/* Main schedule area */}
+            <div className="lg:col-span-3">
+              <Tabs value={view} onValueChange={v => setView(v as any)}>
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="day">{t('schedule.day')}</TabsTrigger>
+                  <TabsTrigger value="week">{t('schedule.week')}</TabsTrigger>
+                  <TabsTrigger value="month">{t('schedule.month')}</TabsTrigger>
+                </TabsList>
 
-            {view !== 'month' && (
-              <div className="flex items-center justify-between mt-3">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => Math.max(0, w - 1))} disabled={displayWeek <= 1}>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm font-medium font-display">
-                  {t('schedule.week')} {displayWeek} <span className="text-muted-foreground font-normal">/ {maxWeek}</span>
-                </span>
-                <div className="flex items-center gap-1">
-                  {defaultProvider ? (
-                    <Button variant="ghost" size="icon" className="h-8 w-8" title={`Add to ${defaultProvider} calendar`} onClick={() => handleCalendarExport(defaultProvider)}>
-                      <CalendarPlus className="h-4 w-4 text-primary" />
+                {view !== 'month' && (
+                  <div className="flex items-center justify-between mt-3">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => Math.max(0, w - 1))} disabled={displayWeek <= 1}>
+                      <ChevronLeft className="h-4 w-4" />
                     </Button>
-                  ) : (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" title="Add week to calendar">
+                    <span className="text-sm font-medium font-display">
+                      {t('schedule.week')} {displayWeek} <span className="text-muted-foreground font-normal">/ {maxWeek}</span>
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {defaultProvider ? (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" title={`Add to ${defaultProvider} calendar`} onClick={() => handleCalendarExport(defaultProvider)}>
                           <CalendarPlus className="h-4 w-4 text-primary" />
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="center" className="w-48">
-                        {(['google', 'outlook', 'apple'] as CalendarProvider[]).map(provider => (
-                          <DropdownMenuItem key={provider} onClick={() => handleCalendarExport(provider)}>
-                            {provider === 'google' && 'Google Calendar'}
-                            {provider === 'outlook' && 'Outlook Calendar'}
-                            {provider === 'apple' && 'Apple Calendar (.ics)'}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => w + 1)} disabled={displayWeek >= maxWeek}>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {view === 'day' && (
-              <div className="flex items-center gap-1 mt-2 overflow-x-auto pb-1">
-                {dayLabels.map((d, i) => {
-                  const hasSessions = sessions.some(s => s.week_number === displayWeek && s.day_of_week === i + 1);
-                  return (
-                    <Button key={i} variant={selectedDay === i + 1 ? 'default' : 'ghost'} size="sm" className={`relative min-w-[40px] h-8 text-xs ${selectedDay === i + 1 ? 'gradient-hyrox text-primary-foreground' : ''}`} onClick={() => setSelectedDay(i + 1)}>
-                      {d}
-                      {hasSessions && selectedDay !== i + 1 && (
-                        <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-primary" />
+                      ) : (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Add week to calendar">
+                              <CalendarPlus className="h-4 w-4 text-primary" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="center" className="w-48">
+                            {(['google', 'outlook', 'apple'] as CalendarProvider[]).map(provider => (
+                              <DropdownMenuItem key={provider} onClick={() => handleCalendarExport(provider)}>
+                                {provider === 'google' && 'Google Calendar'}
+                                {provider === 'outlook' && 'Outlook Calendar'}
+                                {provider === 'apple' && 'Apple Calendar (.ics)'}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
-                    </Button>
-                  );
-                })}
-              </div>
-            )}
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => w + 1)} disabled={displayWeek >= maxWeek}>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
-            {isLoading ? (
-              <div className="flex justify-center py-16">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              </div>
-            ) : (
-              <>
-                <TabsContent value="day" className="mt-3">
-                  <DailyView sessions={sessions} weekNumber={displayWeek} dayOfWeek={selectedDay} completedSessions={completedSessions} substitutionMap={substitutionMap} />
-                </TabsContent>
-                <TabsContent value="week" className="mt-3">
-                  <WeeklyView sessions={sessions} weekNumber={displayWeek} weeklySummary={weeklySummary} completedSessions={completedSessions} substitutionMap={substitutionMap} />
-                </TabsContent>
-                <TabsContent value="month" className="mt-3">
-                  <MonthlyView sessions={sessions} completedSessions={completedSessions} maxWeek={maxWeek} currentWeek={displayWeek} onSelectWeek={(w) => { setWeekOffset(w - 1); setView('week'); }} />
-                </TabsContent>
-              </>
-            )}
-            {!isLoading && sessions.length > 0 && (
-              <div className="flex justify-center pt-2">
-                {defaultProvider ? (
-                  <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => handleFullPlanExport(defaultProvider)}>
-                    <Download className="h-3.5 w-3.5" />
-                    {t('schedule.exportFullPlan')}
-                  </Button>
+                {view === 'day' && (
+                  <div className="flex items-center gap-1 mt-2 overflow-x-auto pb-1">
+                    {dayLabels.map((d, i) => {
+                      const hasSessions = sessions.some(s => s.week_number === displayWeek && s.day_of_week === i + 1);
+                      return (
+                        <Button key={i} variant={selectedDay === i + 1 ? 'default' : 'ghost'} size="sm" className={`relative min-w-[40px] h-8 text-xs ${selectedDay === i + 1 ? 'gradient-hyrox text-primary-foreground' : ''}`} onClick={() => setSelectedDay(i + 1)}>
+                          {d}
+                          {hasSessions && selectedDay !== i + 1 && (
+                            <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-primary" />
+                          )}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {isLoading ? (
+                  <div className="flex justify-center py-16">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
                 ) : (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="text-xs gap-1.5">
+                  <>
+                    <TabsContent value="day" className="mt-3">
+                      <DailyView sessions={sessions} weekNumber={displayWeek} dayOfWeek={selectedDay} completedSessions={completedSessions} substitutionMap={substitutionMap} />
+                    </TabsContent>
+                    <TabsContent value="week" className="mt-3">
+                      <WeeklyView sessions={sessions} weekNumber={displayWeek} weeklySummary={weeklySummary} completedSessions={completedSessions} substitutionMap={substitutionMap} />
+                    </TabsContent>
+                    <TabsContent value="month" className="mt-3">
+                      <MonthlyView sessions={sessions} completedSessions={completedSessions} maxWeek={maxWeek} currentWeek={displayWeek} onSelectWeek={(w) => { setWeekOffset(w - 1); setView('week'); }} />
+                    </TabsContent>
+                  </>
+                )}
+                {!isLoading && sessions.length > 0 && (
+                  <div className="flex justify-center pt-2">
+                    {defaultProvider ? (
+                      <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => handleFullPlanExport(defaultProvider)}>
                         <Download className="h-3.5 w-3.5" />
                         {t('schedule.exportFullPlan')}
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="center" className="w-48">
-                      {(['google', 'outlook', 'apple'] as CalendarProvider[]).map(provider => (
-                        <DropdownMenuItem key={provider} onClick={() => handleFullPlanExport(provider)}>
-                          {provider === 'google' && 'Google Calendar'}
-                          {provider === 'outlook' && 'Outlook Calendar'}
-                          {provider === 'apple' && 'Apple Calendar (.ics)'}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    ) : (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="text-xs gap-1.5">
+                            <Download className="h-3.5 w-3.5" />
+                            {t('schedule.exportFullPlan')}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="center" className="w-48">
+                          {(['google', 'outlook', 'apple'] as CalendarProvider[]).map(provider => (
+                            <DropdownMenuItem key={provider} onClick={() => handleFullPlanExport(provider)}>
+                              {provider === 'google' && 'Google Calendar'}
+                              {provider === 'outlook' && 'Outlook Calendar'}
+                              {provider === 'apple' && 'Apple Calendar (.ics)'}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
                 )}
-              </div>
-            )}
-          </Tabs>
+              </Tabs>
+            </div>
+
+            {/* Desktop sidebar: Weekly summary + Targets */}
+            <div className="hidden lg:block space-y-4">
+              {weeklySummary && (
+                <Card className="glass sticky top-16">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-display">{t('schedule.week')} {displayWeek}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-xs">
+                    {weeklySummary.run_km_target && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Run Target</span>
+                        <span className="font-mono font-bold">{weeklySummary.run_km_target} km</span>
+                      </div>
+                    )}
+                    {weeklySummary.bike_z2_min_target && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Bike Z2</span>
+                        <span className="font-mono font-bold">{weeklySummary.bike_z2_min_target} min</span>
+                      </div>
+                    )}
+                    {weeklySummary.run_days && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Run Days</span>
+                        <span className="font-medium">{weeklySummary.run_days}</span>
+                      </div>
+                    )}
+                    {weeklySummary.notes && (
+                      <p className="text-muted-foreground pt-1 border-t border-border/50">{weeklySummary.notes}</p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {targets.length > 0 && (
+                <Card className="glass">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-display">Targets</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {targets.map((target: any) => (
+                      <div key={target.id} className="space-y-1">
+                        <p className="text-xs font-medium capitalize">{target.type.replace('_', ' ')}</p>
+                        <p className="text-xs text-primary font-mono">{target.primary_target}</p>
+                        {target.secondary_guardrail && (
+                          <p className="text-[10px] text-muted-foreground">{target.secondary_guardrail}</p>
+                        )}
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
         </>
       )}
     </div>
