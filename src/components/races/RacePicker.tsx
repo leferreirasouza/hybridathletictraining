@@ -43,6 +43,9 @@ const RACE_TYPE_LABELS: Record<string, string> = {
   other: 'Other',
 };
 
+const RUNNING_TYPES = ['5k', '10k', '21k', 'marathon'];
+const HYROX_TYPES = ['hyrox'];
+
 const RACE_TYPE_COLORS: Record<string, string> = {
   hyrox: 'bg-primary/20 text-primary',
   '5k': 'bg-green-500/20 text-green-400',
