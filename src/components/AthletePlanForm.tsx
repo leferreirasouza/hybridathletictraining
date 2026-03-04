@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import RacePicker from '@/components/races/RacePicker';
 
 const hyroxStations = [
   'SkiErg', 'Sled Push', 'Sled Pull', 'Burpee Broad Jumps',
@@ -105,6 +106,22 @@ export default function AthletePlanForm() {
   const [runKmTarget, setRunKmTarget] = useState('');
   const [ageGroup, setAgeGroup] = useState('30-34');
   const [stationTargets, setStationTargets] = useState<Record<string, string>>({});
+  const [selectedRaceId, setSelectedRaceId] = useState<string | undefined>();
+
+  const handleRaceSelect = useCallback((race: any) => {
+    setSelectedRaceId(race.id);
+    setNextRaceName(race.race_name);
+    setNextRaceLocation(race.city ? `${race.city}, ${race.country}` : race.country);
+    const raceDate = new Date(race.race_date + 'T00:00:00');
+    setNextRaceDate(raceDate);
+    const weeks = differenceInWeeks(raceDate, new Date());
+    if (weeks >= 4 && weeks <= 16) {
+      const closest = [4, 6, 8, 10, 12, 16].reduce((prev, curr) =>
+        Math.abs(curr - weeks) < Math.abs(prev - weeks) ? curr : prev
+      );
+      setPlanWeeks(String(closest));
+    }
+  }, []);
 
   // Fetch race results
   const { data: raceResults } = useQuery({
@@ -644,12 +661,20 @@ export default function AthletePlanForm() {
                 <Flag className="h-4 w-4 text-primary" />
                 <Label className="font-display font-bold text-sm">Next Race</Label>
               </div>
+
+              {/* Race Picker from database */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Search Official Races</Label>
+                <RacePicker onSelect={handleRaceSelect} selectedRaceId={selectedRaceId} />
+              </div>
+
+              {/* Manual override fields */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Race Name</Label>
                   <Input
                     value={nextRaceName}
-                    onChange={e => setNextRaceName(e.target.value)}
+                    onChange={e => { setNextRaceName(e.target.value); setSelectedRaceId(undefined); }}
                     placeholder={raceType === 'hyrox' ? 'HYROX Munich' : 'City Marathon'}
                     className="h-8 text-xs"
                   />
@@ -658,7 +683,7 @@ export default function AthletePlanForm() {
                   <Label className="text-xs flex items-center gap-1"><MapPin className="h-3 w-3" /> Location</Label>
                   <Input
                     value={nextRaceLocation}
-                    onChange={e => setNextRaceLocation(e.target.value)}
+                    onChange={e => { setNextRaceLocation(e.target.value); setSelectedRaceId(undefined); }}
                     placeholder="Munich, DE"
                     className="h-8 text-xs"
                   />
@@ -685,6 +710,7 @@ export default function AthletePlanForm() {
                       selected={nextRaceDate}
                       onSelect={(date) => {
                         setNextRaceDate(date);
+                        setSelectedRaceId(undefined);
                         if (date) {
                           const weeks = differenceInWeeks(date, new Date());
                           if (weeks >= 4 && weeks <= 16) {
