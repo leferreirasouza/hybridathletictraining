@@ -811,6 +811,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_onboarding_role: {
+        Args: { _org_id: string; _role: string }
+        Returns: undefined
+      }
       has_org_role: {
         Args: {
           _org_id: string
@@ -825,6 +829,13 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      list_active_organizations: {
+        Args: never
+        Returns: {
+          id: string
+          name: string
+        }[]
       }
     }
     Enums: {
