@@ -211,6 +211,8 @@ export default function CoachDashboard() {
           </Card>
         </motion.div>
 
+        <motion.div variants={item}><AthleteLoadAlertsPanel /></motion.div>
+
         <motion.div variants={item}><SwapRequestsPanel /></motion.div>
 
         <motion.div variants={item}>
