@@ -114,7 +114,9 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("parse-race-screenshot error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+    const safeMsg = e instanceof Error && e.message === "Could not parse race data from screenshot. Try manual entry."
+      ? e.message : "An error occurred processing your request";
+    return new Response(JSON.stringify({ error: safeMsg }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

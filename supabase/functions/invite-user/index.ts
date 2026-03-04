@@ -84,7 +84,16 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e: any) {
-    return new Response(JSON.stringify({ error: e.message }), {
+    console.error('invite-user error:', e);
+    const safeMessages = [
+      'Unauthorized',
+      'email, role, and organization_id are required',
+      'Only admins can invite users',
+      'Only master admins can create admin accounts',
+      'User already has a role in this organization',
+    ];
+    const message = safeMessages.includes(e.message) ? e.message : 'An error occurred processing your request';
+    return new Response(JSON.stringify({ error: message }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

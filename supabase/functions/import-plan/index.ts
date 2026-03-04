@@ -355,7 +355,7 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("import-plan error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+    return new Response(JSON.stringify({ error: "An error occurred processing your request" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
