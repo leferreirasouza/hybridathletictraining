@@ -3,7 +3,7 @@ import { Dumbbell } from 'lucide-react';
 
 export default function Terms() {
   return (
-    <div className="min-h-screen bg-background px-4 py-10 max-w-2xl mx-auto">
+    <div className="min-h-screen bg-background page-container py-10">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl gradient-hyrox flex items-center justify-center">
