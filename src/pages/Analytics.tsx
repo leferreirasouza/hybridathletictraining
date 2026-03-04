@@ -186,7 +186,7 @@ export default function Analytics() {
   }
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto">
+    <div className="page-container py-6">
       <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
         <motion.div variants={item}>
           <h1 className="text-xl font-display font-bold">Analytics</h1>

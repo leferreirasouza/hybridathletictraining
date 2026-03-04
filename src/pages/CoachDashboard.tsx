@@ -174,7 +174,7 @@ export default function CoachDashboard() {
   const navigate = useNavigate();
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto space-y-5">
+    <div className="page-container py-6 space-y-5">
       <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
         <motion.div variants={item} className="flex items-center justify-between">
           <div>

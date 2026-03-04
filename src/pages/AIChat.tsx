@@ -133,7 +133,7 @@ export default function AIChat() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-5rem)] max-w-lg mx-auto">
+    <div className="flex flex-col h-[calc(100vh-5rem)] page-container-narrow">
       <div className="px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-xl gradient-hyrox flex items-center justify-center">

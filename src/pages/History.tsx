@@ -121,7 +121,7 @@ export default function History() {
   }
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto space-y-4">
+    <div className="page-container py-6 space-y-4">
       <div>
         <h1 className="text-xl font-display font-bold">{t('history.title')}</h1>
         <p className="text-sm text-muted-foreground mt-0.5">

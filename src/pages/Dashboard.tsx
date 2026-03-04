@@ -88,7 +88,7 @@ export default function Dashboard() {
   const locale = i18n.language === 'pt-BR' ? 'pt-BR' : 'en-US';
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto">
+    <div className="page-container py-6">
       <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
         {/* Greeting */}
         <motion.div variants={item}>

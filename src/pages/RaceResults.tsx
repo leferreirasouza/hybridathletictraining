@@ -78,7 +78,7 @@ export default function RaceResults() {
   });
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto space-y-5">
+    <div className="page-container py-6 space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-display font-bold">{t('raceResults.title')}</h1>

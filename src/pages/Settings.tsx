@@ -117,7 +117,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto space-y-5">
+    <div className="page-container py-6 space-y-5">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigate('/profile')}>
           <ArrowLeft className="h-5 w-5" />
