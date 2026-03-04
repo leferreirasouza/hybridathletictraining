@@ -12,7 +12,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { BookOpen, Search, FileText, Globe, Upload, Trash2, ExternalLink, Plus, Loader2, Link, FileUp } from 'lucide-react';
+import { BookOpen, Search, FileText, Globe, Upload, Trash2, ExternalLink, Plus, Loader2, Link, FileUp, ChevronRight, Eye } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 import {
