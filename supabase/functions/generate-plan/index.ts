@@ -378,7 +378,7 @@ Plan Duration (weeks): ${profile.planWeeks || "8"}
     // Persist to DB
     const { data: plan, error: planErr } = await supabase
       .from("training_plans")
-      .insert({ name: planData.plan_name || "AI Generated Plan", organization_id: organizationId, created_by: user.id })
+      .insert({ name: planData.plan_name || "AI Generated Plan", organization_id: organizationId, created_by: user.id, source: 'ai_generated' })
       .select()
       .single();
     if (planErr) throw planErr;

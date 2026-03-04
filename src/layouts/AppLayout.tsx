@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Calendar, Dumbbell, Mail, User, Shield, Eye, Bell, MessageSquare, BookOpen } from 'lucide-react';
+import { Home, Calendar, Dumbbell, Mail, User, Shield, Eye, Bell, MessageSquare, BookOpen, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useAuth, getAccessibleRoles } from '@/contexts/AuthContext';
@@ -44,6 +44,7 @@ export default function AppLayout() {
       { path: '/athletes', icon: User, label: t('nav.athletes') },
       { path: '/exercises', icon: BookOpen, label: t('nav.library') },
       { path: '/plans', icon: Calendar, label: t('nav.plans') },
+      { path: '/plan-history', icon: History, label: 'History' },
       { path: '/profile', icon: User, label: t('nav.profile') },
     ],
     admin: [

@@ -466,6 +466,41 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_history: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          performed_by: string
+          plan_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          performed_by: string
+          plan_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          performed_by?: string
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_history_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "training_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_versions: {
         Row: {
           created_at: string
@@ -936,6 +971,7 @@ export type Database = {
       }
       training_plans: {
         Row: {
+          archived_at: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -943,9 +979,11 @@ export type Database = {
           is_template: boolean
           name: string
           organization_id: string
+          source: string
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -953,9 +991,11 @@ export type Database = {
           is_template?: boolean
           name: string
           organization_id: string
+          source?: string
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -963,6 +1003,7 @@ export type Database = {
           is_template?: boolean
           name?: string
           organization_id?: string
+          source?: string
           updated_at?: string
         }
         Relationships: [
