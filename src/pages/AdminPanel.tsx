@@ -10,10 +10,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Plus, Pencil, Shield, Building2 } from 'lucide-react';
+import { Plus, Pencil, Shield, Building2, BookOpen } from 'lucide-react';
 import { motion } from 'framer-motion';
 import UserManagementTab from '@/components/admin/UserManagementTab';
 import AdminActivityTab from '@/components/admin/AdminActivityTab';
+import KnowledgeLibraryTab from '@/components/admin/KnowledgeLibraryTab';
 import { useTranslation } from 'react-i18next';
 
 interface Organization {
