@@ -117,16 +117,27 @@ export default function Schedule() {
           )}
 
           {isAllPlans && plans && plans.length > 1 && (
-            <div className="flex flex-wrap items-center gap-3 px-1">
-              {plans.map(p => (
-                <span key={p.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <span
-                    className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: planColorMap[p.id] }}
-                  />
-                  {p.name}
-                </span>
-              ))}
+            <div className="flex flex-wrap items-center gap-1.5 px-1">
+              {plans.map(p => {
+                const isHidden = hiddenPlanIds.has(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => togglePlanVisibility(p.id)}
+                    className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border transition-all ${
+                      isHidden
+                        ? 'opacity-40 border-border bg-muted line-through'
+                        : 'border-border/50 bg-background hover:bg-accent'
+                    }`}
+                  >
+                    <span
+                      className="inline-block w-2.5 h-2.5 rounded-full shrink-0 transition-opacity"
+                      style={{ backgroundColor: planColorMap[p.id], opacity: isHidden ? 0.3 : 1 }}
+                    />
+                    {p.name}
+                  </button>
+                );
+              })}
             </div>
           )}
 
