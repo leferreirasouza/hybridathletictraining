@@ -36,7 +36,7 @@ export default function AppLayout() {
       { path: '/dashboard', icon: Home, label: t('nav.today') },
       { path: '/schedule', icon: Calendar, label: t('nav.plan') },
       { path: '/log', icon: Dumbbell, label: t('nav.log') },
-      { path: '/messages', icon: Mail, label: t('nav.chat') },
+      { path: '/plan-history', icon: History, label: 'History' },
       { path: '/profile', icon: User, label: t('nav.profile') },
     ],
     coach: [
