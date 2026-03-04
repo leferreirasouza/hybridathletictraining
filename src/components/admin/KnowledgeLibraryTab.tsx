@@ -267,6 +267,8 @@ export default function KnowledgeLibraryTab() {
         onComplete={() => { refetch(); setUploadOpen(false); }}
       />
 
+      <ChunkDetailDialog doc={viewDoc} onClose={() => setViewDoc(null)} />
+
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
