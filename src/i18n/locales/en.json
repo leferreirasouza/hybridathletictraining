@@ -277,7 +277,11 @@
     "removeImage": "Remove",
     "parsing": "Parsing {{current}}/{{total}}…",
     "screenshotData": "Screenshot data",
-    "overwriteWarning": "This will overwrite current form fields with extracted data."
+    "overwriteWarning": "This will overwrite current form fields with extracted data.",
+    "multipleRacesDetected": "{{count}} distinct races detected!",
+    "racesDetected": "{{count}} Races Detected",
+    "saveAllRaces": "Save {{count}} Race(s)",
+    "multiSaved": "{{count}} race results saved!"
   },
   "history": {
     "title": "Session History",
