@@ -220,7 +220,7 @@ export default function LogSession() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>RPE (Rate of Perceived Exertion)</Label>
+                <Label>{t('logSession.rpe')}</Label>
                 <Badge variant="secondary" className="font-mono">{rpe[0]}/10</Badge>
               </div>
               <Slider value={rpe} onValueChange={setRpe} min={1} max={10} step={1} className="py-2" />
