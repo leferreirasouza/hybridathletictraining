@@ -10,10 +10,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Plus, Pencil, Shield, Building2 } from 'lucide-react';
+import { Plus, Pencil, Shield, Building2, BookOpen } from 'lucide-react';
 import { motion } from 'framer-motion';
 import UserManagementTab from '@/components/admin/UserManagementTab';
 import AdminActivityTab from '@/components/admin/AdminActivityTab';
+import KnowledgeLibraryTab from '@/components/admin/KnowledgeLibraryTab';
 import { useTranslation } from 'react-i18next';
 
 interface Organization {
@@ -56,6 +57,7 @@ export default function AdminPanel() {
         <TabsList>
           {isMasterAdmin && <TabsTrigger value="orgs">{t('admin.organizations')}</TabsTrigger>}
           <TabsTrigger value="users">{t('admin.userManagement')}</TabsTrigger>
+          {isMasterAdmin && <TabsTrigger value="knowledge" className="gap-1.5"><BookOpen className="h-3.5 w-3.5" /> Knowledge</TabsTrigger>}
           <TabsTrigger value="activity">{t('admin.activityLogTab')}</TabsTrigger>
         </TabsList>
         {isMasterAdmin && (
@@ -66,6 +68,11 @@ export default function AdminPanel() {
         <TabsContent value="users">
           <UserManagementTab isMasterAdmin={isMasterAdmin} currentOrgId={currentOrg?.id} />
         </TabsContent>
+        {isMasterAdmin && (
+          <TabsContent value="knowledge">
+            <KnowledgeLibraryTab />
+          </TabsContent>
+        )}
         <TabsContent value="activity">
           <AdminActivityTab />
         </TabsContent>
