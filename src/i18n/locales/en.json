@@ -469,5 +469,19 @@
     "saving": "Saving…",
     "active": "Active",
     "disabled": "Disabled"
+  },
+  "racePicker": {
+    "searchRaces": "Search for a race...",
+    "findRace": "Find Your Race",
+    "searchPlaceholder": "Search by name, city, or country...",
+    "noRacesFound": "No races found. Add your own!",
+    "addCustom": "Add Custom Race",
+    "createCustomRace": "Create Custom Race",
+    "raceNamePlaceholder": "e.g. Maratona de São Paulo",
+    "createRace": "Create Race",
+    "raceCreated": "Race added successfully!",
+    "fillRequired": "Please fill in race name and date",
+    "cantFindRace": "Can't find your race? Add it manually",
+    "orSelectFromCalendar": "Or select from the race calendar"
   }
 }
