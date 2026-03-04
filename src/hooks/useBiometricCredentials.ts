@@ -5,6 +5,19 @@
  * device PIN, so the user gets a biometric prompt.
  */
 
+declare global {
+  interface Window {
+    PasswordCredential: new (data: {
+      id: string;
+      password: string;
+      name?: string;
+    }) => PasswordCredential;
+  }
+  interface PasswordCredential extends Credential {
+    password: string;
+  }
+}
+
 const isSupported = () =>
   typeof window !== 'undefined' &&
   'credentials' in navigator &&
