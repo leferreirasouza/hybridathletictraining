@@ -287,16 +287,24 @@ function SessionDetailSheet({ session, isCompleted, substitution }: { session: S
           </div>
         )}
         {!isCompleted && !substitution && <SwapSessionDialog session={session} />}
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => {
-            const url = buildGoogleCalendarUrl(session);
-            window.open(url, '_blank', 'noopener');
-          }}
-        >
-          <CalendarPlus className="h-4 w-4 mr-2" /> Add to Google Calendar
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="w-full">
+              <CalendarPlus className="h-4 w-4 mr-2" /> Add to Calendar
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" className="w-48">
+            <DropdownMenuItem onClick={() => addToCalendar('google', session)}>
+              Google Calendar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addToCalendar('outlook', session)}>
+              Outlook Calendar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addToCalendar('apple', session)}>
+              Apple Calendar (.ics)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

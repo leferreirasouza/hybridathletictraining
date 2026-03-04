@@ -92,12 +92,26 @@ export default function Schedule() {
                   {t('schedule.week')} {displayWeek} <span className="text-muted-foreground font-normal">/ {maxWeek}</span>
                 </span>
                 <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" title="Add week to Google Calendar" onClick={() => {
-                    exportWeekToGoogleCalendar(sessions, displayWeek);
-                    toast.success(`Opening ${sessions.filter(s => s.week_number === displayWeek).length} sessions in Google Calendar`);
-                  }}>
-                    <CalendarPlus className="h-4 w-4 text-primary" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title="Add week to calendar">
+                        <CalendarPlus className="h-4 w-4 text-primary" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="center" className="w-48">
+                      {(['google', 'outlook', 'apple'] as CalendarProvider[]).map(provider => (
+                        <DropdownMenuItem key={provider} onClick={() => {
+                          exportWeekToCalendar(provider, sessions, displayWeek);
+                          const count = sessions.filter(s => s.week_number === displayWeek).length;
+                          toast.success(`${count} sessions → ${provider === 'apple' ? '.ics downloaded' : provider.charAt(0).toUpperCase() + provider.slice(1) + ' Calendar'}`);
+                        }}>
+                          {provider === 'google' && 'Google Calendar'}
+                          {provider === 'outlook' && 'Outlook Calendar'}
+                          {provider === 'apple' && 'Apple Calendar (.ics)'}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => w + 1)} disabled={displayWeek >= maxWeek}>
                     <ChevronRight className="h-4 w-4" />
                   </Button>
