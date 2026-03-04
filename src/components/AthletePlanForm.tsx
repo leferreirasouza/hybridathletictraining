@@ -106,6 +106,22 @@ export default function AthletePlanForm() {
   const [runKmTarget, setRunKmTarget] = useState('');
   const [ageGroup, setAgeGroup] = useState('30-34');
   const [stationTargets, setStationTargets] = useState<Record<string, string>>({});
+  const [selectedRaceId, setSelectedRaceId] = useState<string | undefined>();
+
+  const handleRaceSelect = useCallback((race: any) => {
+    setSelectedRaceId(race.id);
+    setNextRaceName(race.race_name);
+    setNextRaceLocation(race.city ? `${race.city}, ${race.country}` : race.country);
+    const raceDate = new Date(race.race_date + 'T00:00:00');
+    setNextRaceDate(raceDate);
+    const weeks = differenceInWeeks(raceDate, new Date());
+    if (weeks >= 4 && weeks <= 16) {
+      const closest = [4, 6, 8, 10, 12, 16].reduce((prev, curr) =>
+        Math.abs(curr - weeks) < Math.abs(prev - weeks) ? curr : prev
+      );
+      setPlanWeeks(String(closest));
+    }
+  }, []);
 
   // Fetch race results
   const { data: raceResults } = useQuery({
