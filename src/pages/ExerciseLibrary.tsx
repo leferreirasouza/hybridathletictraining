@@ -377,9 +377,9 @@ export default function ExerciseLibrary() {
       ) : filtered.length === 0 ? (
         <Card className="p-8 text-center">
           <Dumbbell className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
-          <p className="text-sm font-medium">No exercises found</p>
+          <p className="text-sm font-medium">{t('exerciseLibrary.noExercisesFound')}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            {exercises.length === 0 ? 'Use "AI Seed" to generate a starter HYROX exercise bank, or add exercises manually.' : 'Try adjusting your filters.'}
+            {exercises.length === 0 ? t('exerciseLibrary.noExercisesHint') : t('exerciseLibrary.adjustFilters')}
           </p>
         </Card>
       ) : (
