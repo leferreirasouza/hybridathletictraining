@@ -328,8 +328,9 @@ export default function PlanBuilder() {
       if (verErr) throw verErr;
       const allSessions = Object.entries(sessionsByWeek).flatMap(([week, rows]) =>
         rows.filter(r => r.name.trim()).map((r, idx) => ({
-          plan_version_id: version.id,
-          week_number: Number(week),
+            plan_version_id: version.id,
+            athlete_id: targetAthleteId,
+            week_number: Number(week),
           day_of_week: r.day,
           discipline: r.discipline as Discipline,
           session_name: r.name.trim(),
