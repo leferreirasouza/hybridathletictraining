@@ -392,7 +392,47 @@ export default function PlanBuilder() {
     input.click();
   };
 
-  if (!isCoach) {
+  useEffect(() => {
+    if (!user) return;
+
+    if (!canManagePlans) {
+      setSelectedAthleteId(user.id);
+      return;
+    }
+
+    if (!assigneeOptions.length) return;
+    if (selectedAthleteId && assigneeOptions.some((option) => option.id === selectedAthleteId)) return;
+
+    const selfOption = assigneeOptions.find((option) => option.id === user.id);
+    setSelectedAthleteId(selfOption?.id || assigneeOptions[0].id);
+  }, [user, canManagePlans, assigneeOptions, selectedAthleteId]);
+
+  if (!canManagePlans) {
+    if (showAthleteImport) {
+      return (
+        <div className="page-container py-6 space-y-5">
+          <h1 className="text-xl font-display font-bold">{t('planBuilder.createYourPlan')}</h1>
+          <Card className="glass">
+            <CardContent className="p-8 text-center space-y-4">
+              <FileSpreadsheet className="h-12 w-12 mx-auto text-primary" />
+              <div>
+                <p className="font-display font-bold">{t('planBuilder.importFromSpreadsheet')}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t('planBuilder.importDesc')}</p>
+              </div>
+              <div className="max-w-xs mx-auto space-y-2">
+                <Label className="text-xs text-muted-foreground">{t('planBuilder.planNameOptional')}</Label>
+                <Input value={planName} onChange={e => setPlanName(e.target.value)} placeholder={t('planBuilder.autoDetected')} className="text-center" />
+              </div>
+              <Button className="gradient-hyrox" onClick={handleImport} disabled={importing}>
+                {importing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                {importing ? t('planBuilder.importing') : t('planBuilder.importBtn')}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
     return (
       <div className="page-container py-6 space-y-5">
         <h1 className="text-xl font-display font-bold">{t('planBuilder.createYourPlan')}</h1>
