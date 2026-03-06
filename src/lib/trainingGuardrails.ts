@@ -213,7 +213,7 @@ export function buildGuardrailPromptSection(
 
   for (const w of weeks) {
     const { metrics } = analyzeWeeklyLoad(existingSessions, w, experience);
-    lines.push(`Week ${w}: ${metrics.totalSessions} sessions, ${metrics.totalRunKm.toFixed(1)}km running, ${Math.round(metrics.totalDurationMin)}min total, ${metrics.highIntensitySessions} high-intensity, ${metrics.strengthSessions} strength`);
+    lines.push(`Week ${w}: ${metrics.totalSessions} sessions, ${metrics.totalRunKm.toFixed(1)}km running, ${metrics.totalBikeKm.toFixed(1)}km cycling, ${Math.round(metrics.totalDurationMin)}min total, ${metrics.highIntensitySessions} high-intensity, ${metrics.strengthSessions} strength`);
   }
 
   const exp = experience || 'intermediate';
