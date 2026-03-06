@@ -107,9 +107,11 @@ export default function Analytics() {
       const dur = Number(s.actual_duration_min) || 0;
       const dist = Number(s.actual_distance_km) || 0;
 
-      const existing = weekMap.get(weekKey) || { week: weekKey, duration: 0, distance: 0, sessions: 0, rpeSum: 0, rpeCount: 0 };
+      const existing = weekMap.get(weekKey) || { week: weekKey, duration: 0, distance: 0, runDistance: 0, bikeDistance: 0, sessions: 0, rpeSum: 0, rpeCount: 0 };
       existing.duration += dur;
       existing.distance += dist;
+      if (s.discipline === 'run') existing.runDistance += dist;
+      if (s.discipline === 'bike') existing.bikeDistance += dist;
       existing.sessions += 1;
       if (s.rpe) { existing.rpeSum += s.rpe; existing.rpeCount += 1; }
       weekMap.set(weekKey, existing);
