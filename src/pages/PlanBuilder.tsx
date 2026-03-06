@@ -426,6 +426,21 @@ export default function PlanBuilder() {
                 <Label className="text-xs text-muted-foreground">{t('planBuilder.planNameOptional')}</Label>
                 <Input value={planName} onChange={e => setPlanName(e.target.value)} placeholder={t('planBuilder.autoDetected')} className="text-center" />
               </div>
+              <div className="max-w-xs mx-auto space-y-2">
+                <Label className="text-xs text-muted-foreground">Assign athlete</Label>
+                <Select value={targetAthleteId} onValueChange={setSelectedAthleteId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select athlete" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assigneeOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.fullName}{option.id === user?.id ? ' (You)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <Button className="gradient-hyrox" onClick={handleImport} disabled={importing}>
                 {importing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
                 {importing ? t('planBuilder.importing') : t('planBuilder.importBtn')}
