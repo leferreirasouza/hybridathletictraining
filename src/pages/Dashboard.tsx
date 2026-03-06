@@ -101,16 +101,27 @@ export default function Dashboard() {
             {t('dashboard.hey', { name: firstName })}
           </h1>
           {isCoachOrAdmin && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2 gap-1.5"
-              onClick={() => navigate('/athletes')}
-            >
-              <Users className="h-3.5 w-3.5" />
-              Coach Dashboard
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Button>
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => navigate('/athletes')}
+              >
+                <Users className="h-3.5 w-3.5" />
+                Coach Dashboard
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant={showAthletePlans ? 'ghost' : 'secondary'}
+                size="sm"
+                className="gap-1.5 text-xs"
+                onClick={() => setShowAthletePlans(prev => !prev)}
+              >
+                {showAthletePlans ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                {showAthletePlans ? 'Hide My Plans' : 'Show My Plans'}
+              </Button>
+            </div>
           )}
         </motion.div>
 
