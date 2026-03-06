@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Calendar, Dumbbell, Mail, User, Shield, Eye, Bell, MessageSquare, BookOpen, History } from 'lucide-react';
+import { Home, Calendar, Dumbbell, Mail, User, Shield, Eye, Bell, MessageSquare, BookOpen, History, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useAuth, getAccessibleRoles } from '@/contexts/AuthContext';
