@@ -15,6 +15,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import type { Database } from '@/integrations/supabase/types';
 import ExcelJS from 'exceljs';
 import AthletePlanForm from '@/components/AthletePlanForm';
@@ -22,6 +23,7 @@ import { useTranslation } from 'react-i18next';
 
 type Discipline = Database['public']['Enums']['discipline'];
 type Intensity = Database['public']['Enums']['intensity_level'];
+type AppRole = Database['public']['Enums']['app_role'];
 
 const disciplineOptions: { value: Discipline; label: string }[] = [
   { value: 'run', label: 'Run' },
@@ -45,6 +47,13 @@ const intensityOptions: { value: Intensity; label: string }[] = [
   { value: 'max_effort', label: 'Max Effort' },
 ];
 
+const rolePriority: Record<AppRole, number> = {
+  master_admin: 0,
+  admin: 1,
+  coach: 2,
+  athlete: 3,
+};
+
 interface SessionRow {
   id: string;
   day: number;
@@ -55,6 +64,12 @@ interface SessionRow {
   intensity: Intensity | '';
   details: string;
   notes: string;
+}
+
+interface AssigneeOption {
+  id: string;
+  fullName: string;
+  role: AppRole;
 }
 
 const emptyRow = (): SessionRow => ({
@@ -213,8 +228,12 @@ function CurrentPlansTab() {
 
 export default function PlanBuilder() {
   const { t } = useTranslation();
-  const { user, currentOrg, effectiveRole } = useAuth();
-  const isCoach = effectiveRole === 'coach' || effectiveRole === 'admin' || effectiveRole === 'master_admin';
+  const { user, currentOrg, currentRole } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const canManagePlans = !!currentRole && ['coach', 'admin', 'master_admin'].includes(currentRole);
+  const requestedTab = searchParams.get('tab');
+  const managerTab = requestedTab === 'plans' || requestedTab === 'build' || requestedTab === 'import' ? requestedTab : 'plans';
+  const showAthleteImport = !canManagePlans && requestedTab === 'import';
 
   const [planName, setPlanName] = useState('');
   const [weekCount, setWeekCount] = useState(1);
@@ -222,6 +241,57 @@ export default function PlanBuilder() {
   const [sessionsByWeek, setSessionsByWeek] = useState<Record<number, SessionRow[]>>({ 1: [emptyRow()] });
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [selectedAthleteId, setSelectedAthleteId] = useState('');
+
+  const { data: assigneeOptions = [] } = useQuery({
+    queryKey: ['plan-builder-assignees', currentOrg?.id, user?.id],
+    queryFn: async () => {
+      if (!currentOrg || !user) return [] as AssigneeOption[];
+
+      const { data: roleRows, error } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .eq('organization_id', currentOrg.id);
+
+      if (error) throw error;
+
+      const roleByUser = new Map<string, AppRole>();
+      (roleRows || []).forEach((row) => {
+        const existing = roleByUser.get(row.user_id as string);
+        const nextRole = row.role as AppRole;
+        if (!existing || rolePriority[nextRole] < rolePriority[existing]) {
+          roleByUser.set(row.user_id as string, nextRole);
+        }
+      });
+
+      if (!roleByUser.has(user.id)) {
+        roleByUser.set(user.id, (currentRole as AppRole) || 'coach');
+      }
+
+      const userIds = [...roleByUser.keys()];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+
+      const profileMap = new Map((profiles || []).map((profile) => [profile.id, profile.full_name]));
+
+      return userIds
+        .map((id) => ({
+          id,
+          fullName: profileMap.get(id) || (id === user.id ? 'You' : 'Unknown'),
+          role: roleByUser.get(id) || 'athlete',
+        }))
+        .sort((a, b) => {
+          if (a.id === user.id) return -1;
+          if (b.id === user.id) return 1;
+          return a.fullName.localeCompare(b.fullName);
+        });
+    },
+    enabled: !!canManagePlans && !!currentOrg?.id && !!user?.id,
+  });
+
+  const targetAthleteId = selectedAthleteId || user?.id || '';
 
   const sessions = sessionsByWeek[currentWeek] || [];
   const setSessions = (updater: (prev: SessionRow[]) => SessionRow[]) => {
@@ -243,6 +313,8 @@ export default function PlanBuilder() {
   const handleSave = async () => {
     if (!planName.trim()) { toast.error('Please enter a plan name'); return; }
     if (!user || !currentOrg) { toast.error('No org context'); return; }
+    if (!targetAthleteId) { toast.error('Please select an athlete'); return; }
+    if (!targetAthleteId) { toast.error('Please select an athlete'); return; }
     setSaving(true);
     try {
       const { data: plan, error: planErr } = await supabase
@@ -257,8 +329,9 @@ export default function PlanBuilder() {
       if (verErr) throw verErr;
       const allSessions = Object.entries(sessionsByWeek).flatMap(([week, rows]) =>
         rows.filter(r => r.name.trim()).map((r, idx) => ({
-          plan_version_id: version.id,
-          week_number: Number(week),
+            plan_version_id: version.id,
+            athlete_id: targetAthleteId,
+            week_number: Number(week),
           day_of_week: r.day,
           discipline: r.discipline as Discipline,
           session_name: r.name.trim(),
@@ -305,7 +378,7 @@ export default function PlanBuilder() {
         });
         if (Object.keys(sheets).length === 0) throw new Error('No data found in the spreadsheet');
         const { data: result, error } = await supabase.functions.invoke('import-plan', {
-          body: { sheets, organizationId: currentOrg.id, planName: importName },
+          body: { sheets, organizationId: currentOrg.id, planName: importName, athleteId: targetAthleteId },
         });
         if (error) throw error;
         if (result?.error) throw new Error(result.error);
@@ -322,7 +395,62 @@ export default function PlanBuilder() {
     input.click();
   };
 
-  if (!isCoach) {
+  useEffect(() => {
+    if (!user) return;
+
+    if (!canManagePlans) {
+      setSelectedAthleteId(user.id);
+      return;
+    }
+
+    if (!assigneeOptions.length) return;
+    if (selectedAthleteId && assigneeOptions.some((option) => option.id === selectedAthleteId)) return;
+
+    const selfOption = assigneeOptions.find((option) => option.id === user.id);
+    setSelectedAthleteId(selfOption?.id || assigneeOptions[0].id);
+  }, [user, canManagePlans, assigneeOptions, selectedAthleteId]);
+
+  if (!canManagePlans) {
+    if (showAthleteImport) {
+      return (
+        <div className="page-container py-6 space-y-5">
+          <h1 className="text-xl font-display font-bold">{t('planBuilder.createYourPlan')}</h1>
+          <Card className="glass">
+            <CardContent className="p-8 text-center space-y-4">
+              <FileSpreadsheet className="h-12 w-12 mx-auto text-primary" />
+              <div>
+                <p className="font-display font-bold">{t('planBuilder.importFromSpreadsheet')}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t('planBuilder.importDesc')}</p>
+              </div>
+              <div className="max-w-xs mx-auto space-y-2">
+                <Label className="text-xs text-muted-foreground">{t('planBuilder.planNameOptional')}</Label>
+                <Input value={planName} onChange={e => setPlanName(e.target.value)} placeholder={t('planBuilder.autoDetected')} className="text-center" />
+              </div>
+              <div className="max-w-xs mx-auto space-y-2">
+                <Label className="text-xs text-muted-foreground">Assign athlete</Label>
+                <Select value={targetAthleteId} onValueChange={setSelectedAthleteId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select athlete" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assigneeOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.fullName}{option.id === user?.id ? ' (You)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button className="gradient-hyrox" onClick={handleImport} disabled={importing}>
+                {importing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                {importing ? t('planBuilder.importing') : t('planBuilder.importBtn')}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
     return (
       <div className="page-container py-6 space-y-5">
         <h1 className="text-xl font-display font-bold">{t('planBuilder.createYourPlan')}</h1>
@@ -337,7 +465,7 @@ export default function PlanBuilder() {
         <h1 className="text-xl font-display font-bold">{t('planBuilder.title')}</h1>
       </div>
 
-      <Tabs defaultValue="plans">
+      <Tabs value={managerTab} onValueChange={(value) => { const next = new URLSearchParams(searchParams); next.set('tab', value); setSearchParams(next, { replace: true }); }}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="plans" className="gap-1.5"><List className="h-3.5 w-3.5" /> Current Plans</TabsTrigger>
           <TabsTrigger value="build">{t('planBuilder.buildFromScratch')}</TabsTrigger>
@@ -351,7 +479,7 @@ export default function PlanBuilder() {
         <TabsContent value="build" className="mt-4 space-y-4">
           <Card className="glass">
             <CardContent className="p-4 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="space-y-2">
                   <Label>{t('planBuilder.planName')}</Label>
                   <Input value={planName} onChange={e => setPlanName(e.target.value)} placeholder="HYROX 12-Week Prep" />
@@ -359,6 +487,21 @@ export default function PlanBuilder() {
                 <div className="space-y-2">
                   <Label>{t('planBuilder.totalWeeks')}</Label>
                   <Input type="number" min={1} max={52} value={weekCount} onChange={e => setWeekCount(Number(e.target.value))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Assign athlete</Label>
+                  <Select value={targetAthleteId} onValueChange={setSelectedAthleteId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select athlete" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assigneeOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          {option.fullName}{option.id === user?.id ? ' (You)' : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="flex items-center gap-2 overflow-x-auto py-1">

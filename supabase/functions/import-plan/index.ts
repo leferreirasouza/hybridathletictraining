@@ -99,7 +99,7 @@ serve(async (req) => {
     if (authError || !user) throw new Error("Unauthorized");
 
     const body = await req.json();
-    const { sheets, organizationId, planName, csvData } = body;
+    const { sheets, organizationId, planName, csvData, athleteId } = body;
 
     if (!organizationId || !planName) {
       throw new Error("Missing required fields: organizationId, planName");
@@ -115,6 +115,19 @@ serve(async (req) => {
 
     if (Object.keys(sheetsData).length === 0) {
       throw new Error("No sheet data provided");
+    }
+
+    if (athleteId) {
+      const { data: athleteMembership, error: athleteMembershipError } = await supabase
+        .from("user_roles")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .eq("user_id", athleteId)
+        .maybeSingle();
+
+      if (athleteMembershipError || !athleteMembership) {
+        throw new Error("Selected athlete is not part of this organization");
+      }
     }
 
     const errors: { sheet: string; row: number; message: string }[] = [];
@@ -227,6 +240,7 @@ serve(async (req) => {
 
           sessions.push({
             plan_version_id: version.id,
+            athlete_id: athleteId || null,
             date: parseDate(rawDate),
             week_number: parseInt(String(row[colMap["week"]] || "1")) || 1,
             day_of_week: parseDayOfWeek(rawDay),

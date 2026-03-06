@@ -32,6 +32,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || t('roles.athlete');
   const isCoachOrAdmin = effectiveRole && ['master_admin', 'admin', 'coach'].includes(effectiveRole);
+  const canManagePlans = !!currentRole && ['master_admin', 'admin', 'coach'].includes(currentRole);
   const [showAthletePlans, setShowAthletePlans] = useState(true);
 
   const { sessions: plannedSessions, completedSessions: completedPlanned, targets, maxWeek, noPlan } = useScheduleData();
@@ -231,7 +232,7 @@ export default function Dashboard() {
                 ) : (
                   <div className="flex gap-2">
                     {noPlan ? (
-                      <Button className="flex-1 gradient-hyrox" onClick={() => navigate('/plans')}>
+                      <Button className="flex-1 gradient-hyrox" onClick={() => navigate(canManagePlans ? '/plans?tab=build' : '/plans')}>
                         {t('dashboard.generatePlan')}
                       </Button>
                     ) : (
