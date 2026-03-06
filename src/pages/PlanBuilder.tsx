@@ -86,8 +86,35 @@ const emptyRow = (): SessionRow => ({
 
 function CurrentPlansTab() {
   const { t } = useTranslation();
-  const { currentOrg } = useAuth();
+  const { user, currentOrg } = useAuth();
   const queryClient = useQueryClient();
+
+  // Fetch org members for assignment dropdown
+  const { data: orgMembers = [] } = useQuery({
+    queryKey: ['current-plans-members', currentOrg?.id],
+    queryFn: async () => {
+      if (!currentOrg || !user) return [];
+      const { data: roleRows } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .eq('organization_id', currentOrg.id);
+      const userIds = [...new Set((roleRows || []).map(r => r.user_id as string))];
+      if (!userIds.length) return [];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+      return (profiles || []).map(p => ({
+        id: p.id,
+        fullName: p.full_name || (p.id === user.id ? 'You' : 'Unknown'),
+      })).sort((a, b) => {
+        if (a.id === user?.id) return -1;
+        if (b.id === user?.id) return 1;
+        return a.fullName.localeCompare(b.fullName);
+      });
+    },
+    enabled: !!currentOrg?.id && !!user?.id,
+  });
 
   const { data: plans, isLoading } = useQuery({
     queryKey: ['org-plans', currentOrg?.id],
@@ -99,23 +126,42 @@ function CurrentPlansTab() {
         .eq('organization_id', currentOrg.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      // Fetch session counts per plan
       const planIds = (data || []).map(p => p.id);
       if (planIds.length === 0) return [];
       const { data: versions } = await supabase
         .from('plan_versions')
         .select('id, plan_id')
         .in('plan_id', planIds);
+      const versionIds = (versions || []).map(v => v.id);
       const versionMap = new Map<string, string[]>();
       (versions || []).forEach(v => {
         const arr = versionMap.get(v.plan_id) || [];
         arr.push(v.id);
         versionMap.set(v.plan_id, arr);
       });
+      // Fetch assigned athlete_id per plan (from planned_sessions)
+      let assignmentMap = new Map<string, string | null>();
+      if (versionIds.length > 0) {
+        const { data: sessions } = await supabase
+          .from('planned_sessions')
+          .select('plan_version_id, athlete_id')
+          .in('plan_version_id', versionIds)
+          .limit(500);
+        // Map plan_id → athlete_id (take first non-null)
+        const versionToPlan = new Map((versions || []).map(v => [v.id, v.plan_id]));
+        (sessions || []).forEach(s => {
+          const pid = versionToPlan.get(s.plan_version_id);
+          if (pid && s.athlete_id && !assignmentMap.has(pid)) {
+            assignmentMap.set(pid, s.athlete_id);
+          }
+        });
+      }
       return (data || []).map(p => ({
         ...p,
         isActive: !p.archived_at,
         versionCount: versionMap.get(p.id)?.length || 0,
+        versionIds: versionMap.get(p.id) || [],
+        assignedAthleteId: assignmentMap.get(p.id) || null,
       }));
     },
     enabled: !!currentOrg?.id,
@@ -135,12 +181,29 @@ function CurrentPlansTab() {
   };
 
   const handleDelete = async (planId: string) => {
-    // Delete plan versions, sessions, etc. cascade via FK
     const { error } = await supabase.from('training_plans').delete().eq('id', planId);
     if (error) {
       toast.error(error.message);
     } else {
       toast.success('Plan deleted permanently');
+      queryClient.invalidateQueries({ queryKey: ['org-plans'] });
+    }
+  };
+
+  const handleAssignAthlete = async (planId: string, versionIds: string[], athleteId: string) => {
+    if (!versionIds.length) {
+      toast.error('No plan versions found');
+      return;
+    }
+    const { error } = await supabase
+      .from('planned_sessions')
+      .update({ athlete_id: athleteId })
+      .in('plan_version_id', versionIds);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      const member = orgMembers.find(m => m.id === athleteId);
+      toast.success(`Plan assigned to ${member?.fullName || 'athlete'}`);
       queryClient.invalidateQueries({ queryKey: ['org-plans'] });
     }
   };
@@ -167,61 +230,84 @@ function CurrentPlansTab() {
 
   return (
     <div className="space-y-3">
-      {plans.map(plan => (
-        <Card key={plan.id} className={`glass transition-opacity ${!plan.isActive ? 'opacity-60' : ''}`}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-display font-bold text-sm truncate">{plan.name}</p>
-                  <Badge variant="outline" className="text-[10px] shrink-0 capitalize">{plan.source}</Badge>
-                  {plan.is_template && <Badge variant="secondary" className="text-[10px] shrink-0">Template</Badge>}
-                </div>
-                {plan.description && (
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{plan.description}</p>
-                )}
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  Created {new Date(plan.created_at).toLocaleDateString()} · {plan.versionCount} version(s)
-                </p>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <div className="flex items-center gap-2">
-                  {plan.isActive ? (
-                    <Eye className="h-3.5 w-3.5 text-success" />
-                  ) : (
-                    <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
+      {plans.map(plan => {
+        const assignedMember = orgMembers.find(m => m.id === plan.assignedAthleteId);
+        return (
+          <Card key={plan.id} className={`glass transition-opacity ${!plan.isActive ? 'opacity-60' : ''}`}>
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-display font-bold text-sm truncate">{plan.name}</p>
+                    <Badge variant="outline" className="text-[10px] shrink-0 capitalize">{plan.source}</Badge>
+                    {plan.is_template && <Badge variant="secondary" className="text-[10px] shrink-0">Template</Badge>}
+                  </div>
+                  {plan.description && (
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{plan.description}</p>
                   )}
-                  <Switch
-                    checked={plan.isActive}
-                    onCheckedChange={() => handleToggleArchive(plan.id, plan.isActive)}
-                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Created {new Date(plan.created_at).toLocaleDateString()} · {plan.versionCount} version(s)
+                  </p>
                 </div>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete plan permanently?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will permanently delete "{plan.name}" and all its sessions, versions, and data. This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleDelete(plan.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                        Delete Forever
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex items-center gap-2">
+                    {plan.isActive ? (
+                      <Eye className="h-3.5 w-3.5 text-success" />
+                    ) : (
+                      <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
+                    )}
+                    <Switch
+                      checked={plan.isActive}
+                      onCheckedChange={() => handleToggleArchive(plan.id, plan.isActive)}
+                    />
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete plan permanently?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete "{plan.name}" and all its sessions, versions, and data. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDelete(plan.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Delete Forever
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+              {/* Assign athlete row */}
+              <div className="flex items-center gap-2 pt-1 border-t border-border/50">
+                <UserCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-xs text-muted-foreground shrink-0">Assigned to:</span>
+                <Select
+                  value={plan.assignedAthleteId || ''}
+                  onValueChange={(val) => handleAssignAthlete(plan.id, plan.versionIds, val)}
+                >
+                  <SelectTrigger className="h-7 text-xs flex-1 min-w-0">
+                    <SelectValue placeholder="Unassigned" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {orgMembers.map(m => (
+                      <SelectItem key={m.id} value={m.id} className="text-xs">
+                        {m.id === user?.id ? `${m.fullName} (You)` : m.fullName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }
