@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next';
 
 type Discipline = Database['public']['Enums']['discipline'];
 type Intensity = Database['public']['Enums']['intensity_level'];
+type AppRole = Database['public']['Enums']['app_role'];
 
 const disciplineOptions: { value: Discipline; label: string }[] = [
   { value: 'run', label: 'Run' },
