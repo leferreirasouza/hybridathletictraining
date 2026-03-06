@@ -228,8 +228,12 @@ function CurrentPlansTab() {
 
 export default function PlanBuilder() {
   const { t } = useTranslation();
-  const { user, currentOrg, effectiveRole } = useAuth();
-  const isCoach = effectiveRole === 'coach' || effectiveRole === 'admin' || effectiveRole === 'master_admin';
+  const { user, currentOrg, currentRole } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const canManagePlans = !!currentRole && ['coach', 'admin', 'master_admin'].includes(currentRole);
+  const requestedTab = searchParams.get('tab');
+  const managerTab = requestedTab === 'plans' || requestedTab === 'build' || requestedTab === 'import' ? requestedTab : 'plans';
+  const showAthleteImport = !canManagePlans && requestedTab === 'import';
 
   const [planName, setPlanName] = useState('');
   const [weekCount, setWeekCount] = useState(1);
@@ -237,6 +241,57 @@ export default function PlanBuilder() {
   const [sessionsByWeek, setSessionsByWeek] = useState<Record<number, SessionRow[]>>({ 1: [emptyRow()] });
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [selectedAthleteId, setSelectedAthleteId] = useState('');
+
+  const { data: assigneeOptions = [] } = useQuery({
+    queryKey: ['plan-builder-assignees', currentOrg?.id, user?.id],
+    queryFn: async () => {
+      if (!currentOrg || !user) return [] as AssigneeOption[];
+
+      const { data: roleRows, error } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .eq('organization_id', currentOrg.id);
+
+      if (error) throw error;
+
+      const roleByUser = new Map<string, AppRole>();
+      (roleRows || []).forEach((row) => {
+        const existing = roleByUser.get(row.user_id as string);
+        const nextRole = row.role as AppRole;
+        if (!existing || rolePriority[nextRole] < rolePriority[existing]) {
+          roleByUser.set(row.user_id as string, nextRole);
+        }
+      });
+
+      if (!roleByUser.has(user.id)) {
+        roleByUser.set(user.id, (currentRole as AppRole) || 'coach');
+      }
+
+      const userIds = [...roleByUser.keys()];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+
+      const profileMap = new Map((profiles || []).map((profile) => [profile.id, profile.full_name]));
+
+      return userIds
+        .map((id) => ({
+          id,
+          fullName: profileMap.get(id) || (id === user.id ? 'You' : 'Unknown'),
+          role: roleByUser.get(id) || 'athlete',
+        }))
+        .sort((a, b) => {
+          if (a.id === user.id) return -1;
+          if (b.id === user.id) return 1;
+          return a.fullName.localeCompare(b.fullName);
+        });
+    },
+    enabled: !!canManagePlans && !!currentOrg?.id && !!user?.id,
+  });
+
+  const targetAthleteId = selectedAthleteId || user?.id || '';
 
   const sessions = sessionsByWeek[currentWeek] || [];
   const setSessions = (updater: (prev: SessionRow[]) => SessionRow[]) => {
