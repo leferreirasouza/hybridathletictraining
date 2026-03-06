@@ -87,13 +87,13 @@ export default function Analytics() {
 
   const { weeklyData, disciplineBreakdown, totals, rpeData, stackedDisciplineData, activeDisciplines, hrZoneDistribution, hrZoneTrend } = useMemo(() => {
     if (!completedSessions?.length)
-      return { weeklyData: [], disciplineBreakdown: [], totals: { sessions: 0, duration: 0, distance: 0, avgRpe: 0 }, rpeData: [], stackedDisciplineData: [], activeDisciplines: [], hrZoneDistribution: [], hrZoneTrend: [] };
+      return { weeklyData: [], disciplineBreakdown: [], totals: { sessions: 0, duration: 0, runDistance: 0, bikeDistance: 0, avgRpe: 0 }, rpeData: [], stackedDisciplineData: [], activeDisciplines: [], hrZoneDistribution: [], hrZoneTrend: [] };
 
-    const weekMap = new Map<string, { week: string; duration: number; distance: number; sessions: number; rpeSum: number; rpeCount: number }>();
+    const weekMap = new Map<string, { week: string; duration: number; distance: number; runDistance: number; bikeDistance: number; sessions: number; rpeSum: number; rpeCount: number }>();
     const discMap = new Map<string, { discipline: string; duration: number; distance: number; sessions: number }>();
     const stackedMap = new Map<string, Record<string, string | number>>();
     const allDiscs = new Set<string>();
-    let totalDuration = 0, totalDistance = 0, totalRpe = 0, rpeCount = 0;
+    let totalDuration = 0, totalRunDistance = 0, totalBikeDistance = 0, totalRpe = 0, rpeCount = 0;
 
     // HR zone tracking
     const zoneCounts = [0, 0, 0, 0, 0];
@@ -107,9 +107,11 @@ export default function Analytics() {
       const dur = Number(s.actual_duration_min) || 0;
       const dist = Number(s.actual_distance_km) || 0;
 
-      const existing = weekMap.get(weekKey) || { week: weekKey, duration: 0, distance: 0, sessions: 0, rpeSum: 0, rpeCount: 0 };
+      const existing = weekMap.get(weekKey) || { week: weekKey, duration: 0, distance: 0, runDistance: 0, bikeDistance: 0, sessions: 0, rpeSum: 0, rpeCount: 0 };
       existing.duration += dur;
       existing.distance += dist;
+      if (s.discipline === 'run') existing.runDistance += dist;
+      if (s.discipline === 'bike') existing.bikeDistance += dist;
       existing.sessions += 1;
       if (s.rpe) { existing.rpeSum += s.rpe; existing.rpeCount += 1; }
       weekMap.set(weekKey, existing);
@@ -135,7 +137,8 @@ export default function Analytics() {
       }
 
       totalDuration += dur;
-      totalDistance += dist;
+      if (s.discipline === 'run') totalRunDistance += dist;
+      if (s.discipline === 'bike') totalBikeDistance += dist;
       if (s.rpe) { totalRpe += s.rpe; rpeCount += 1; }
     }
 
@@ -166,7 +169,8 @@ export default function Analytics() {
       totals: {
         sessions: completedSessions.length,
         duration: totalDuration,
-        distance: totalDistance,
+        runDistance: totalRunDistance,
+        bikeDistance: totalBikeDistance,
         avgRpe: rpeCount > 0 ? totalRpe / rpeCount : 0,
       },
       rpeData,
@@ -194,11 +198,12 @@ export default function Analytics() {
         </motion.div>
 
         {/* Summary cards */}
-        <motion.div variants={item} className="grid grid-cols-2 gap-3">
+        <motion.div variants={item} className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {[
             { label: 'Total Sessions', value: totals.sessions, icon: TrendingUp },
             { label: 'Total Duration', value: `${Math.round(totals.duration)} min`, icon: Clock },
-            { label: 'Total Distance', value: `${totals.distance.toFixed(1)} km`, icon: MapPin },
+            { label: 'Run Distance', value: `${totals.runDistance.toFixed(1)} km`, icon: MapPin },
+            { label: 'Bike Distance', value: `${totals.bikeDistance.toFixed(1)} km`, icon: MapPin },
             { label: 'Avg RPE', value: totals.avgRpe > 0 ? totals.avgRpe.toFixed(1) : '—', icon: Flame },
           ].map(stat => (
             <Card key={stat.label} className="glass">
@@ -230,26 +235,31 @@ export default function Analytics() {
               </CardHeader>
               <CardContent className="pb-3">
                 <ResponsiveContainer width="100%" height={180}>
-                  <AreaChart data={weeklyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(15, 100%, 55%)" stopOpacity={0.3} />
-                        <stop offset="100%" stopColor="hsl(15, 100%, 55%)" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="week" tick={{ fontSize: 10 }} className="fill-muted-foreground" />
-                    <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" />
-                    <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: 'hsl(var(--foreground))' }} />
-                    <Area
-                      type="monotone"
-                      dataKey={volumeMetric}
-                      stroke="hsl(15, 100%, 55%)"
-                      fill="url(#volGrad)"
-                      strokeWidth={2}
-                      name={volumeMetric === 'duration' ? 'Duration (min)' : 'Distance (km)'}
-                    />
-                  </AreaChart>
+                  {volumeMetric === 'duration' ? (
+                    <AreaChart data={weeklyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(15, 100%, 55%)" stopOpacity={0.3} />
+                          <stop offset="100%" stopColor="hsl(15, 100%, 55%)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="week" tick={{ fontSize: 10 }} className="fill-muted-foreground" />
+                      <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" />
+                      <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: 'hsl(var(--foreground))' }} />
+                      <Area type="monotone" dataKey="duration" stroke="hsl(15, 100%, 55%)" fill="url(#volGrad)" strokeWidth={2} name="Duration (min)" />
+                    </AreaChart>
+                  ) : (
+                    <BarChart data={weeklyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="week" tick={{ fontSize: 10 }} className="fill-muted-foreground" />
+                      <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" />
+                      <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: 'hsl(var(--foreground))' }} formatter={(v: number) => [`${v.toFixed(1)} km`]} />
+                      <Legend wrapperStyle={{ fontSize: 10 }} />
+                      <Bar dataKey="runDistance" name="Run (km)" fill="hsl(217, 91%, 60%)" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="bikeDistance" name="Bike (km)" fill="hsl(160, 84%, 39%)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  )}
                 </ResponsiveContainer>
               </CardContent>
             </Card>

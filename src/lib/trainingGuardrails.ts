@@ -53,6 +53,9 @@ export const GUARDRAILS = {
   // Running disciplines
   RUN_DISCIPLINES: ['run'] as string[],
 
+  // Cycling disciplines
+  BIKE_DISCIPLINES: ['bike'] as string[],
+
   // Strength disciplines
   STRENGTH_DISCIPLINES: ['strength', 'accessories', 'prehab'] as string[],
 } as const;
@@ -63,6 +66,7 @@ export interface WeeklyLoadMetrics {
   weekNumber: number;
   totalSessions: number;
   totalRunKm: number;
+  totalBikeKm: number;
   totalDurationMin: number;
   highIntensitySessions: number;
   strengthSessions: number;
@@ -99,6 +103,9 @@ export function analyzeWeeklyLoad(
   const totalRunKm = weekSessions
     .filter(s => GUARDRAILS.RUN_DISCIPLINES.includes(s.discipline))
     .reduce((sum, s) => sum + (Number(s.distance_km) || 0), 0);
+  const totalBikeKm = weekSessions
+    .filter(s => GUARDRAILS.BIKE_DISCIPLINES.includes(s.discipline))
+    .reduce((sum, s) => sum + (Number(s.distance_km) || 0), 0);
   const totalDurationMin = weekSessions.reduce((sum, s) => sum + (Number(s.duration_min) || 0), 0);
   const highIntensitySessions = weekSessions.filter(s =>
     GUARDRAILS.HIGH_INTENSITY_LEVELS.includes(s.intensity || '')
@@ -125,7 +132,7 @@ export function analyzeWeeklyLoad(
   const hardPct = 100 - easyPct;
 
   const metrics: WeeklyLoadMetrics = {
-    weekNumber, totalSessions, totalRunKm, totalDurationMin,
+    weekNumber, totalSessions, totalRunKm, totalBikeKm, totalDurationMin,
     highIntensitySessions, strengthSessions, consecutiveTrainingDays: maxConsecutive,
     easyPct, hardPct,
   };
@@ -206,7 +213,7 @@ export function buildGuardrailPromptSection(
 
   for (const w of weeks) {
     const { metrics } = analyzeWeeklyLoad(existingSessions, w, experience);
-    lines.push(`Week ${w}: ${metrics.totalSessions} sessions, ${metrics.totalRunKm.toFixed(1)}km running, ${Math.round(metrics.totalDurationMin)}min total, ${metrics.highIntensitySessions} high-intensity, ${metrics.strengthSessions} strength`);
+    lines.push(`Week ${w}: ${metrics.totalSessions} sessions, ${metrics.totalRunKm.toFixed(1)}km running, ${metrics.totalBikeKm.toFixed(1)}km cycling, ${Math.round(metrics.totalDurationMin)}min total, ${metrics.highIntensitySessions} high-intensity, ${metrics.strengthSessions} strength`);
   }
 
   const exp = experience || 'intermediate';
