@@ -28,9 +28,10 @@ const item = {
 
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
-  const { user } = useAuth();
+  const { user, currentRole } = useAuth();
   const navigate = useNavigate();
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || t('roles.athlete');
+  const isCoachOrAdmin = currentRole && ['master_admin', 'admin', 'coach'].includes(currentRole);
 
   const { sessions: plannedSessions, completedSessions: completedPlanned, targets, maxWeek, noPlan } = useScheduleData();
 
