@@ -137,7 +137,8 @@ export default function Analytics() {
       }
 
       totalDuration += dur;
-      totalDistance += dist;
+      if (s.discipline === 'run') totalRunDistance += dist;
+      if (s.discipline === 'bike') totalBikeDistance += dist;
       if (s.rpe) { totalRpe += s.rpe; rpeCount += 1; }
     }
 
