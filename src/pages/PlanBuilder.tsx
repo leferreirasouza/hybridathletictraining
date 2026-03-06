@@ -15,6 +15,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import type { Database } from '@/integrations/supabase/types';
 import ExcelJS from 'exceljs';
 import AthletePlanForm from '@/components/AthletePlanForm';
