@@ -66,6 +66,12 @@ interface SessionRow {
   notes: string;
 }
 
+interface AssigneeOption {
+  id: string;
+  fullName: string;
+  role: AppRole;
+}
+
 const emptyRow = (): SessionRow => ({
   id: crypto.randomUUID(),
   day: 1,
