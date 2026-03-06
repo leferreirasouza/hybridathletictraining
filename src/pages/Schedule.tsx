@@ -27,6 +27,8 @@ function getDefaultCalendarProvider(): CalendarProvider | null {
 export default function Schedule() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { effectiveRole } = useAuth();
+  const isCoachOrAdmin = effectiveRole && ['master_admin', 'admin', 'coach'].includes(effectiveRole);
   const {
     plans, activePlanId, setSelectedPlanId, isAllPlans,
     sessions, weeklySummaries, targets, completedSessions,
