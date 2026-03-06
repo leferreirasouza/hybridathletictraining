@@ -66,6 +66,7 @@ export interface WeeklyLoadMetrics {
   weekNumber: number;
   totalSessions: number;
   totalRunKm: number;
+  totalBikeKm: number;
   totalDurationMin: number;
   highIntensitySessions: number;
   strengthSessions: number;
