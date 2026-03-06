@@ -87,13 +87,13 @@ export default function Analytics() {
 
   const { weeklyData, disciplineBreakdown, totals, rpeData, stackedDisciplineData, activeDisciplines, hrZoneDistribution, hrZoneTrend } = useMemo(() => {
     if (!completedSessions?.length)
-      return { weeklyData: [], disciplineBreakdown: [], totals: { sessions: 0, duration: 0, distance: 0, avgRpe: 0 }, rpeData: [], stackedDisciplineData: [], activeDisciplines: [], hrZoneDistribution: [], hrZoneTrend: [] };
+      return { weeklyData: [], disciplineBreakdown: [], totals: { sessions: 0, duration: 0, runDistance: 0, bikeDistance: 0, avgRpe: 0 }, rpeData: [], stackedDisciplineData: [], activeDisciplines: [], hrZoneDistribution: [], hrZoneTrend: [] };
 
-    const weekMap = new Map<string, { week: string; duration: number; distance: number; sessions: number; rpeSum: number; rpeCount: number }>();
+    const weekMap = new Map<string, { week: string; duration: number; distance: number; runDistance: number; bikeDistance: number; sessions: number; rpeSum: number; rpeCount: number }>();
     const discMap = new Map<string, { discipline: string; duration: number; distance: number; sessions: number }>();
     const stackedMap = new Map<string, Record<string, string | number>>();
     const allDiscs = new Set<string>();
-    let totalDuration = 0, totalDistance = 0, totalRpe = 0, rpeCount = 0;
+    let totalDuration = 0, totalRunDistance = 0, totalBikeDistance = 0, totalRpe = 0, rpeCount = 0;
 
     // HR zone tracking
     const zoneCounts = [0, 0, 0, 0, 0];
