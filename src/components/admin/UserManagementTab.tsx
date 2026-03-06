@@ -42,7 +42,7 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
   const [roleFilter, setRoleFilter] = useState<string>('all');
 
   const assignableRoles: AppRole[] = isMasterAdmin
-    ? ['admin', 'coach', 'athlete']
+    ? ['master_admin', 'admin', 'coach', 'athlete']
     : ['coach', 'athlete'];
 
   useEffect(() => {

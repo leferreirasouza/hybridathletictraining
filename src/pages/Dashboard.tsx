@@ -28,10 +28,11 @@ const item = {
 
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
-  const { user, currentRole } = useAuth();
+  const { user, currentRole, effectiveRole } = useAuth();
   const navigate = useNavigate();
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || t('roles.athlete');
-  const isCoachOrAdmin = currentRole && ['master_admin', 'admin', 'coach'].includes(currentRole);
+  const isCoachOrAdmin = effectiveRole && ['master_admin', 'admin', 'coach'].includes(effectiveRole);
+  const [showAthletePlans, setShowAthletePlans] = useState(true);
 
   const { sessions: plannedSessions, completedSessions: completedPlanned, targets, maxWeek, noPlan } = useScheduleData();
 
