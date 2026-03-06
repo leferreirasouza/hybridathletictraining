@@ -60,10 +60,11 @@ export function useScheduleData() {
           .filter((session) => !session.athlete_id || session.athlete_id === user.id)
           .map((session) => session.plan_version_id),
       );
+      const versionIdsWithSessions = new Set((planSessions || []).map((session) => session.plan_version_id));
 
       const visiblePlanIds = new Set<string>();
       latestVersionByPlan.forEach((versionId, planId) => {
-        if (visibleVersionIds.has(versionId)) {
+        if (!versionIdsWithSessions.has(versionId) || visibleVersionIds.has(versionId)) {
           visiblePlanIds.add(planId);
         }
       });
