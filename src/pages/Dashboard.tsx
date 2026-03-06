@@ -136,7 +136,7 @@ export default function Dashboard() {
         </div>
 
         {/* Plan Completion */}
-        {!noPlan && planStats.totalPlanned > 0 && (
+        {showAthletePlans && !noPlan && planStats.totalPlanned > 0 && (
           <motion.div variants={item}>
             <Card className="glass">
               <CardContent className="p-4 space-y-2">
@@ -157,13 +157,14 @@ export default function Dashboard() {
           </motion.div>
         )}
 
-        {noPlan && (
+        {showAthletePlans && noPlan && (
           <motion.div variants={item}>
             <FirstPlanCTA />
           </motion.div>
         )}
 
         {/* Desktop: Today's Training + Week Overview / Stats side-by-side */}
+        {showAthletePlans && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Today's Sessions — takes 2 cols on large screens */}
           <motion.div variants={item} className="lg:col-span-2">
@@ -310,6 +311,7 @@ export default function Dashboard() {
             </motion.div>
           </div>
         </div>
+        )}
 
         {/* Bottom CTAs — side by side on desktop */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
