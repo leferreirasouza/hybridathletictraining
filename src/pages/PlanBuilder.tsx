@@ -45,7 +45,13 @@ const intensityOptions: { value: Intensity; label: string }[] = [
   { value: 'hard', label: 'Hard' },
   { value: 'race_pace', label: 'Race Pace' },
   { value: 'max_effort', label: 'Max Effort' },
-];
+
+const rolePriority: Record<AppRole, number> = {
+  master_admin: 0,
+  admin: 1,
+  coach: 2,
+  athlete: 3,
+};
 
 interface SessionRow {
   id: string;
