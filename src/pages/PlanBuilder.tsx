@@ -450,7 +450,7 @@ export default function PlanBuilder() {
         <h1 className="text-xl font-display font-bold">{t('planBuilder.title')}</h1>
       </div>
 
-      <Tabs defaultValue="plans">
+      <Tabs value={managerTab} onValueChange={(value) => { const next = new URLSearchParams(searchParams); next.set('tab', value); setSearchParams(next, { replace: true }); }}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="plans" className="gap-1.5"><List className="h-3.5 w-3.5" /> Current Plans</TabsTrigger>
           <TabsTrigger value="build">{t('planBuilder.buildFromScratch')}</TabsTrigger>
