@@ -132,7 +132,7 @@ export function analyzeWeeklyLoad(
   const hardPct = 100 - easyPct;
 
   const metrics: WeeklyLoadMetrics = {
-    weekNumber, totalSessions, totalRunKm, totalDurationMin,
+    weekNumber, totalSessions, totalRunKm, totalBikeKm, totalDurationMin,
     highIntensitySessions, strengthSessions, consecutiveTrainingDays: maxConsecutive,
     easyPct, hardPct,
   };
