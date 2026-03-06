@@ -109,7 +109,15 @@ export default function Schedule() {
         </div>
       </div>
 
-      {noPlan ? (
+      {!showAthletePlans && isCoachOrAdmin ? (
+        <Card className="glass border-border">
+          <CardContent className="p-8 text-center space-y-3">
+            <EyeOff className="h-10 w-10 mx-auto text-muted-foreground" />
+            <p className="font-display font-bold">Personal plans hidden</p>
+            <p className="text-sm text-muted-foreground">Toggle "Show My Plans" to view your athlete schedule.</p>
+          </CardContent>
+        </Card>
+      ) : noPlan ? (
         <Card className="glass border-primary/20 overflow-hidden">
           <div className="h-1 gradient-hyrox" />
           <CardContent className="p-8 text-center space-y-3">
