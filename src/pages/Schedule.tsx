@@ -3,10 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Calendar, Loader2, CalendarPlus, Download } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Loader2, CalendarPlus, Download, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useScheduleData } from '@/hooks/useScheduleData';
+import { useAuth } from '@/contexts/AuthContext';
 import WeeklyView from '@/components/schedule/WeeklyView';
 import MonthlyView from '@/components/schedule/MonthlyView';
 import DailyView from '@/components/schedule/DailyView';
@@ -26,6 +27,8 @@ function getDefaultCalendarProvider(): CalendarProvider | null {
 export default function Schedule() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { effectiveRole } = useAuth();
+  const isCoachOrAdmin = effectiveRole && ['master_admin', 'admin', 'coach'].includes(effectiveRole);
   const {
     plans, activePlanId, setSelectedPlanId, isAllPlans,
     sessions, weeklySummaries, targets, completedSessions,
@@ -36,6 +39,7 @@ export default function Schedule() {
   const [selectedDay, setSelectedDay] = useState(1);
   const [view, setView] = useState<'day' | 'week' | 'month'>('week');
   const [hiddenPlanIds, setHiddenPlanIds] = useState<Set<string>>(new Set());
+  const [showAthletePlans, setShowAthletePlans] = useState(true);
   const defaultProvider = getDefaultCalendarProvider();
 
   const togglePlanVisibility = (planId: string) => {
@@ -72,6 +76,17 @@ export default function Schedule() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-display font-bold">{t('schedule.title')}</h1>
         <div className="flex items-center gap-2">
+          {isCoachOrAdmin && (
+            <Button
+              variant={showAthletePlans ? 'ghost' : 'secondary'}
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => setShowAthletePlans(prev => !prev)}
+            >
+              {showAthletePlans ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              {showAthletePlans ? 'Hide My Plans' : 'Show My Plans'}
+            </Button>
+          )}
           {targets.length > 0 && <TargetsPanel targets={targets} />}
           {plans && plans.length > 1 && (
             <Select value={isAllPlans ? 'all' : activePlanId} onValueChange={setSelectedPlanId}>
@@ -94,7 +109,15 @@ export default function Schedule() {
         </div>
       </div>
 
-      {noPlan ? (
+      {!showAthletePlans && isCoachOrAdmin ? (
+        <Card className="glass border-border">
+          <CardContent className="p-8 text-center space-y-3">
+            <EyeOff className="h-10 w-10 mx-auto text-muted-foreground" />
+            <p className="font-display font-bold">Personal plans hidden</p>
+            <p className="text-sm text-muted-foreground">Toggle "Show My Plans" to view your athlete schedule.</p>
+          </CardContent>
+        </Card>
+      ) : noPlan ? (
         <Card className="glass border-primary/20 overflow-hidden">
           <div className="h-1 gradient-hyrox" />
           <CardContent className="p-8 text-center space-y-3">
