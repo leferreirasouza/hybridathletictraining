@@ -198,7 +198,7 @@ export default function Analytics() {
         </motion.div>
 
         {/* Summary cards */}
-        <motion.div variants={item} className="grid grid-cols-2 gap-3">
+        <motion.div variants={item} className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {[
             { label: 'Total Sessions', value: totals.sessions, icon: TrendingUp },
             { label: 'Total Duration', value: `${Math.round(totals.duration)} min`, icon: Clock },
