@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Calendar, Dumbbell, Clock, Target, TrendingUp, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { Calendar, Dumbbell, Clock, Target, TrendingUp, ChevronRight, CheckCircle2, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -28,9 +28,10 @@ const item = {
 
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
-  const { user } = useAuth();
+  const { user, currentRole } = useAuth();
   const navigate = useNavigate();
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || t('roles.athlete');
+  const isCoachOrAdmin = currentRole && ['master_admin', 'admin', 'coach'].includes(currentRole);
 
   const { sessions: plannedSessions, completedSessions: completedPlanned, targets, maxWeek, noPlan } = useScheduleData();
 
@@ -98,6 +99,18 @@ export default function Dashboard() {
           <h1 className="text-2xl font-display font-bold mt-1">
             {t('dashboard.hey', { name: firstName })}
           </h1>
+          {isCoachOrAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 gap-1.5"
+              onClick={() => navigate('/athletes')}
+            >
+              <Users className="h-3.5 w-3.5" />
+              Coach Dashboard
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </motion.div>
 
         {/* Desktop: two-column layout for top cards */}
