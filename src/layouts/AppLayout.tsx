@@ -37,6 +37,7 @@ export default function AppLayout() {
       { path: '/schedule', icon: Calendar, label: t('nav.plan') },
       { path: '/log', icon: Dumbbell, label: t('nav.log') },
       { path: '/plan-history', icon: History, label: 'History' },
+      { path: '/mileage', icon: MapPin, label: 'Mileage' },
       { path: '/profile', icon: User, label: t('nav.profile') },
     ],
     coach: [
@@ -45,6 +46,7 @@ export default function AppLayout() {
       { path: '/exercises', icon: BookOpen, label: t('nav.library') },
       { path: '/plans', icon: Calendar, label: t('nav.plans') },
       { path: '/plan-history', icon: History, label: 'History' },
+      { path: '/mileage', icon: MapPin, label: 'Mileage' },
       { path: '/profile', icon: User, label: t('nav.profile') },
     ],
     admin: [
@@ -52,6 +54,7 @@ export default function AppLayout() {
       { path: '/admin', icon: Shield, label: t('nav.manage') },
       { path: '/athletes', icon: User, label: t('nav.athletes') },
       { path: '/messages', icon: Mail, label: t('nav.chat') },
+      { path: '/mileage', icon: MapPin, label: 'Mileage' },
       { path: '/profile', icon: User, label: t('nav.profile') },
     ],
     master_admin: [
@@ -59,6 +62,7 @@ export default function AppLayout() {
       { path: '/admin', icon: Shield, label: t('nav.admin') },
       { path: '/messages', icon: Mail, label: t('nav.chat') },
       { path: '/plans', icon: Calendar, label: t('nav.plans') },
+      { path: '/mileage', icon: MapPin, label: 'Mileage' },
       { path: '/profile', icon: User, label: t('nav.profile') },
     ],
   };
