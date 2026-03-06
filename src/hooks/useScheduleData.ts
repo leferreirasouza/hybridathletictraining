@@ -17,18 +17,60 @@ export function useScheduleData() {
   const [selectedPlanId, setSelectedPlanId] = useState<string>('');
 
   const { data: plans, isLoading: plansLoading } = useQuery({
-    queryKey: ['org-plans', currentOrg?.id],
+    queryKey: ['org-plans', currentOrg?.id, user?.id],
     queryFn: async () => {
-      if (!currentOrg) return [];
-      const { data, error } = await supabase
+      if (!currentOrg || !user) return [];
+
+      const { data: orgPlans, error } = await supabase
         .from('training_plans')
         .select('id, name, created_at, source, archived_at')
         .eq('organization_id', currentOrg.id)
         .is('archived_at', null)
         .order('created_at', { ascending: false });
-      return error ? [] : data || [];
+
+      if (error || !orgPlans?.length) return [];
+
+      const planIds = orgPlans.map((plan) => plan.id);
+      const { data: versions } = await supabase
+        .from('plan_versions')
+        .select('id, plan_id, version_number')
+        .in('plan_id', planIds)
+        .order('plan_id', { ascending: true })
+        .order('version_number', { ascending: false });
+
+      const latestVersionByPlan = new Map<string, string>();
+      (versions || []).forEach((version) => {
+        if (!latestVersionByPlan.has(version.plan_id)) {
+          latestVersionByPlan.set(version.plan_id, version.id);
+        }
+      });
+
+      if (latestVersionByPlan.size === 0) {
+        return orgPlans;
+      }
+
+      const latestVersionIds = [...latestVersionByPlan.values()];
+      const { data: planSessions } = await supabase
+        .from('planned_sessions')
+        .select('plan_version_id, athlete_id')
+        .in('plan_version_id', latestVersionIds);
+
+      const visibleVersionIds = new Set(
+        (planSessions || [])
+          .filter((session) => !session.athlete_id || session.athlete_id === user.id)
+          .map((session) => session.plan_version_id),
+      );
+
+      const visiblePlanIds = new Set<string>();
+      latestVersionByPlan.forEach((versionId, planId) => {
+        if (visibleVersionIds.has(versionId)) {
+          visiblePlanIds.add(planId);
+        }
+      });
+
+      return orgPlans.filter((plan) => visiblePlanIds.has(plan.id));
     },
-    enabled: !!currentOrg,
+    enabled: !!currentOrg?.id && !!user?.id,
   });
 
   // Auto-default to 'all' when multiple plans exist
