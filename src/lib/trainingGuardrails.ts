@@ -103,6 +103,9 @@ export function analyzeWeeklyLoad(
   const totalRunKm = weekSessions
     .filter(s => GUARDRAILS.RUN_DISCIPLINES.includes(s.discipline))
     .reduce((sum, s) => sum + (Number(s.distance_km) || 0), 0);
+  const totalBikeKm = weekSessions
+    .filter(s => GUARDRAILS.BIKE_DISCIPLINES.includes(s.discipline))
+    .reduce((sum, s) => sum + (Number(s.distance_km) || 0), 0);
   const totalDurationMin = weekSessions.reduce((sum, s) => sum + (Number(s.duration_min) || 0), 0);
   const highIntensitySessions = weekSessions.filter(s =>
     GUARDRAILS.HIGH_INTENSITY_LEVELS.includes(s.intensity || '')
