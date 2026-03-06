@@ -70,6 +70,7 @@ export default function TrainingLoadBanner({ sessions, weekNumber, experience = 
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
               <MetricRow label="Sessions" value={metrics.totalSessions} />
               <MetricRow label="Run km" value={metrics.totalRunKm.toFixed(1)} />
+              <MetricRow label="Bike km" value={metrics.totalBikeKm.toFixed(1)} />
               <MetricRow label="Duration" value={`${Math.round(metrics.totalDurationMin)}min`} />
               <MetricRow label="High-Int." value={metrics.highIntensitySessions} />
               <MetricRow label="Strength" value={metrics.strengthSessions} />
