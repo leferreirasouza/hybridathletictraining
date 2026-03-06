@@ -53,6 +53,9 @@ export const GUARDRAILS = {
   // Running disciplines
   RUN_DISCIPLINES: ['run'] as string[],
 
+  // Cycling disciplines
+  BIKE_DISCIPLINES: ['bike'] as string[],
+
   // Strength disciplines
   STRENGTH_DISCIPLINES: ['strength', 'accessories', 'prehab'] as string[],
 } as const;
