@@ -179,7 +179,7 @@ export default function CoachDashboard() {
         .eq('coach_id', user.id);
       if (error || !assignments?.length) return [];
 
-      const athleteIds = [...new Set(assignments.map(a => a.athlete_id))];
+      const athleteIds = [...new Set([...(assignments?.map(a => a.athlete_id) || []), user.id])];
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name')
@@ -210,13 +210,16 @@ export default function CoachDashboard() {
         const lastActive = stats?.lastActive
           ? getRelativeTime(new Date(stats.lastActive))
           : 'No activity';
+        const assignment = assignments?.find(a => a.athlete_id === id);
+        const isSelfAthlete = id === user.id;
+
         return {
           id,
-          name: profileMap.get(id) || 'Unknown',
+          name: profileMap.get(id) || (isSelfAthlete ? 'You' : 'Unknown'),
           sessionsThisWeek: stats?.count || 0,
           painFlag: stats?.painFlag || false,
           lastActive,
-          coachType: assignments.find(a => a.athlete_id === id)?.coach_type || 'primary',
+          coachType: assignment?.coach_type || (isSelfAthlete ? 'self' : 'primary'),
         };
       });
     },

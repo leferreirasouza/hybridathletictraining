@@ -232,7 +232,7 @@ export default function Dashboard() {
                 ) : (
                   <div className="flex gap-2">
                     {noPlan ? (
-                      <Button className="flex-1 gradient-hyrox" onClick={() => navigate('/plans')}>
+                      <Button className="flex-1 gradient-hyrox" onClick={() => navigate(canManagePlans ? '/plans?tab=build' : '/plans')}>
                         {t('dashboard.generatePlan')}
                       </Button>
                     ) : (
