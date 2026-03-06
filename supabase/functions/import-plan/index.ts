@@ -117,6 +117,19 @@ serve(async (req) => {
       throw new Error("No sheet data provided");
     }
 
+    if (athleteId) {
+      const { data: athleteMembership, error: athleteMembershipError } = await supabase
+        .from("user_roles")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .eq("user_id", athleteId)
+        .maybeSingle();
+
+      if (athleteMembershipError || !athleteMembership) {
+        throw new Error("Selected athlete is not part of this organization");
+      }
+    }
+
     const errors: { sheet: string; row: number; message: string }[] = [];
 
     // Create training plan
