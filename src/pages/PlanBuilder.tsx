@@ -378,7 +378,7 @@ export default function PlanBuilder() {
         });
         if (Object.keys(sheets).length === 0) throw new Error('No data found in the spreadsheet');
         const { data: result, error } = await supabase.functions.invoke('import-plan', {
-          body: { sheets, organizationId: currentOrg.id, planName: importName },
+          body: { sheets, organizationId: currentOrg.id, planName: importName, athleteId: targetAthleteId },
         });
         if (error) throw error;
         if (result?.error) throw new Error(result.error);
