@@ -1,10 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Calendar, Dumbbell, Clock, Target, TrendingUp, ChevronRight, CheckCircle2, Users } from 'lucide-react';
+import { Calendar, Dumbbell, Clock, Target, TrendingUp, ChevronRight, CheckCircle2, Users, EyeOff, Eye } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -28,10 +28,11 @@ const item = {
 
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
-  const { user, currentRole } = useAuth();
+  const { user, currentRole, effectiveRole } = useAuth();
   const navigate = useNavigate();
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || t('roles.athlete');
-  const isCoachOrAdmin = currentRole && ['master_admin', 'admin', 'coach'].includes(currentRole);
+  const isCoachOrAdmin = effectiveRole && ['master_admin', 'admin', 'coach'].includes(effectiveRole);
+  const [showAthletePlans, setShowAthletePlans] = useState(true);
 
   const { sessions: plannedSessions, completedSessions: completedPlanned, targets, maxWeek, noPlan } = useScheduleData();
 
@@ -100,16 +101,27 @@ export default function Dashboard() {
             {t('dashboard.hey', { name: firstName })}
           </h1>
           {isCoachOrAdmin && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2 gap-1.5"
-              onClick={() => navigate('/athletes')}
-            >
-              <Users className="h-3.5 w-3.5" />
-              Coach Dashboard
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Button>
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => navigate('/athletes')}
+              >
+                <Users className="h-3.5 w-3.5" />
+                Coach Dashboard
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant={showAthletePlans ? 'ghost' : 'secondary'}
+                size="sm"
+                className="gap-1.5 text-xs"
+                onClick={() => setShowAthletePlans(prev => !prev)}
+              >
+                {showAthletePlans ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                {showAthletePlans ? 'Hide My Plans' : 'Show My Plans'}
+              </Button>
+            </div>
           )}
         </motion.div>
 
@@ -124,7 +136,7 @@ export default function Dashboard() {
         </div>
 
         {/* Plan Completion */}
-        {!noPlan && planStats.totalPlanned > 0 && (
+        {showAthletePlans && !noPlan && planStats.totalPlanned > 0 && (
           <motion.div variants={item}>
             <Card className="glass">
               <CardContent className="p-4 space-y-2">
@@ -145,13 +157,14 @@ export default function Dashboard() {
           </motion.div>
         )}
 
-        {noPlan && (
+        {showAthletePlans && noPlan && (
           <motion.div variants={item}>
             <FirstPlanCTA />
           </motion.div>
         )}
 
         {/* Desktop: Today's Training + Week Overview / Stats side-by-side */}
+        {showAthletePlans && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Today's Sessions — takes 2 cols on large screens */}
           <motion.div variants={item} className="lg:col-span-2">
@@ -298,6 +311,7 @@ export default function Dashboard() {
             </motion.div>
           </div>
         </div>
+        )}
 
         {/* Bottom CTAs — side by side on desktop */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
