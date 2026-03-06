@@ -34,6 +34,7 @@ const Settings = lazy(() => import("@/pages/Settings"));
 const ActivityLog = lazy(() => import("@/pages/ActivityLog"));
 const ExerciseLibrary = lazy(() => import("@/pages/ExerciseLibrary"));
 const PlanHistory = lazy(() => import("@/pages/PlanHistory"));
+const MileageHistory = lazy(() => import("@/pages/MileageHistory"));
 
 const queryClient = new QueryClient();
 
@@ -99,6 +100,7 @@ const App = () => (
                 <Route path="activity" element={<ActivityLog />} />
                 <Route path="exercises" element={<ExerciseLibrary />} />
                 <Route path="plan-history" element={<PlanHistory />} />
+                <Route path="mileage" element={<MileageHistory />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

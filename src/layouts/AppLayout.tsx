@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Calendar, Dumbbell, Mail, User, Shield, Eye, Bell, MessageSquare, BookOpen, History } from 'lucide-react';
+import { Home, Calendar, Dumbbell, Mail, User, Shield, Eye, Bell, MessageSquare, BookOpen, History, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useAuth, getAccessibleRoles } from '@/contexts/AuthContext';
@@ -37,6 +37,7 @@ export default function AppLayout() {
       { path: '/schedule', icon: Calendar, label: t('nav.plan') },
       { path: '/log', icon: Dumbbell, label: t('nav.log') },
       { path: '/plan-history', icon: History, label: 'History' },
+      { path: '/mileage', icon: MapPin, label: 'Mileage' },
       { path: '/profile', icon: User, label: t('nav.profile') },
     ],
     coach: [
@@ -45,6 +46,7 @@ export default function AppLayout() {
       { path: '/exercises', icon: BookOpen, label: t('nav.library') },
       { path: '/plans', icon: Calendar, label: t('nav.plans') },
       { path: '/plan-history', icon: History, label: 'History' },
+      { path: '/mileage', icon: MapPin, label: 'Mileage' },
       { path: '/profile', icon: User, label: t('nav.profile') },
     ],
     admin: [
@@ -52,6 +54,7 @@ export default function AppLayout() {
       { path: '/admin', icon: Shield, label: t('nav.manage') },
       { path: '/athletes', icon: User, label: t('nav.athletes') },
       { path: '/messages', icon: Mail, label: t('nav.chat') },
+      { path: '/mileage', icon: MapPin, label: 'Mileage' },
       { path: '/profile', icon: User, label: t('nav.profile') },
     ],
     master_admin: [
@@ -59,6 +62,7 @@ export default function AppLayout() {
       { path: '/admin', icon: Shield, label: t('nav.admin') },
       { path: '/messages', icon: Mail, label: t('nav.chat') },
       { path: '/plans', icon: Calendar, label: t('nav.plans') },
+      { path: '/mileage', icon: MapPin, label: 'Mileage' },
       { path: '/profile', icon: User, label: t('nav.profile') },
     ],
   };
@@ -333,7 +337,7 @@ export default function AppLayout() {
         {/* Mobile bottom nav — hidden on desktop */}
         <nav className="fixed bottom-0 left-0 right-0 z-50 glass border-t safe-bottom lg:hidden">
           <div className="flex items-center justify-around h-16 max-w-lg md:max-w-3xl mx-auto px-2">
-            {tabs.map((tab) => {
+            {tabs.filter(tab => tab.path !== '/mileage').map((tab) => {
               const isActive = location.pathname === tab.path ||
                 (tab.path !== '/dashboard' && location.pathname.startsWith(tab.path));
               const showBadge = tab.path === '/messages' && unreadCount > 0;
