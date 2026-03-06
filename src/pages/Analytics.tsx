@@ -169,7 +169,8 @@ export default function Analytics() {
       totals: {
         sessions: completedSessions.length,
         duration: totalDuration,
-        distance: totalDistance,
+        runDistance: totalRunDistance,
+        bikeDistance: totalBikeDistance,
         avgRpe: rpeCount > 0 ? totalRpe / rpeCount : 0,
       },
       rpeData,
