@@ -39,6 +39,7 @@ export default function Schedule() {
   const [selectedDay, setSelectedDay] = useState(1);
   const [view, setView] = useState<'day' | 'week' | 'month'>('week');
   const [hiddenPlanIds, setHiddenPlanIds] = useState<Set<string>>(new Set());
+  const [showAthletePlans, setShowAthletePlans] = useState(true);
   const defaultProvider = getDefaultCalendarProvider();
 
   const togglePlanVisibility = (planId: string) => {
