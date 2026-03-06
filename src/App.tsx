@@ -100,6 +100,7 @@ const App = () => (
                 <Route path="activity" element={<ActivityLog />} />
                 <Route path="exercises" element={<ExerciseLibrary />} />
                 <Route path="plan-history" element={<PlanHistory />} />
+                <Route path="mileage" element={<MileageHistory />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
