@@ -240,6 +240,7 @@ serve(async (req) => {
 
           sessions.push({
             plan_version_id: version.id,
+            athlete_id: athleteId || null,
             date: parseDate(rawDate),
             week_number: parseInt(String(row[colMap["week"]] || "1")) || 1,
             day_of_week: parseDayOfWeek(rawDay),
