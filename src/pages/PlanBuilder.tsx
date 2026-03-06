@@ -6,11 +6,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Upload, FileSpreadsheet, Trash2, Loader2, CheckCircle2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Plus, Upload, FileSpreadsheet, Trash2, Loader2, CheckCircle2, List, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Database } from '@/integrations/supabase/types';
 import ExcelJS from 'exceljs';
 import AthletePlanForm from '@/components/AthletePlanForm';
@@ -64,6 +68,148 @@ const emptyRow = (): SessionRow => ({
   details: '',
   notes: '',
 });
+
+function CurrentPlansTab() {
+  const { t } = useTranslation();
+  const { currentOrg } = useAuth();
+  const queryClient = useQueryClient();
+
+  const { data: plans, isLoading } = useQuery({
+    queryKey: ['org-plans', currentOrg?.id],
+    queryFn: async () => {
+      if (!currentOrg) return [];
+      const { data, error } = await supabase
+        .from('training_plans')
+        .select('id, name, description, is_template, source, created_at, archived_at, created_by')
+        .eq('organization_id', currentOrg.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      // Fetch session counts per plan
+      const planIds = (data || []).map(p => p.id);
+      if (planIds.length === 0) return [];
+      const { data: versions } = await supabase
+        .from('plan_versions')
+        .select('id, plan_id')
+        .in('plan_id', planIds);
+      const versionMap = new Map<string, string[]>();
+      (versions || []).forEach(v => {
+        const arr = versionMap.get(v.plan_id) || [];
+        arr.push(v.id);
+        versionMap.set(v.plan_id, arr);
+      });
+      return (data || []).map(p => ({
+        ...p,
+        isActive: !p.archived_at,
+        versionCount: versionMap.get(p.id)?.length || 0,
+      }));
+    },
+    enabled: !!currentOrg?.id,
+  });
+
+  const handleToggleArchive = async (planId: string, currentlyActive: boolean) => {
+    const { error } = await supabase
+      .from('training_plans')
+      .update({ archived_at: currentlyActive ? new Date().toISOString() : null })
+      .eq('id', planId);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success(currentlyActive ? 'Plan archived — hidden from athlete dashboard' : 'Plan restored — visible on athlete dashboard');
+      queryClient.invalidateQueries({ queryKey: ['org-plans'] });
+    }
+  };
+
+  const handleDelete = async (planId: string) => {
+    // Delete plan versions, sessions, etc. cascade via FK
+    const { error } = await supabase.from('training_plans').delete().eq('id', planId);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Plan deleted permanently');
+      queryClient.invalidateQueries({ queryKey: ['org-plans'] });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!plans?.length) {
+    return (
+      <Card className="glass">
+        <CardContent className="p-8 text-center">
+          <List className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+          <p className="font-display font-bold">No plans yet</p>
+          <p className="text-sm text-muted-foreground mt-1">Create a plan from scratch or import one from a spreadsheet.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {plans.map(plan => (
+        <Card key={plan.id} className={`glass transition-opacity ${!plan.isActive ? 'opacity-60' : ''}`}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-display font-bold text-sm truncate">{plan.name}</p>
+                  <Badge variant="outline" className="text-[10px] shrink-0 capitalize">{plan.source}</Badge>
+                  {plan.is_template && <Badge variant="secondary" className="text-[10px] shrink-0">Template</Badge>}
+                </div>
+                {plan.description && (
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{plan.description}</p>
+                )}
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Created {new Date(plan.created_at).toLocaleDateString()} · {plan.versionCount} version(s)
+                </p>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-center gap-2">
+                  {plan.isActive ? (
+                    <Eye className="h-3.5 w-3.5 text-success" />
+                  ) : (
+                    <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
+                  )}
+                  <Switch
+                    checked={plan.isActive}
+                    onCheckedChange={() => handleToggleArchive(plan.id, plan.isActive)}
+                  />
+                </div>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete plan permanently?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete "{plan.name}" and all its sessions, versions, and data. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleDelete(plan.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        Delete Forever
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
 
 export default function PlanBuilder() {
   const { t } = useTranslation();
@@ -189,17 +335,18 @@ export default function PlanBuilder() {
     <div className="page-container py-6 space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-display font-bold">{t('planBuilder.title')}</h1>
-        <Button variant="outline" size="sm" onClick={handleImport} disabled={importing}>
-          {importing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
-          {t('dashboard.import')}
-        </Button>
       </div>
 
-      <Tabs defaultValue="build">
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs defaultValue="plans">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="plans" className="gap-1.5"><List className="h-3.5 w-3.5" /> Current Plans</TabsTrigger>
           <TabsTrigger value="build">{t('planBuilder.buildFromScratch')}</TabsTrigger>
           <TabsTrigger value="import">{t('planBuilder.importFile')}</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="plans" className="mt-4">
+          <CurrentPlansTab />
+        </TabsContent>
 
         <TabsContent value="build" className="mt-4 space-y-4">
           <Card className="glass">

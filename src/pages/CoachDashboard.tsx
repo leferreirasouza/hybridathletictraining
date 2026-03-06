@@ -16,13 +16,6 @@ import { Label } from '@/components/ui/label';
 import { useTranslation } from 'react-i18next';
 import AthleteLoadAlertsPanel from '@/components/coach/AthleteLoadAlertsPanel';
 
-const mockAthletes = [
-  { id: '1', name: 'Sarah Mitchell', compliance: 92, sessions: '5/6', flag: false, lastActive: '2h ago' },
-  { id: '2', name: 'James Carter', compliance: 67, sessions: '3/5', flag: true, lastActive: '1d ago' },
-  { id: '3', name: 'Emma Wilson', compliance: 100, sessions: '6/6', flag: false, lastActive: '30m ago' },
-  { id: '4', name: 'Lucas Brown', compliance: 45, sessions: '2/5', flag: false, lastActive: '3d ago' },
-];
-
 const container = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.06 } },
@@ -173,6 +166,66 @@ function SwapRequestsPanel() {
 export default function CoachDashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Fetch real assigned athletes
+  const { data: athletes, isLoading: athletesLoading } = useQuery({
+    queryKey: ['coach-athletes', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data: assignments, error } = await supabase
+        .from('coach_athlete_assignments')
+        .select('athlete_id, coach_type')
+        .eq('coach_id', user.id);
+      if (error || !assignments?.length) return [];
+
+      const athleteIds = [...new Set(assignments.map(a => a.athlete_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', athleteIds);
+
+      const profileMap = new Map((profiles || []).map(p => [p.id, p.full_name]));
+
+      // Fetch recent completed sessions for each athlete (last 7 days)
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const { data: completedSessions } = await supabase
+        .from('completed_sessions')
+        .select('athlete_id, pain_flag, completed_at')
+        .in('athlete_id', athleteIds)
+        .gte('date', weekAgo.toISOString().split('T')[0]);
+
+      const sessionsByAthlete = new Map<string, { count: number; painFlag: boolean; lastActive: string }>();
+      (completedSessions || []).forEach(s => {
+        const existing = sessionsByAthlete.get(s.athlete_id) || { count: 0, painFlag: false, lastActive: s.completed_at };
+        existing.count++;
+        if (s.pain_flag) existing.painFlag = true;
+        if (s.completed_at > existing.lastActive) existing.lastActive = s.completed_at;
+        sessionsByAthlete.set(s.athlete_id, existing);
+      });
+
+      return athleteIds.map(id => {
+        const stats = sessionsByAthlete.get(id);
+        const lastActive = stats?.lastActive
+          ? getRelativeTime(new Date(stats.lastActive))
+          : 'No activity';
+        return {
+          id,
+          name: profileMap.get(id) || 'Unknown',
+          sessionsThisWeek: stats?.count || 0,
+          painFlag: stats?.painFlag || false,
+          lastActive,
+          coachType: assignments.find(a => a.athlete_id === id)?.coach_type || 'primary',
+        };
+      });
+    },
+    enabled: !!user?.id,
+  });
+
+  const totalSessions = athletes?.reduce((sum, a) => sum + a.sessionsThisWeek, 0) || 0;
+  const painFlags = athletes?.filter(a => a.painFlag).length || 0;
+  const athleteCount = athletes?.length || 0;
 
   return (
     <div className="page-container py-6 space-y-5">
@@ -180,9 +233,9 @@ export default function CoachDashboard() {
         <motion.div variants={item} className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-display font-bold">{t('coachDashboard.title')}</h1>
-            <p className="text-sm text-muted-foreground">{t('coachDashboard.athletes', { count: mockAthletes.length })}</p>
+            <p className="text-sm text-muted-foreground">{t('coachDashboard.athletes', { count: athleteCount })}</p>
           </div>
-          <Button size="sm" className="gradient-hyrox">
+          <Button size="sm" className="gradient-hyrox" onClick={() => navigate('/admin')}>
             <Plus className="h-4 w-4 mr-1" /> {t('coachDashboard.invite')}
           </Button>
         </motion.div>
@@ -190,22 +243,22 @@ export default function CoachDashboard() {
         <motion.div variants={item} className="grid grid-cols-3 gap-3">
           <Card className="glass">
             <CardContent className="p-3 text-center">
-              <CheckCircle className="h-4 w-4 mx-auto text-success mb-1" />
-              <p className="text-lg font-display font-bold">76%</p>
-              <p className="text-[10px] text-muted-foreground">{t('coachDashboard.avgCompliance')}</p>
+              <Users className="h-4 w-4 mx-auto text-primary mb-1" />
+              <p className="text-lg font-display font-bold">{athleteCount}</p>
+              <p className="text-[10px] text-muted-foreground">Athletes</p>
             </CardContent>
           </Card>
           <Card className="glass">
             <CardContent className="p-3 text-center">
               <AlertTriangle className="h-4 w-4 mx-auto text-warning mb-1" />
-              <p className="text-lg font-display font-bold">1</p>
+              <p className="text-lg font-display font-bold">{painFlags}</p>
               <p className="text-[10px] text-muted-foreground">{t('coachDashboard.painFlags')}</p>
             </CardContent>
           </Card>
           <Card className="glass">
             <CardContent className="p-3 text-center">
               <TrendingUp className="h-4 w-4 mx-auto text-accent mb-1" />
-              <p className="text-lg font-display font-bold">16</p>
+              <p className="text-lg font-display font-bold">{totalSessions}</p>
               <p className="text-[10px] text-muted-foreground">{t('coachDashboard.sessionsWeek')}</p>
             </CardContent>
           </Card>
@@ -225,32 +278,36 @@ export default function CoachDashboard() {
               </div>
             </CardHeader>
             <CardContent className="space-y-2">
-              {mockAthletes.map(athlete => (
-                <button key={athlete.id} className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors text-left" onClick={() => {}}>
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-9 w-9">
-                      <AvatarFallback className="text-xs bg-secondary">
-                        {athlete.name.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{athlete.name}</span>
-                        {athlete.flag && <AlertTriangle className="h-3 w-3 text-destructive" />}
+              {athletesLoading ? (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : !athletes?.length ? (
+                <p className="text-center text-sm text-muted-foreground py-6">
+                  No athletes assigned yet. Assign yourself or athletes via the Admin Panel.
+                </p>
+              ) : (
+                athletes.map(athlete => (
+                  <button key={athlete.id} className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors text-left" onClick={() => {}}>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9">
+                        <AvatarFallback className="text-xs bg-secondary">
+                          {athlete.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{athlete.name}</span>
+                          {athlete.painFlag && <AlertTriangle className="h-3 w-3 text-destructive" />}
+                          <Badge variant="outline" className="text-[9px] capitalize">{athlete.coachType}</Badge>
+                        </div>
+                        <span className="text-xs text-muted-foreground">{athlete.sessionsThisWeek} sessions · {athlete.lastActive}</span>
                       </div>
-                      <span className="text-xs text-muted-foreground">{athlete.sessions} sessions · {athlete.lastActive}</span>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className={`text-xs ${
-                      athlete.compliance >= 80 ? 'bg-success/10 text-success' :
-                      athlete.compliance >= 60 ? 'bg-warning/10 text-warning' :
-                      'bg-destructive/10 text-destructive'
-                    }`}>{athlete.compliance}%</Badge>
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </button>
-              ))}
+                  </button>
+                ))
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -290,4 +347,15 @@ export default function CoachDashboard() {
       </motion.div>
     </div>
   );
+}
+
+function getRelativeTime(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDays = Math.floor(diffHr / 24);
+  return `${diffDays}d ago`;
 }
