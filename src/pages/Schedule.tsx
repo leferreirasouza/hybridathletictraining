@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Calendar, Loader2, CalendarPlus, Download, E
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useScheduleData } from '@/hooks/useScheduleData';
+import { useAuth } from '@/contexts/AuthContext';
 import WeeklyView from '@/components/schedule/WeeklyView';
 import MonthlyView from '@/components/schedule/MonthlyView';
 import DailyView from '@/components/schedule/DailyView';
