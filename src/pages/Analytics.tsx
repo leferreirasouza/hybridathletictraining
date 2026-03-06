@@ -202,7 +202,8 @@ export default function Analytics() {
           {[
             { label: 'Total Sessions', value: totals.sessions, icon: TrendingUp },
             { label: 'Total Duration', value: `${Math.round(totals.duration)} min`, icon: Clock },
-            { label: 'Total Distance', value: `${totals.distance.toFixed(1)} km`, icon: MapPin },
+            { label: 'Run Distance', value: `${totals.runDistance.toFixed(1)} km`, icon: MapPin },
+            { label: 'Bike Distance', value: `${totals.bikeDistance.toFixed(1)} km`, icon: MapPin },
             { label: 'Avg RPE', value: totals.avgRpe > 0 ? totals.avgRpe.toFixed(1) : '—', icon: Flame },
           ].map(stat => (
             <Card key={stat.label} className="glass">
