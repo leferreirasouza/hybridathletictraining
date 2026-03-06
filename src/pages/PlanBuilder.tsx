@@ -464,7 +464,7 @@ export default function PlanBuilder() {
         <TabsContent value="build" className="mt-4 space-y-4">
           <Card className="glass">
             <CardContent className="p-4 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="space-y-2">
                   <Label>{t('planBuilder.planName')}</Label>
                   <Input value={planName} onChange={e => setPlanName(e.target.value)} placeholder="HYROX 12-Week Prep" />
@@ -472,6 +472,21 @@ export default function PlanBuilder() {
                 <div className="space-y-2">
                   <Label>{t('planBuilder.totalWeeks')}</Label>
                   <Input type="number" min={1} max={52} value={weekCount} onChange={e => setWeekCount(Number(e.target.value))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Assign athlete</Label>
+                  <Select value={targetAthleteId} onValueChange={setSelectedAthleteId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select athlete" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assigneeOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          {option.fullName}{option.id === user?.id ? ' (You)' : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="flex items-center gap-2 overflow-x-auto py-1">
