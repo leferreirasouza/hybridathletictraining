@@ -32,6 +32,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || t('roles.athlete');
   const isCoachOrAdmin = effectiveRole && ['master_admin', 'admin', 'coach'].includes(effectiveRole);
+  const canManagePlans = !!currentRole && ['master_admin', 'admin', 'coach'].includes(currentRole);
   const [showAthletePlans, setShowAthletePlans] = useState(true);
 
   const { sessions: plannedSessions, completedSessions: completedPlanned, targets, maxWeek, noPlan } = useScheduleData();
