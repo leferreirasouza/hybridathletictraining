@@ -76,6 +76,17 @@ export default function Schedule() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-display font-bold">{t('schedule.title')}</h1>
         <div className="flex items-center gap-2">
+          {isCoachOrAdmin && (
+            <Button
+              variant={showAthletePlans ? 'ghost' : 'secondary'}
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => setShowAthletePlans(prev => !prev)}
+            >
+              {showAthletePlans ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              {showAthletePlans ? 'Hide My Plans' : 'Show My Plans'}
+            </Button>
+          )}
           {targets.length > 0 && <TargetsPanel targets={targets} />}
           {plans && plans.length > 1 && (
             <Select value={isAllPlans ? 'all' : activePlanId} onValueChange={setSelectedPlanId}>
