@@ -99,7 +99,7 @@ serve(async (req) => {
     if (authError || !user) throw new Error("Unauthorized");
 
     const body = await req.json();
-    const { sheets, organizationId, planName, csvData } = body;
+    const { sheets, organizationId, planName, csvData, athleteId } = body;
 
     if (!organizationId || !planName) {
       throw new Error("Missing required fields: organizationId, planName");
