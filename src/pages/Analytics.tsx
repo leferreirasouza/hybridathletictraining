@@ -235,26 +235,31 @@ export default function Analytics() {
               </CardHeader>
               <CardContent className="pb-3">
                 <ResponsiveContainer width="100%" height={180}>
-                  <AreaChart data={weeklyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(15, 100%, 55%)" stopOpacity={0.3} />
-                        <stop offset="100%" stopColor="hsl(15, 100%, 55%)" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="week" tick={{ fontSize: 10 }} className="fill-muted-foreground" />
-                    <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" />
-                    <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: 'hsl(var(--foreground))' }} />
-                    <Area
-                      type="monotone"
-                      dataKey={volumeMetric}
-                      stroke="hsl(15, 100%, 55%)"
-                      fill="url(#volGrad)"
-                      strokeWidth={2}
-                      name={volumeMetric === 'duration' ? 'Duration (min)' : 'Distance (km)'}
-                    />
-                  </AreaChart>
+                  {volumeMetric === 'duration' ? (
+                    <AreaChart data={weeklyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(15, 100%, 55%)" stopOpacity={0.3} />
+                          <stop offset="100%" stopColor="hsl(15, 100%, 55%)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="week" tick={{ fontSize: 10 }} className="fill-muted-foreground" />
+                      <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" />
+                      <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: 'hsl(var(--foreground))' }} />
+                      <Area type="monotone" dataKey="duration" stroke="hsl(15, 100%, 55%)" fill="url(#volGrad)" strokeWidth={2} name="Duration (min)" />
+                    </AreaChart>
+                  ) : (
+                    <BarChart data={weeklyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="week" tick={{ fontSize: 10 }} className="fill-muted-foreground" />
+                      <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" />
+                      <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: 'hsl(var(--foreground))' }} formatter={(v: number) => [`${v.toFixed(1)} km`]} />
+                      <Legend wrapperStyle={{ fontSize: 10 }} />
+                      <Bar dataKey="runDistance" name="Run (km)" fill="hsl(217, 91%, 60%)" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="bikeDistance" name="Bike (km)" fill="hsl(160, 84%, 39%)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  )}
                 </ResponsiveContainer>
               </CardContent>
             </Card>
