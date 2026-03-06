@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Calendar, Dumbbell, Clock, Target, TrendingUp, ChevronRight, CheckCircle2, Users } from 'lucide-react';
+import { Calendar, Dumbbell, Clock, Target, TrendingUp, ChevronRight, CheckCircle2, Users, EyeOff, Eye } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
