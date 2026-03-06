@@ -314,6 +314,7 @@ export default function PlanBuilder() {
     if (!planName.trim()) { toast.error('Please enter a plan name'); return; }
     if (!user || !currentOrg) { toast.error('No org context'); return; }
     if (!targetAthleteId) { toast.error('Please select an athlete'); return; }
+    if (!targetAthleteId) { toast.error('Please select an athlete'); return; }
     setSaving(true);
     try {
       const { data: plan, error: planErr } = await supabase
