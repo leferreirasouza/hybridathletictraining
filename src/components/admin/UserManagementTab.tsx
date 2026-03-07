@@ -325,13 +325,13 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
   };
 
   // Filtering
-  const filteredMembers = members.filter((m: any) => {
-    const name = (m.profiles?.full_name ?? '').toLowerCase();
-    const userId = (m.user_id ?? '').toLowerCase();
-    const orgName = (m.organizations?.name ?? '').toLowerCase();
+  const filteredMembers = members.filter((member) => {
+    const name = (member.profiles?.full_name ?? '').toLowerCase();
+    const userId = (member.user_id ?? '').toLowerCase();
+    const orgName = (member.organizations?.name ?? '').toLowerCase();
     const q = searchQuery.toLowerCase();
     const matchesSearch = !q || name.includes(q) || userId.includes(q) || orgName.includes(q);
-    const matchesRole = roleFilter === 'all' || m.role === roleFilter;
+    const matchesRole = roleFilter === 'all' || member.role === roleFilter;
     return matchesSearch && matchesRole;
   });
 
@@ -347,7 +347,8 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
     }
     setBulkActionLoading(false);
     setBulkRoleDialogOpen(false);
-    fetchMembers();
+    await fetchMembers();
+    await fetchAssignments();
   };
 
   const handleBulkRemove = async () => {
@@ -361,7 +362,8 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
       toast.success(`Removed ${ids.length} member(s)`);
     }
     setBulkActionLoading(false);
-    fetchMembers();
+    await fetchMembers();
+    await fetchAssignments();
   };
 
   const hasSelection = selectedIds.size > 0;
