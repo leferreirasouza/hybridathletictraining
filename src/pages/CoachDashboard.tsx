@@ -241,8 +241,8 @@ export default function CoachDashboard() {
             <h1 className="text-xl font-display font-bold">{t('coachDashboard.title')}</h1>
             <p className="text-sm text-muted-foreground">{t('coachDashboard.athletes', { count: athleteCount })}</p>
           </div>
-          <Button size="sm" className="gradient-hyrox" onClick={() => navigate('/admin')}>
-            <Plus className="h-4 w-4 mr-1" /> {t('coachDashboard.invite')}
+          <Button size="sm" className="gradient-hyrox" onClick={() => setAssignDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" /> Assign Athlete
           </Button>
         </motion.div>
 
