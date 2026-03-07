@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useTranslation } from 'react-i18next';
 import AthleteLoadAlertsPanel from '@/components/coach/AthleteLoadAlertsPanel';
+import AssignAthleteDialog from '@/components/coach/AssignAthleteDialog';
 
 const container = {
   hidden: { opacity: 0 },
@@ -167,6 +168,8 @@ export default function CoachDashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
 
   // Fetch real assigned athletes
   const { data: athletes, isLoading: athletesLoading } = useQuery({
@@ -238,8 +241,8 @@ export default function CoachDashboard() {
             <h1 className="text-xl font-display font-bold">{t('coachDashboard.title')}</h1>
             <p className="text-sm text-muted-foreground">{t('coachDashboard.athletes', { count: athleteCount })}</p>
           </div>
-          <Button size="sm" className="gradient-hyrox" onClick={() => navigate('/admin')}>
-            <Plus className="h-4 w-4 mr-1" /> {t('coachDashboard.invite')}
+          <Button size="sm" className="gradient-hyrox" onClick={() => setAssignDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" /> Assign Athlete
           </Button>
         </motion.div>
 
@@ -348,6 +351,13 @@ export default function CoachDashboard() {
           </Card>
         </motion.div>
       </motion.div>
+
+      <AssignAthleteDialog
+        open={assignDialogOpen}
+        onOpenChange={setAssignDialogOpen}
+        onAssigned={() => queryClient.invalidateQueries({ queryKey: ['coach-athletes'] })}
+        existingAthleteIds={athletes?.map(a => a.id) || []}
+      />
     </div>
   );
 }
