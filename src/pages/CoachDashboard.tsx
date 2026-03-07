@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useTranslation } from 'react-i18next';
 import AthleteLoadAlertsPanel from '@/components/coach/AthleteLoadAlertsPanel';
+import AssignAthleteDialog from '@/components/coach/AssignAthleteDialog';
 
 const container = {
   hidden: { opacity: 0 },
