@@ -81,42 +81,184 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
     ? ['master_admin', 'admin', 'coach', 'athlete']
     : ['coach', 'athlete'];
 
-  useEffect(() => {
-    if (isMasterAdmin) {
-      supabase.from('organizations').select('id, name').eq('is_active', true)
-        .then(({ data }) => setOrgs(data ?? []));
-    }
-    fetchMembers();
-  }, [currentOrgId]);
-
   const fetchMembers = async () => {
     setLoadingMembers(true);
-    let query = supabase.from('user_roles')
+    let query = supabase
+      .from('user_roles')
       .select('id, user_id, role, organization_id, organizations(name)');
-    if (!isMasterAdmin && currentOrgId) {
+
+    if (currentOrgId) {
+      query = query.eq('organization_id', currentOrgId);
+    } else if (!isMasterAdmin && currentOrgId) {
       query = query.eq('organization_id', currentOrgId);
     }
-    const { data: rolesData } = await query.order('created_at', { ascending: false }).limit(100);
-    
+
+    const { data: rolesData } = await query.order('created_at', { ascending: false }).limit(200);
+
     if (rolesData && rolesData.length > 0) {
-      // Fetch profiles separately since there's no FK from user_roles to profiles
-      const userIds = [...new Set(rolesData.map(r => r.user_id))];
+      const userIds = [...new Set(rolesData.map((r) => r.user_id))];
       const { data: profilesData } = await supabase
         .from('profiles')
         .select('id, full_name')
         .in('id', userIds);
-      
-      const profileMap = new Map(profilesData?.map(p => [p.id, p]) ?? []);
-      const merged = rolesData.map(r => ({
-        ...r,
+
+      const profileMap = new Map(profilesData?.map((p) => [p.id, p]) ?? []);
+      const merged: MemberRow[] = rolesData.map((r) => ({
+        ...(r as MemberRow),
         profiles: profileMap.get(r.user_id) ?? null,
       }));
       setMembers(merged);
     } else {
       setMembers([]);
     }
+
     setSelectedIds(new Set());
     setLoadingMembers(false);
+  };
+
+  const fetchAssignments = async () => {
+    setLoadingAssignments(true);
+    let query = supabase
+      .from('coach_athlete_assignments')
+      .select('id, coach_id, athlete_id, coach_type, organization_id, created_at')
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    if (currentOrgId) {
+      query = query.eq('organization_id', currentOrgId);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      toast.error(error.message);
+      setAssignments([]);
+    } else {
+      setAssignments((data || []) as AssignmentRow[]);
+    }
+    setLoadingAssignments(false);
+  };
+
+  useEffect(() => {
+    if (isMasterAdmin) {
+      supabase
+        .from('organizations')
+        .select('id, name')
+        .eq('is_active', true)
+        .then(({ data }) => setOrgs(data ?? []));
+    }
+
+    fetchMembers();
+    fetchAssignments();
+  }, [currentOrgId, isMasterAdmin]);
+
+  const memberDirectory = useMemo(() => {
+    const byUserId = new Map<string, { userId: string; fullName: string; role: AppRole }>();
+
+    members.forEach((member) => {
+      const existing = byUserId.get(member.user_id);
+      const nextRole = member.role;
+      const nextName = member.profiles?.full_name || member.user_id;
+
+      if (!existing || rolePriority[nextRole] < rolePriority[existing.role]) {
+        byUserId.set(member.user_id, { userId: member.user_id, fullName: nextName, role: nextRole });
+      }
+    });
+
+    return [...byUserId.values()].sort((a, b) => {
+      if (a.userId === user?.id) return -1;
+      if (b.userId === user?.id) return 1;
+      return a.fullName.localeCompare(b.fullName);
+    });
+  }, [members, user?.id]);
+
+  const coachOptions = memberDirectory.filter((member) =>
+    member.role === 'coach' || member.role === 'admin' || member.role === 'master_admin' || member.userId === user?.id,
+  );
+
+  const athleteOptions = memberDirectory.filter((member) => member.role === 'athlete' || member.userId === user?.id);
+  const athleteSelectionOptions = athleteOptions.length > 0 ? athleteOptions : memberDirectory;
+
+  const memberNameByUserId = useMemo(
+    () => new Map(memberDirectory.map((member) => [member.userId, member.fullName])),
+    [memberDirectory],
+  );
+
+  useEffect(() => {
+    if (!user) return;
+
+    if (!assignmentCoachId || !coachOptions.some((option) => option.userId === assignmentCoachId)) {
+      const selfCoach = coachOptions.find((option) => option.userId === user.id);
+      setAssignmentCoachId(selfCoach?.userId || coachOptions[0]?.userId || '');
+    }
+
+    if (!assignmentAthleteId || !athleteSelectionOptions.some((option) => option.userId === assignmentAthleteId)) {
+      const selfAthlete = athleteSelectionOptions.find((option) => option.userId === user.id);
+      setAssignmentAthleteId(selfAthlete?.userId || athleteSelectionOptions[0]?.userId || '');
+    }
+  }, [user, coachOptions, athleteSelectionOptions, assignmentCoachId, assignmentAthleteId]);
+
+  const handleCreateAssignment = async () => {
+    const targetOrgId = currentOrgId || orgId;
+    if (!targetOrgId) {
+      toast.error('Select an organization first');
+      return;
+    }
+    if (!assignmentCoachId || !assignmentAthleteId) {
+      toast.error('Select both coach and athlete');
+      return;
+    }
+
+    setAssignmentSaving(true);
+    try {
+      const existing = assignments.find(
+        (assignment) =>
+          assignment.organization_id === targetOrgId &&
+          assignment.coach_id === assignmentCoachId &&
+          assignment.athlete_id === assignmentAthleteId,
+      );
+
+      if (existing) {
+        if (existing.coach_type === assignmentCoachType) {
+          toast.message('This coach-athlete assignment already exists');
+          setAssignmentSaving(false);
+          return;
+        }
+
+        const { error } = await supabase
+          .from('coach_athlete_assignments')
+          .update({ coach_type: assignmentCoachType })
+          .eq('id', existing.id);
+        if (error) throw error;
+        toast.success('Assignment updated');
+      } else {
+        const { error } = await supabase.from('coach_athlete_assignments').insert({
+          organization_id: targetOrgId,
+          coach_id: assignmentCoachId,
+          athlete_id: assignmentAthleteId,
+          coach_type: assignmentCoachType,
+        });
+        if (error) throw error;
+
+        const coachName = memberNameByUserId.get(assignmentCoachId) || 'Coach';
+        const athleteName = memberNameByUserId.get(assignmentAthleteId) || 'Athlete';
+        toast.success(`${coachName} assigned to ${athleteName}`);
+      }
+
+      await fetchAssignments();
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to save assignment');
+    }
+    setAssignmentSaving(false);
+  };
+
+  const handleRemoveAssignment = async (assignmentId: string) => {
+    const { error } = await supabase.from('coach_athlete_assignments').delete().eq('id', assignmentId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success('Assignment removed');
+    fetchAssignments();
   };
 
   const handleInvite = async () => {
