@@ -351,6 +351,13 @@ export default function CoachDashboard() {
           </Card>
         </motion.div>
       </motion.div>
+
+      <AssignAthleteDialog
+        open={assignDialogOpen}
+        onOpenChange={setAssignDialogOpen}
+        onAssigned={() => queryClient.invalidateQueries({ queryKey: ['coach-athletes'] })}
+        existingAthleteIds={athletes?.map(a => a.id) || []}
+      />
     </div>
   );
 }
