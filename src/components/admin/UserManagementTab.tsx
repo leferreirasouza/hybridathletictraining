@@ -89,8 +89,6 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
 
     if (currentOrgId) {
       query = query.eq('organization_id', currentOrgId);
-    } else if (!isMasterAdmin && currentOrgId) {
-      query = query.eq('organization_id', currentOrgId);
     }
 
     const { data: rolesData } = await query.order('created_at', { ascending: false }).limit(200);
