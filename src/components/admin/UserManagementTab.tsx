@@ -262,8 +262,15 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
   };
 
   const handleInvite = async () => {
-    if (!email.trim()) { toast.error('Email is required'); return; }
-    if (!orgId) { toast.error('Select an organization'); return; }
+    if (!email.trim()) {
+      toast.error('Email is required');
+      return;
+    }
+    if (!orgId) {
+      toast.error('Select an organization');
+      return;
+    }
+
     setSaving(true);
     try {
       const { error } = await supabase.functions.invoke('invite-user', {
@@ -274,7 +281,7 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
       setDialogOpen(false);
       setEmail('');
       setFullName('');
-      fetchMembers();
+      await fetchMembers();
     } catch (e: any) {
       toast.error(e.message || 'Failed to invite user.');
     }
@@ -284,13 +291,19 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
   const handleChangeRole = async (memberId: string, newRole: AppRole) => {
     const { error } = await supabase.from('user_roles').update({ role: newRole }).eq('id', memberId);
     error ? toast.error(error.message) : toast.success('Role updated');
-    if (!error) fetchMembers();
+    if (!error) {
+      await fetchMembers();
+      await fetchAssignments();
+    }
   };
 
   const handleRemoveMember = async (memberId: string) => {
     const { error } = await supabase.from('user_roles').delete().eq('id', memberId);
     error ? toast.error(error.message) : toast.success('Member removed');
-    if (!error) fetchMembers();
+    if (!error) {
+      await fetchMembers();
+      await fetchAssignments();
+    }
   };
 
   // Bulk actions
