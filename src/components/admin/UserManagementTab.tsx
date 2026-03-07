@@ -49,6 +49,7 @@ const rolePriority: Record<AppRole, number> = {
 };
 
 export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props) {
+  const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
@@ -56,8 +57,15 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
   const [orgId, setOrgId] = useState(currentOrgId ?? '');
   const [orgs, setOrgs] = useState<{ id: string; name: string }[]>([]);
   const [saving, setSaving] = useState(false);
-  const [members, setMembers] = useState<any[]>([]);
+  const [members, setMembers] = useState<MemberRow[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
+
+  const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
+  const [loadingAssignments, setLoadingAssignments] = useState(true);
+  const [assignmentCoachId, setAssignmentCoachId] = useState('');
+  const [assignmentAthleteId, setAssignmentAthleteId] = useState('');
+  const [assignmentCoachType, setAssignmentCoachType] = useState<CoachType>('primary');
+  const [assignmentSaving, setAssignmentSaving] = useState(false);
 
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
