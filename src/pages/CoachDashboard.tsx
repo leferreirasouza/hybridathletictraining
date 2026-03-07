@@ -168,6 +168,8 @@ export default function CoachDashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
 
   // Fetch real assigned athletes
   const { data: athletes, isLoading: athletesLoading } = useQuery({
