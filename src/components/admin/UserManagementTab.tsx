@@ -538,7 +538,7 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredMembers.map((m: any) => (
+              {filteredMembers.map((m) => (
                 <TableRow key={m.id} data-state={selectedIds.has(m.id) ? 'selected' : undefined}>
                   <TableCell>
                     <Checkbox
@@ -555,7 +555,7 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {assignableRoles.map(r => (
+                        {assignableRoles.map((r) => (
                           <SelectItem key={r} value={r} className="capitalize">{r.replace('_', ' ')}</SelectItem>
                         ))}
                       </SelectContent>
@@ -592,6 +592,92 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
             </TableBody>
           </Table>
         )}
+
+        <div className="pt-4 border-t border-border space-y-3">
+          <div>
+            <p className="text-sm font-semibold">Coach assignments</p>
+            <p className="text-xs text-muted-foreground">Assign one coach to a specific athlete, including yourself for self-coaching.</p>
+          </div>
+
+          {!currentOrgId ? (
+            <p className="text-xs text-muted-foreground">Pick an organization first to manage assignments.</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">Coach</Label>
+                  <Select value={assignmentCoachId} onValueChange={setAssignmentCoachId}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Select coach" /></SelectTrigger>
+                    <SelectContent>
+                      {coachOptions.map((option) => (
+                        <SelectItem key={option.userId} value={option.userId}>
+                          {option.fullName}{option.userId === user?.id ? ' (You)' : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">Athlete</Label>
+                  <Select value={assignmentAthleteId} onValueChange={setAssignmentAthleteId}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Select athlete" /></SelectTrigger>
+                    <SelectContent>
+                      {athleteSelectionOptions.map((option) => (
+                        <SelectItem key={option.userId} value={option.userId}>
+                          {option.fullName}{option.userId === user?.id ? ' (You)' : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">Type</Label>
+                  <Select value={assignmentCoachType} onValueChange={(value) => setAssignmentCoachType(value as CoachType)}>
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="primary">Primary</SelectItem>
+                      <SelectItem value="secondary">Secondary</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-end">
+                  <Button className="w-full" onClick={handleCreateAssignment} disabled={assignmentSaving || !coachOptions.length || !athleteSelectionOptions.length}>
+                    {assignmentSaving ? 'Saving...' : 'Save assignment'}
+                  </Button>
+                </div>
+              </div>
+
+              {loadingAssignments ? (
+                <div className="flex justify-center py-4"><div className="h-5 w-5 rounded-md gradient-hyrox animate-pulse" /></div>
+              ) : assignments.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-2">No coach-athlete assignments yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {assignments.map((assignment) => {
+                    const coachName = memberNameByUserId.get(assignment.coach_id) || `${assignment.coach_id.slice(0, 8)}...`;
+                    const athleteName = memberNameByUserId.get(assignment.athlete_id) || `${assignment.athlete_id.slice(0, 8)}...`;
+                    return (
+                      <div key={assignment.id} className="flex items-center justify-between gap-3 p-2 rounded-md border border-border/60 bg-muted/20">
+                        <div className="text-sm min-w-0">
+                          <span className="font-medium">{coachName}</span>
+                          <span className="text-muted-foreground"> → </span>
+                          <span className="font-medium">{athleteName}</span>
+                          <span className="ml-2 text-xs text-muted-foreground capitalize">({assignment.coach_type})</span>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleRemoveAssignment(assignment.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
