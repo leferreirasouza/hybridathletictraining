@@ -21,6 +21,33 @@ interface Props {
   currentOrgId?: string;
 }
 
+type CoachType = 'primary' | 'secondary';
+
+type MemberRow = {
+  id: string;
+  user_id: string;
+  role: AppRole;
+  organization_id: string;
+  organizations?: { name?: string } | null;
+  profiles?: { id: string; full_name: string } | null;
+};
+
+type AssignmentRow = {
+  id: string;
+  coach_id: string;
+  athlete_id: string;
+  coach_type: CoachType;
+  organization_id: string;
+  created_at: string;
+};
+
+const rolePriority: Record<AppRole, number> = {
+  master_admin: 0,
+  admin: 1,
+  coach: 2,
+  athlete: 3,
+};
+
 export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [email, setEmail] = useState('');
