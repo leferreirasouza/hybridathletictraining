@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -42,6 +42,62 @@ export default function Schedule() {
   const [hiddenPlanIds, setHiddenPlanIds] = useState<Set<string>>(new Set());
   const [showAthletePlans, setShowAthletePlans] = useState(true);
   const defaultProvider = getDefaultCalendarProvider();
+  const hasAutoScrolled = useRef(false);
+
+  // Auto-navigate to the current training week based on today's date
+  useEffect(() => {
+    if (hasAutoScrolled.current || !sessions.length) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Try to match via weekly_summaries week_start/week_end
+    if (weeklySummaries.length > 0) {
+      for (const ws of weeklySummaries) {
+        if (ws.week_start && ws.week_end) {
+          const start = new Date(ws.week_start);
+          const end = new Date(ws.week_end);
+          if (today >= start && today <= end) {
+            setWeekOffset(ws.week_number - 1);
+            setSelectedDay(today.getDay() === 0 ? 7 : today.getDay());
+            hasAutoScrolled.current = true;
+            return;
+          }
+        }
+      }
+    }
+
+    // Fallback: match via session dates
+    const sessionsWithDate = sessions.filter((s: any) => s.date);
+    if (sessionsWithDate.length > 0) {
+      const todayStr = today.toISOString().split('T')[0];
+      // Find the session closest to today
+      let bestWeek = 1;
+      let bestDist = Infinity;
+      for (const s of sessionsWithDate) {
+        const d = new Date(s.date);
+        const dist = Math.abs(d.getTime() - today.getTime());
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestWeek = s.week_number;
+        }
+      }
+      setWeekOffset(bestWeek - 1);
+      setSelectedDay(today.getDay() === 0 ? 7 : today.getDay());
+      hasAutoScrolled.current = true;
+      return;
+    }
+
+    // Last fallback: estimate from plan creation date
+    if (plans?.length) {
+      const planCreated = new Date(plans[plans.length - 1].created_at);
+      const weeksSinceCreation = Math.floor((today.getTime() - planCreated.getTime()) / (7 * 24 * 60 * 60 * 1000));
+      const estimatedWeek = Math.max(1, Math.min(maxWeek, weeksSinceCreation + 1));
+      setWeekOffset(estimatedWeek - 1);
+      setSelectedDay(today.getDay() === 0 ? 7 : today.getDay());
+      hasAutoScrolled.current = true;
+    }
+  }, [sessions, weeklySummaries, plans, maxWeek]);
 
   const togglePlanVisibility = (planId: string) => {
     setHiddenPlanIds(prev => {
