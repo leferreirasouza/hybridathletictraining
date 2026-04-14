@@ -58,16 +58,16 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !data?.claims) {
+    // Verify the JWT server-side via Supabase Auth — cannot be bypassed with a crafted token
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const userId = data.claims.sub as string;
+    const userId = user.id;
     const { messages } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -93,7 +93,6 @@ serve(async (req) => {
 
         if (query.length > 3) {
           // Simple keyword search across knowledge chunks
-          // Search for relevant chunks by matching keywords
           const keywords = query
             .toLowerCase()
             .split(/\s+/)
