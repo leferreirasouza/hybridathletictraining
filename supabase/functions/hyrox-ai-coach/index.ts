@@ -6,6 +6,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Conservative character budget for the conversation history.
+// Reserves headroom for the system prompt + RAG knowledge context (~3k chars).
+// Oldest messages are dropped first; the last user message is always kept.
+const MAX_HISTORY_CHARS = 80_000;
+
 const LEGAL_DISCLAIMER = `
 
 ---
@@ -35,6 +40,24 @@ ${LEGAL_DISCLAIMER}
 KNOWLEDGE BASE CONTEXT:
 When provided with knowledge base context below, use it to inform your answers. Cite specific sources when possible. If the knowledge base contradicts general knowledge, prefer the knowledge base as it represents the coaching organization's methodology.
 `;
+
+function trimMessages(messages: any[]): { trimmed: any[]; dropped: number } {
+  if (!messages.length) return { trimmed: [], dropped: 0 };
+
+  let budget = MAX_HISTORY_CHARS;
+  const kept: any[] = [];
+
+  // Walk backwards so we always keep the most recent messages
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const charLen = (messages[i].content ?? "").length;
+    // Always keep the last message even if it alone exceeds budget
+    if (budget - charLen < 0 && kept.length > 0) break;
+    kept.unshift(messages[i]);
+    budget -= charLen;
+  }
+
+  return { trimmed: kept, dropped: messages.length - kept.length };
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -69,6 +92,13 @@ serve(async (req) => {
 
     const userId = user.id;
     const { messages } = await req.json();
+
+    // Trim conversation history to stay within the model context window
+    const { trimmed: trimmedMessages, dropped } = trimMessages(messages ?? []);
+    if (dropped > 0) {
+      console.log(`Context trimmed: dropped ${dropped} oldest message(s) to stay within budget`);
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -88,11 +118,10 @@ serve(async (req) => {
         const orgId = userRoles[0].organization_id;
 
         // Get the latest user message for keyword matching
-        const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
+        const lastUserMsg = [...trimmedMessages].reverse().find((m: any) => m.role === "user");
         const query = lastUserMsg?.content || "";
 
         if (query.length > 3) {
-          // Simple keyword search across knowledge chunks
           const keywords = query
             .toLowerCase()
             .split(/\s+/)
@@ -100,7 +129,6 @@ serve(async (req) => {
             .slice(0, 5);
 
           if (keywords.length > 0) {
-            // Get processed documents for this org
             const { data: docs } = await serviceClient
               .from("knowledge_documents")
               .select("id, title")
@@ -111,7 +139,6 @@ serve(async (req) => {
               const docIds = docs.map(d => d.id);
               const docTitleMap = new Map(docs.map(d => [d.id, d.title]));
 
-              // Get chunks from these documents using text search
               const searchPattern = keywords.join(" | ");
               const { data: chunks } = await serviceClient
                 .from("knowledge_chunks")
@@ -149,7 +176,7 @@ serve(async (req) => {
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          ...messages,
+          ...trimmedMessages,
         ],
         stream: true,
       }),
