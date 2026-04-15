@@ -27,10 +27,12 @@ function getDefaultCalendarProvider(): CalendarProvider | null {
 export default function Schedule() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { currentRole, effectiveRole } = useAuth();
+  const { currentRole, effectiveRole, user, currentOrg } = useAuth();
   const isCoachOrAdmin = effectiveRole && ['master_admin', 'admin', 'coach'].includes(effectiveRole);
   const canManagePlans = !!currentRole && ['master_admin', 'admin', 'coach'].includes(currentRole);
   const {
+    authReady,
+    authLoading,
     plans, activePlanId, setSelectedPlanId, isAllPlans,
     sessions, weeklySummaries, targets, completedSessions,
     substitutionMap, maxWeek, isLoading, noPlan, planColorMap,
@@ -44,19 +46,24 @@ export default function Schedule() {
   const defaultProvider = getDefaultCalendarProvider();
   const hasAutoScrolled = useRef(false);
 
-  // Auto-navigate to the current training week based on today's date
   useEffect(() => {
-    if (hasAutoScrolled.current || !sessions.length) return;
+    hasAutoScrolled.current = false;
+  }, [user?.id, currentOrg?.id, activePlanId, isAllPlans]);
+
+  useEffect(() => {
+    if (!authReady || authLoading || isLoading || noPlan || hasAutoScrolled.current || !sessions.length) return;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Try to match via weekly_summaries week_start/week_end
     if (weeklySummaries.length > 0) {
       for (const ws of weeklySummaries) {
         if (ws.week_start && ws.week_end) {
           const start = new Date(ws.week_start);
           const end = new Date(ws.week_end);
+          start.setHours(0, 0, 0, 0);
+          end.setHours(23, 59, 59, 999);
+
           if (today >= start && today <= end) {
             setWeekOffset(ws.week_number - 1);
             setSelectedDay(today.getDay() === 0 ? 7 : today.getDay());
@@ -67,37 +74,41 @@ export default function Schedule() {
       }
     }
 
-    // Fallback: match via session dates
-    const sessionsWithDate = sessions.filter((s: any) => s.date);
+    const sessionsWithDate = sessions.filter((session: any) => session.date);
     if (sessionsWithDate.length > 0) {
-      const todayStr = today.toISOString().split('T')[0];
-      // Find the session closest to today
       let bestWeek = 1;
       let bestDist = Infinity;
-      for (const s of sessionsWithDate) {
-        const d = new Date(s.date);
-        const dist = Math.abs(d.getTime() - today.getTime());
-        if (dist < bestDist) {
-          bestDist = dist;
-          bestWeek = s.week_number;
+
+      for (const session of sessionsWithDate) {
+        const sessionDate = new Date(session.date);
+        sessionDate.setHours(0, 0, 0, 0);
+
+        const distance = Math.abs(sessionDate.getTime() - today.getTime());
+        if (distance < bestDist) {
+          bestDist = distance;
+          bestWeek = session.week_number;
         }
       }
+
       setWeekOffset(bestWeek - 1);
       setSelectedDay(today.getDay() === 0 ? 7 : today.getDay());
       hasAutoScrolled.current = true;
       return;
     }
 
-    // Last fallback: estimate from plan creation date
     if (plans?.length) {
-      const planCreated = new Date(plans[plans.length - 1].created_at);
-      const weeksSinceCreation = Math.floor((today.getTime() - planCreated.getTime()) / (7 * 24 * 60 * 60 * 1000));
+      const oldestPlanDate = plans.reduce((oldest, plan) => {
+        const planDate = new Date(plan.created_at);
+        return planDate < oldest ? planDate : oldest;
+      }, new Date(plans[0].created_at));
+
+      const weeksSinceCreation = Math.floor((today.getTime() - oldestPlanDate.getTime()) / (7 * 24 * 60 * 60 * 1000));
       const estimatedWeek = Math.max(1, Math.min(maxWeek, weeksSinceCreation + 1));
       setWeekOffset(estimatedWeek - 1);
       setSelectedDay(today.getDay() === 0 ? 7 : today.getDay());
       hasAutoScrolled.current = true;
     }
-  }, [sessions, weeklySummaries, plans, maxWeek]);
+  }, [authReady, authLoading, isLoading, noPlan, sessions, weeklySummaries, plans, maxWeek]);
 
   const togglePlanVisibility = (planId: string) => {
     setHiddenPlanIds(prev => {
@@ -127,6 +138,14 @@ export default function Schedule() {
 
   const displayWeek = Math.max(1, Math.min(maxWeek, 1 + weekOffset));
   const weeklySummary = weeklySummaries.find((ws: any) => ws.week_number === displayWeek);
+
+  if (authLoading) {
+    return (
+      <div className="page-container py-16 flex justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="page-container py-6 space-y-4">
