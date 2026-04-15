@@ -106,7 +106,8 @@ serve(async (req) => {
               .from("knowledge_documents")
               .select("id, title")
               .eq("organization_id", orgId)
-              .eq("status", "processed");
+              .eq("status", "processed")
+              .eq("is_verified", true);
 
             if (docs && docs.length > 0) {
               const docIds = docs.map(d => d.id);
