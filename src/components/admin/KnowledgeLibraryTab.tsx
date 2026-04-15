@@ -89,14 +89,17 @@ export default function KnowledgeLibraryTab() {
       if (error) throw error;
 
       const orgIds = [...new Set((docs || []).map(d => d.organization_id))];
-      const uploaderIds = [...new Set((docs || []).map(d => d.uploaded_by))];
+      const allUserIds = [...new Set([
+        ...(docs || []).map(d => d.uploaded_by),
+        ...(docs || []).map(d => d.verified_by).filter(Boolean),
+      ])];
 
       const [orgsRes, profilesRes] = await Promise.all([
         orgIds.length > 0
           ? supabase.from('organizations').select('id, name').in('id', orgIds)
           : { data: [] },
-        uploaderIds.length > 0
-          ? supabase.from('profiles').select('id, full_name').in('id', uploaderIds)
+        allUserIds.length > 0
+          ? supabase.from('profiles').select('id, full_name').in('id', allUserIds)
           : { data: [] },
       ]);
 
@@ -107,6 +110,7 @@ export default function KnowledgeLibraryTab() {
         ...doc,
         org_name: orgMap.get(doc.organization_id) || 'Unknown',
         uploader_name: profileMap.get(doc.uploaded_by) || 'Unknown',
+        verifier_name: doc.verified_by ? profileMap.get(doc.verified_by) || 'Unknown' : null,
       })) as KnowledgeDocument[];
     },
   });
