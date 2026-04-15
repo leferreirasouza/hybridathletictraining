@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Dumbbell, Users, Trophy, User, Flag } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import ParqStep from '@/components/onboarding/ParqStep';
+import FitnessAssessmentStep, { type FitnessAssessmentData } from '@/components/onboarding/FitnessAssessmentStep';
 
 type Role = 'athlete' | 'coach';
 
@@ -39,7 +41,36 @@ export default function Onboarding() {
   const [goalRaceDate, setGoalRaceDate] = useState('');
   const [goalRaceLocation, setGoalRaceLocation] = useState('');
 
-  const totalSteps = role === 'athlete' ? 4 : role === 'coach' ? 3 : 2;
+  // PAR-Q state
+  const [parqAnswers, setParqAnswers] = useState({
+    q1_heart_condition: false,
+    q2_chest_pain_activity: false,
+    q3_chest_pain_rest: false,
+    q4_dizziness: false,
+    q5_bone_joint: false,
+    q6_blood_pressure_meds: false,
+    q7_other_reason: false,
+    medical_notes: '',
+    risk_acknowledged: false,
+  });
+
+  // Fitness assessment state
+  const [fitnessAssessment, setFitnessAssessment] = useState<FitnessAssessmentData>({
+    training_years: '',
+    weekly_training_hours: '',
+    previous_race_experience: '',
+    current_injuries: '',
+    past_injuries: '',
+    mobility_limitations: '',
+    resting_hr: '',
+    sleep_hours_avg: '',
+    stress_level: 5,
+    nutrition_quality: 5,
+  });
+
+  // Athlete steps: 1=Role, 2=Org, 3=PAR-Q, 4=Profile, 5=Fitness, 6=Goal Race
+  // Coach steps: 1=Role, 2=Org, 3=Confirm
+  const totalSteps = role === 'athlete' ? 6 : role === 'coach' ? 3 : 2;
 
   const FITNESS_LEVELS = [
     { value: 'beginner', label: t('onboarding.beginner'), desc: t('onboarding.beginnerDesc') },
@@ -91,6 +122,7 @@ export default function Onboarding() {
       if (error) throw error;
 
       if (role === 'athlete') {
+        // Save profile
         await supabase.from('profiles').update({
           age: age ? parseInt(age) : null,
           weight_kg: weightKg ? parseFloat(weightKg) : null,
@@ -101,6 +133,40 @@ export default function Onboarding() {
           goal_race_location: goalRaceLocation.trim() || null,
           onboarding_completed: true,
         } as any).eq('id', user.id);
+
+        // Save PAR-Q responses
+        const hasRisks = parqAnswers.q1_heart_condition || parqAnswers.q2_chest_pain_activity ||
+          parqAnswers.q3_chest_pain_rest || parqAnswers.q4_dizziness || parqAnswers.q5_bone_joint ||
+          parqAnswers.q6_blood_pressure_meds || parqAnswers.q7_other_reason;
+
+        await supabase.from('parq_responses' as any).insert({
+          athlete_id: user.id,
+          q1_heart_condition: parqAnswers.q1_heart_condition,
+          q2_chest_pain_activity: parqAnswers.q2_chest_pain_activity,
+          q3_chest_pain_rest: parqAnswers.q3_chest_pain_rest,
+          q4_dizziness: parqAnswers.q4_dizziness,
+          q5_bone_joint: parqAnswers.q5_bone_joint,
+          q6_blood_pressure_meds: parqAnswers.q6_blood_pressure_meds,
+          q7_other_reason: parqAnswers.q7_other_reason,
+          medical_notes: parqAnswers.medical_notes || null,
+          risk_acknowledged: hasRisks ? parqAnswers.risk_acknowledged : false,
+          risk_acknowledged_at: hasRisks && parqAnswers.risk_acknowledged ? new Date().toISOString() : null,
+        } as any);
+
+        // Save fitness assessment
+        await supabase.from('fitness_assessments' as any).insert({
+          athlete_id: user.id,
+          training_years: fitnessAssessment.training_years ? parseInt(fitnessAssessment.training_years) : null,
+          weekly_training_hours: fitnessAssessment.weekly_training_hours ? parseFloat(fitnessAssessment.weekly_training_hours) : null,
+          previous_race_experience: fitnessAssessment.previous_race_experience || null,
+          current_injuries: fitnessAssessment.current_injuries || null,
+          past_injuries: fitnessAssessment.past_injuries || null,
+          mobility_limitations: fitnessAssessment.mobility_limitations || null,
+          resting_hr: fitnessAssessment.resting_hr ? parseInt(fitnessAssessment.resting_hr) : null,
+          sleep_hours_avg: fitnessAssessment.sleep_hours_avg ? parseFloat(fitnessAssessment.sleep_hours_avg) : null,
+          stress_level: fitnessAssessment.stress_level,
+          nutrition_quality: fitnessAssessment.nutrition_quality,
+        } as any);
       } else {
         await supabase.from('profiles').update({
           onboarding_completed: true,
@@ -210,8 +276,18 @@ export default function Onboarding() {
           </Card>
         )}
 
-        {/* Step 3 (Athlete): Profile & Biometrics */}
+        {/* Step 3 (Athlete): PAR-Q Health Screening */}
         {step === 3 && role === 'athlete' && (
+          <ParqStep
+            answers={parqAnswers}
+            onChange={setParqAnswers}
+            onNext={() => setStep(4)}
+            onBack={() => setStep(2)}
+          />
+        )}
+
+        {/* Step 4 (Athlete): Profile & Biometrics */}
+        {step === 4 && role === 'athlete' && (
           <Card className="glass">
             <CardHeader>
               <CardTitle className="text-lg font-display flex items-center gap-2">
@@ -254,15 +330,25 @@ export default function Onboarding() {
                 </RadioGroup>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setStep(2)} className="flex-1">{t('onboarding.back')}</Button>
-                <Button className="flex-1 gradient-hyrox" onClick={() => setStep(4)}>{t('onboarding.continue')}</Button>
+                <Button variant="outline" onClick={() => setStep(3)} className="flex-1">{t('onboarding.back')}</Button>
+                <Button className="flex-1 gradient-hyrox" onClick={() => setStep(5)}>{t('onboarding.continue')}</Button>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Step 4 (Athlete): Goal Race */}
-        {step === 4 && role === 'athlete' && (
+        {/* Step 5 (Athlete): Fitness Assessment */}
+        {step === 5 && role === 'athlete' && (
+          <FitnessAssessmentStep
+            data={fitnessAssessment}
+            onChange={setFitnessAssessment}
+            onNext={() => setStep(6)}
+            onBack={() => setStep(4)}
+          />
+        )}
+
+        {/* Step 6 (Athlete): Goal Race */}
+        {step === 6 && role === 'athlete' && (
           <Card className="glass">
             <CardHeader>
               <CardTitle className="text-lg font-display flex items-center gap-2">
@@ -287,7 +373,7 @@ export default function Onboarding() {
               </div>
               <p className="text-xs text-muted-foreground">{t('onboarding.skipHint')}</p>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setStep(3)} className="flex-1">{t('onboarding.back')}</Button>
+                <Button variant="outline" onClick={() => setStep(5)} className="flex-1">{t('onboarding.back')}</Button>
                 <Button className="flex-1 gradient-hyrox" onClick={handleComplete} disabled={loading}>
                   {loading ? t('onboarding.settingUp') : t('onboarding.getStarted')}
                 </Button>
