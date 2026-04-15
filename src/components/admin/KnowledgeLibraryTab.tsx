@@ -238,6 +238,20 @@ export default function KnowledgeLibraryTab() {
                         </div>
                       </TableCell>
                       <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`h-7 gap-1 text-[10px] ${doc.is_verified ? 'text-emerald-600' : 'text-muted-foreground'}`}
+                          onClick={(e) => { e.stopPropagation(); handleToggleVerify(doc); }}
+                          disabled={verifying === doc.id}
+                        >
+                          {doc.is_verified ? <ShieldCheck className="h-3.5 w-3.5" /> : <ShieldAlert className="h-3.5 w-3.5" />}
+                          {doc.is_verified ? 'Safe' : 'Unverified'}
+                        </Button>
+                        {doc.is_verified && doc.verifier_name && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">by {doc.verifier_name}</p>
+                        )}
+                      <TableCell>
                         <div className="flex items-center gap-1.5">
                           {sourceTypeIcon(doc.source_type)}
                           <span className="text-xs capitalize">{doc.source_type}</span>
