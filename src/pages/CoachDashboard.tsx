@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { useTranslation } from 'react-i18next';
 import AthleteLoadAlertsPanel from '@/components/coach/AthleteLoadAlertsPanel';
 import AssignAthleteDialog from '@/components/coach/AssignAthleteDialog';
+import GuardrailDashboard from '@/components/coach/GuardrailDashboard';
 
 const container = {
   hidden: { opacity: 0 },
