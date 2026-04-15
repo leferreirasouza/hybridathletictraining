@@ -351,6 +351,11 @@ export default function CoachDashboard() {
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* AI Guardrail Dashboard */}
+        <motion.div variants={item}>
+          <GuardrailDashboard />
+        </motion.div>
       </motion.div>
 
       <AssignAthleteDialog
