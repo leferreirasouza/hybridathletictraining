@@ -210,6 +210,7 @@ export default function KnowledgeLibraryTab() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Title</TableHead>
+                    <TableHead>Verified</TableHead>
                     <TableHead>Source</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-center">Chunks</TableHead>
