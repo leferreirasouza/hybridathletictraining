@@ -41,8 +41,13 @@ interface KnowledgeDocument {
   organization_id: string;
   content_text: string | null;
   metadata: any;
+  is_verified: boolean;
+  verified_by: string | null;
+  verified_at: string | null;
+  safety_notes: string | null;
   org_name?: string;
   uploader_name?: string;
+  verifier_name?: string;
 }
 
 const sourceTypeIcon = (type: string) => {
