@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { useTranslation } from 'react-i18next';
 import AthleteLoadAlertsPanel from '@/components/coach/AthleteLoadAlertsPanel';
 import AssignAthleteDialog from '@/components/coach/AssignAthleteDialog';
+import GuardrailDashboard from '@/components/coach/GuardrailDashboard';
 
 const container = {
   hidden: { opacity: 0 },
@@ -349,6 +350,11 @@ export default function CoachDashboard() {
               </div>
             </CardContent>
           </Card>
+        </motion.div>
+
+        {/* AI Guardrail Dashboard */}
+        <motion.div variants={item}>
+          <GuardrailDashboard />
         </motion.div>
       </motion.div>
 

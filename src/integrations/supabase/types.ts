@@ -310,6 +310,75 @@ export type Database = {
           },
         ]
       }
+      fitness_assessments: {
+        Row: {
+          assessed_by: string | null
+          assessor_notes: string | null
+          athlete_id: string
+          body_fat_pct: number | null
+          created_at: string
+          current_disciplines: string[] | null
+          current_injuries: string | null
+          id: string
+          mobility_limitations: string | null
+          nutrition_quality: number | null
+          past_injuries: string | null
+          previous_race_experience: string | null
+          recommended_fitness_level: string | null
+          resting_hr: number | null
+          sleep_hours_avg: number | null
+          stress_level: number | null
+          training_years: number | null
+          updated_at: string
+          vo2_max_estimate: number | null
+          weekly_training_hours: number | null
+        }
+        Insert: {
+          assessed_by?: string | null
+          assessor_notes?: string | null
+          athlete_id: string
+          body_fat_pct?: number | null
+          created_at?: string
+          current_disciplines?: string[] | null
+          current_injuries?: string | null
+          id?: string
+          mobility_limitations?: string | null
+          nutrition_quality?: number | null
+          past_injuries?: string | null
+          previous_race_experience?: string | null
+          recommended_fitness_level?: string | null
+          resting_hr?: number | null
+          sleep_hours_avg?: number | null
+          stress_level?: number | null
+          training_years?: number | null
+          updated_at?: string
+          vo2_max_estimate?: number | null
+          weekly_training_hours?: number | null
+        }
+        Update: {
+          assessed_by?: string | null
+          assessor_notes?: string | null
+          athlete_id?: string
+          body_fat_pct?: number | null
+          created_at?: string
+          current_disciplines?: string[] | null
+          current_injuries?: string | null
+          id?: string
+          mobility_limitations?: string | null
+          nutrition_quality?: number | null
+          past_injuries?: string | null
+          previous_race_experience?: string | null
+          recommended_fitness_level?: string | null
+          resting_hr?: number | null
+          sleep_hours_avg?: number | null
+          stress_level?: number | null
+          training_years?: number | null
+          updated_at?: string
+          vo2_max_estimate?: number | null
+          weekly_training_hours?: number | null
+        }
+        Relationships: []
+      }
       garmin_workouts: {
         Row: {
           id: string
@@ -392,8 +461,10 @@ export type Database = {
           created_at: string
           file_path: string | null
           id: string
+          is_verified: boolean
           metadata: Json | null
           organization_id: string
+          safety_notes: string | null
           source_type: string
           source_url: string | null
           status: string
@@ -401,14 +472,18 @@ export type Database = {
           total_chunks: number | null
           updated_at: string
           uploaded_by: string
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           content_text?: string | null
           created_at?: string
           file_path?: string | null
           id?: string
+          is_verified?: boolean
           metadata?: Json | null
           organization_id: string
+          safety_notes?: string | null
           source_type?: string
           source_url?: string | null
           status?: string
@@ -416,14 +491,18 @@ export type Database = {
           total_chunks?: number | null
           updated_at?: string
           uploaded_by: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           content_text?: string | null
           created_at?: string
           file_path?: string | null
           id?: string
+          is_verified?: boolean
           metadata?: Json | null
           organization_id?: string
+          safety_notes?: string | null
           source_type?: string
           source_url?: string | null
           status?: string
@@ -431,6 +510,8 @@ export type Database = {
           total_chunks?: number | null
           updated_at?: string
           uploaded_by?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -463,6 +544,60 @@ export type Database = {
           is_active?: boolean
           logo_url?: string | null
           name?: string
+        }
+        Relationships: []
+      }
+      parq_responses: {
+        Row: {
+          athlete_id: string
+          completed_at: string
+          created_at: string
+          has_risk_flags: boolean | null
+          id: string
+          medical_notes: string | null
+          q1_heart_condition: boolean
+          q2_chest_pain_activity: boolean
+          q3_chest_pain_rest: boolean
+          q4_dizziness: boolean
+          q5_bone_joint: boolean
+          q6_blood_pressure_meds: boolean
+          q7_other_reason: boolean
+          risk_acknowledged: boolean
+          risk_acknowledged_at: string | null
+        }
+        Insert: {
+          athlete_id: string
+          completed_at?: string
+          created_at?: string
+          has_risk_flags?: boolean | null
+          id?: string
+          medical_notes?: string | null
+          q1_heart_condition?: boolean
+          q2_chest_pain_activity?: boolean
+          q3_chest_pain_rest?: boolean
+          q4_dizziness?: boolean
+          q5_bone_joint?: boolean
+          q6_blood_pressure_meds?: boolean
+          q7_other_reason?: boolean
+          risk_acknowledged?: boolean
+          risk_acknowledged_at?: string | null
+        }
+        Update: {
+          athlete_id?: string
+          completed_at?: string
+          created_at?: string
+          has_risk_flags?: boolean | null
+          id?: string
+          medical_notes?: string | null
+          q1_heart_condition?: boolean
+          q2_chest_pain_activity?: boolean
+          q3_chest_pain_rest?: boolean
+          q4_dizziness?: boolean
+          q5_bone_joint?: boolean
+          q6_blood_pressure_meds?: boolean
+          q7_other_reason?: boolean
+          risk_acknowledged?: boolean
+          risk_acknowledged_at?: string | null
         }
         Relationships: []
       }

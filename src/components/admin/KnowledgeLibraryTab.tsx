@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { BookOpen, Search, FileText, Globe, Upload, Trash2, ExternalLink, Plus, Loader2, Link, FileUp, ChevronRight, Eye } from 'lucide-react';
+import { BookOpen, Search, FileText, Globe, Upload, Trash2, ExternalLink, Plus, Loader2, Link, FileUp, ChevronRight, Eye, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
@@ -41,8 +41,13 @@ interface KnowledgeDocument {
   organization_id: string;
   content_text: string | null;
   metadata: any;
+  is_verified: boolean;
+  verified_by: string | null;
+  verified_at: string | null;
+  safety_notes: string | null;
   org_name?: string;
   uploader_name?: string;
+  verifier_name?: string;
 }
 
 const sourceTypeIcon = (type: string) => {
@@ -71,6 +76,7 @@ export default function KnowledgeLibraryTab() {
   const [deleting, setDeleting] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [viewDoc, setViewDoc] = useState<KnowledgeDocument | null>(null);
+  const [verifying, setVerifying] = useState<string | null>(null);
 
   const { data: documents = [], isLoading, refetch } = useQuery({
     queryKey: ['admin-knowledge-documents'],
@@ -83,14 +89,17 @@ export default function KnowledgeLibraryTab() {
       if (error) throw error;
 
       const orgIds = [...new Set((docs || []).map(d => d.organization_id))];
-      const uploaderIds = [...new Set((docs || []).map(d => d.uploaded_by))];
+      const allUserIds = [...new Set([
+        ...(docs || []).map(d => d.uploaded_by),
+        ...(docs || []).map(d => d.verified_by).filter(Boolean),
+      ])];
 
       const [orgsRes, profilesRes] = await Promise.all([
         orgIds.length > 0
           ? supabase.from('organizations').select('id, name').in('id', orgIds)
           : { data: [] },
-        uploaderIds.length > 0
-          ? supabase.from('profiles').select('id, full_name').in('id', uploaderIds)
+        allUserIds.length > 0
+          ? supabase.from('profiles').select('id, full_name').in('id', allUserIds)
           : { data: [] },
       ]);
 
@@ -101,6 +110,7 @@ export default function KnowledgeLibraryTab() {
         ...doc,
         org_name: orgMap.get(doc.organization_id) || 'Unknown',
         uploader_name: profileMap.get(doc.uploaded_by) || 'Unknown',
+        verifier_name: doc.verified_by ? profileMap.get(doc.verified_by) || 'Unknown' : null,
       })) as KnowledgeDocument[];
     },
   });
@@ -119,6 +129,29 @@ export default function KnowledgeLibraryTab() {
     } finally {
       setDeleting(false);
       setDeleteId(null);
+    }
+  };
+
+  const handleToggleVerify = async (doc: KnowledgeDocument) => {
+    if (!user) return;
+    setVerifying(doc.id);
+    try {
+      const newVerified = !doc.is_verified;
+      const { error } = await supabase
+        .from('knowledge_documents')
+        .update({
+          is_verified: newVerified,
+          verified_by: newVerified ? user.id : null,
+          verified_at: newVerified ? new Date().toISOString() : null,
+        })
+        .eq('id', doc.id);
+      if (error) throw error;
+      toast.success(newVerified ? 'Document verified as safe' : 'Verification removed');
+      refetch();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update');
+    } finally {
+      setVerifying(null);
     }
   };
 
@@ -177,6 +210,7 @@ export default function KnowledgeLibraryTab() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Title</TableHead>
+                    <TableHead>Verified</TableHead>
                     <TableHead>Source</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-center">Chunks</TableHead>
@@ -202,6 +236,21 @@ export default function KnowledgeLibraryTab() {
                             </p>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`h-7 gap-1 text-[10px] ${doc.is_verified ? 'text-emerald-600' : 'text-muted-foreground'}`}
+                          onClick={(e) => { e.stopPropagation(); handleToggleVerify(doc); }}
+                          disabled={verifying === doc.id}
+                        >
+                          {doc.is_verified ? <ShieldCheck className="h-3.5 w-3.5" /> : <ShieldAlert className="h-3.5 w-3.5" />}
+                          {doc.is_verified ? 'Safe' : 'Unverified'}
+                        </Button>
+                        {doc.is_verified && doc.verifier_name && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">by {doc.verifier_name}</p>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
