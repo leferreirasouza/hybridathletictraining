@@ -251,6 +251,7 @@ export default function KnowledgeLibraryTab() {
                         {doc.is_verified && doc.verifier_name && (
                           <p className="text-[10px] text-muted-foreground mt-0.5">by {doc.verifier_name}</p>
                         )}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           {sourceTypeIcon(doc.source_type)}
