@@ -153,6 +153,7 @@ export default function Schedule() {
     }
   };
 
+  const togglePlanVisibility = (planId: string) => {
     setHiddenPlanIds(prev => {
       const next = new Set(prev);
       if (next.has(planId)) next.delete(planId); else next.add(planId);
