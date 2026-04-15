@@ -132,6 +132,29 @@ export default function KnowledgeLibraryTab() {
     }
   };
 
+  const handleToggleVerify = async (doc: KnowledgeDocument) => {
+    if (!user) return;
+    setVerifying(doc.id);
+    try {
+      const newVerified = !doc.is_verified;
+      const { error } = await supabase
+        .from('knowledge_documents')
+        .update({
+          is_verified: newVerified,
+          verified_by: newVerified ? user.id : null,
+          verified_at: newVerified ? new Date().toISOString() : null,
+        })
+        .eq('id', doc.id);
+      if (error) throw error;
+      toast.success(newVerified ? 'Document verified as safe' : 'Verification removed');
+      refetch();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update');
+    } finally {
+      setVerifying(null);
+    }
+  };
+
   const filtered = documents.filter(doc =>
     doc.title.toLowerCase().includes(search.toLowerCase()) ||
     doc.org_name?.toLowerCase().includes(search.toLowerCase()) ||
