@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Calendar, Loader2, CalendarPlus, Download, Eye, EyeOff } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Loader2, CalendarPlus, Download, Eye, EyeOff, LocateFixed } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useScheduleData } from '@/hooks/useScheduleData';
@@ -110,7 +110,49 @@ export default function Schedule() {
     }
   }, [authReady, authLoading, isLoading, noPlan, sessions, weeklySummaries, plans, maxWeek]);
 
-  const togglePlanVisibility = (planId: string) => {
+  const goToToday = () => {
+    hasAutoScrolled.current = false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (weeklySummaries.length > 0) {
+      for (const ws of weeklySummaries) {
+        if (ws.week_start && ws.week_end) {
+          const start = new Date(ws.week_start); start.setHours(0, 0, 0, 0);
+          const end = new Date(ws.week_end); end.setHours(23, 59, 59, 999);
+          if (today >= start && today <= end) {
+            setWeekOffset(ws.week_number - 1);
+            setSelectedDay(today.getDay() === 0 ? 7 : today.getDay());
+            hasAutoScrolled.current = true;
+            return;
+          }
+        }
+      }
+    }
+
+    const sessionsWithDate = sessions.filter((s: any) => s.date);
+    if (sessionsWithDate.length > 0) {
+      let bestWeek = 1, bestDist = Infinity;
+      for (const s of sessionsWithDate) {
+        const d = new Date(s.date); d.setHours(0, 0, 0, 0);
+        const dist = Math.abs(d.getTime() - today.getTime());
+        if (dist < bestDist) { bestDist = dist; bestWeek = s.week_number; }
+      }
+      setWeekOffset(bestWeek - 1);
+      setSelectedDay(today.getDay() === 0 ? 7 : today.getDay());
+      hasAutoScrolled.current = true;
+      return;
+    }
+
+    if (plans?.length) {
+      const oldest = plans.reduce((o, p) => { const d = new Date(p.created_at); return d < o ? d : o; }, new Date(plans[0].created_at));
+      const weeks = Math.floor((today.getTime() - oldest.getTime()) / (7 * 24 * 60 * 60 * 1000));
+      setWeekOffset(Math.max(0, Math.min(maxWeek - 1, weeks)));
+      setSelectedDay(today.getDay() === 0 ? 7 : today.getDay());
+      hasAutoScrolled.current = true;
+    }
+  };
+
     setHiddenPlanIds(prev => {
       const next = new Set(prev);
       if (next.has(planId)) next.delete(planId); else next.add(planId);
@@ -260,9 +302,15 @@ export default function Schedule() {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => Math.max(0, w - 1))} disabled={displayWeek <= 1}>
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <span className="text-sm font-medium font-display">
-                      {t('schedule.week')} {displayWeek} <span className="text-muted-foreground font-normal">/ {maxWeek}</span>
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-medium font-display">
+                        {t('schedule.week')} {displayWeek} <span className="text-muted-foreground font-normal">/ {maxWeek}</span>
+                      </span>
+                      <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] text-primary" onClick={goToToday}>
+                        <LocateFixed className="h-3 w-3 mr-1" />
+                        Today
+                      </Button>
+                    </div>
                     <div className="flex items-center gap-1">
                       {defaultProvider ? (
                         <Button variant="ghost" size="icon" className="h-8 w-8" title={`Add to ${defaultProvider} calendar`} onClick={() => handleCalendarExport(defaultProvider)}>
