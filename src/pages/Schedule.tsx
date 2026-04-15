@@ -139,6 +139,14 @@ export default function Schedule() {
   const displayWeek = Math.max(1, Math.min(maxWeek, 1 + weekOffset));
   const weeklySummary = weeklySummaries.find((ws: any) => ws.week_number === displayWeek);
 
+  if (authLoading) {
+    return (
+      <div className="page-container py-16 flex justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="page-container py-6 space-y-4">
       <div className="flex items-center justify-between">
