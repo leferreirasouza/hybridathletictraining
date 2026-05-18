@@ -1,11 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
 // Map day names to numbers
 const dayNameToNum: Record<string, number> = {
   monday: 1, mon: 1, tuesday: 2, tue: 2, wednesday: 3, wed: 3,
@@ -81,6 +76,15 @@ function findHeader(rows: any[][], keywords: string[]): number {
 }
 
 serve(async (req) => {
+  const origin = req.headers.get("Origin") ?? "";
+  const allowedOrigin = Deno.env.get("ALLOWED_ORIGIN") ?? "";
+  const devOrigins = ["http://localhost:5173", "http://localhost:3000", "http://localhost:8080"];
+  const isAllowed = !allowedOrigin || origin === allowedOrigin || devOrigins.includes(origin);
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": isAllowed ? (origin || allowedOrigin || "*") : allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  };
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }

@@ -1,11 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
 // Conservative character budget for the conversation history.
 // Reserves headroom for the system prompt + RAG knowledge context (~3k chars).
 // Oldest messages are dropped first; the last user message is always kept.
@@ -60,6 +55,15 @@ function trimMessages(messages: any[]): { trimmed: any[]; dropped: number } {
 }
 
 serve(async (req) => {
+  const origin = req.headers.get("Origin") ?? "";
+  const allowedOrigin = Deno.env.get("ALLOWED_ORIGIN") ?? "";
+  const devOrigins = ["http://localhost:5173", "http://localhost:3000", "http://localhost:8080"];
+  const isAllowed = !allowedOrigin || origin === allowedOrigin || devOrigins.includes(origin);
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": isAllowed ? (origin || allowedOrigin || "*") : allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  };
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }

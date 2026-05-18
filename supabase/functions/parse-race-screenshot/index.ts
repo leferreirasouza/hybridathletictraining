@@ -1,11 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
 const EXTRACTION_PROMPT = `You are a HYROX race result extraction AI. Given a screenshot from the ROX Fit app or a HYROX results page, extract the race split data.
 
 HYROX has 8 rounds. Each round consists of a 1km run followed by a station workout in this order:
@@ -51,6 +46,15 @@ Respond with ONLY valid JSON (no markdown, no backticks):
 If you cannot read certain splits, set them to null. Always try your best to extract what's visible.`;
 
 serve(async (req) => {
+  const origin = req.headers.get("Origin") ?? "";
+  const allowedOrigin = Deno.env.get("ALLOWED_ORIGIN") ?? "";
+  const devOrigins = ["http://localhost:5173", "http://localhost:3000", "http://localhost:8080"];
+  const isAllowed = !allowedOrigin || origin === allowedOrigin || devOrigins.includes(origin);
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": isAllowed ? (origin || allowedOrigin || "*") : allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  };
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -71,9 +75,9 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !data?.claims) {
+    // Verify the JWT server-side via Supabase Auth
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

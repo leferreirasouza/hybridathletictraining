@@ -1,11 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
 const PLAN_GEN_PROMPT = `You are a HYROX and running race training plan generator. Given an athlete's profile, produce a structured multi-week training plan in JSON.
 
 HYROX race format: 8 × 1km runs alternating with 8 stations (SkiErg 1000m, Sled Push 50m, Sled Pull 50m, Burpee Broad Jumps 80m, Row 1000m, Farmers Carry 200m, Sandbag Lunges 100m, Wall Balls 100 reps).
@@ -80,6 +75,15 @@ function fmtTime(s: number): string {
 }
 
 serve(async (req) => {
+  const origin = req.headers.get("Origin") ?? "";
+  const allowedOrigin = Deno.env.get("ALLOWED_ORIGIN") ?? "";
+  const devOrigins = ["http://localhost:5173", "http://localhost:3000", "http://localhost:8080"];
+  const isAllowed = !allowedOrigin || origin === allowedOrigin || devOrigins.includes(origin);
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": isAllowed ? (origin || allowedOrigin || "*") : allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  };
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
