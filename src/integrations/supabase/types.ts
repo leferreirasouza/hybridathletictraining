@@ -379,6 +379,48 @@ export type Database = {
         }
         Relationships: []
       }
+      garmin_connections: {
+        Row: {
+          access_token: string | null
+          access_token_secret: string | null
+          created_at: string
+          garmin_user_id: string | null
+          id: string
+          last_sync_at: string | null
+          request_token: string | null
+          request_token_secret: string | null
+          scopes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          access_token_secret?: string | null
+          created_at?: string
+          garmin_user_id?: string | null
+          id?: string
+          last_sync_at?: string | null
+          request_token?: string | null
+          request_token_secret?: string | null
+          scopes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          access_token_secret?: string | null
+          created_at?: string
+          garmin_user_id?: string | null
+          id?: string
+          last_sync_at?: string | null
+          request_token?: string | null
+          request_token_secret?: string | null
+          scopes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       garmin_workouts: {
         Row: {
           id: string
