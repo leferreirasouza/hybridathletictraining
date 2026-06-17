@@ -282,19 +282,17 @@ serve(async (req) => {
               .from("knowledge_documents")
               .select("id, title")
               .eq("organization_id", orgId)
-              .eq("status", "processed")
-              .eq("is_verified", true);
+              .eq("status", "processed");
 
             if (docs && docs.length > 0) {
               const docIds = docs.map((d) => d.id);
               const docTitleMap = new Map(docs.map((d) => [d.id, d.title]));
-              const searchPattern = keywords.join(" | ");
               const { data: chunks } = await serviceClient
                 .from("knowledge_chunks")
                 .select("content, document_id, chunk_index")
                 .in("document_id", docIds)
-                .textSearch("content", searchPattern, { type: "websearch", config: "english" })
-                .limit(8);
+                .textSearch("content", keywords.join(" "), { type: "plain", config: "english" })
+                .limit(12);
 
               if (chunks && chunks.length > 0) {
                 knowledgeContext = "\n\n--- KNOWLEDGE BASE CONTEXT ---\n";
