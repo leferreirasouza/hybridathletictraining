@@ -304,6 +304,27 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
     }
   };
 
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ userId }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to delete user');
+      toast.success(`${userName} permanently deleted`);
+      await fetchMembers();
+      await fetchAssignments();
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to delete user');
+    }
+  };
+
   // Bulk actions
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
