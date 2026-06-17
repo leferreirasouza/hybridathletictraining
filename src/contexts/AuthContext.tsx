@@ -140,8 +140,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (currentOrg && memberships.length > 0) {
-      const m = memberships.find(m => m.organization_id === currentOrg.id);
-      setCurrentRole(m?.role ?? null);
+      // Pick the highest-ranked role for this org (handles users with multiple roles in same org)
+      const orgRoles = memberships
+        .filter(m => m.organization_id === currentOrg.id)
+        .sort((a, b) => getRoleLevel(a.role) - getRoleLevel(b.role));
+      setCurrentRole(orgRoles[0]?.role ?? null);
       setViewAsRoleState(null); // reset view-as when org changes
     }
   }, [currentOrg, memberships]);
