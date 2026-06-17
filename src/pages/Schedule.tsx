@@ -40,7 +40,7 @@ export default function Schedule() {
 
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDay, setSelectedDay] = useState(1);
-  const [view, setView] = useState<'day' | 'week' | 'month'>('week');
+  const [view, setView] = useState<'day' | 'week' | 'month'>('day');
   const [hiddenPlanIds, setHiddenPlanIds] = useState<Set<string>>(new Set());
   const [showAthletePlans, setShowAthletePlans] = useState(true);
   const defaultProvider = getDefaultCalendarProvider();
