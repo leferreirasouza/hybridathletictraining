@@ -59,10 +59,8 @@ const rolePriority: Record<AppRole, number> = {
 interface ExerciseEntry {
   exerciseId: string;
   exerciseName: string;
-  sets?: string;
-  reps?: string;
+  setsReps: string;
   load?: string;
-  notes?: string;
 }
 
 interface SessionRow {
@@ -556,7 +554,7 @@ export default function PlanBuilder() {
       const allSessions = Object.entries(sessionsByWeek).flatMap(([week, rows]) =>
         rows.filter(r => r.name.trim()).map((r, idx) => {
           const workoutDetailsText = r.exercises.length > 0
-            ? r.exercises.map(ex => `${ex.exerciseName}${ex.sets ? ` ${ex.sets}×${ex.reps || '?'}` : ''}${ex.load ? ` @${ex.load}` : ''}${ex.notes ? ` (${ex.notes})` : ''}`).join('\n')
+            ? r.exercises.map(ex => `${ex.exerciseName}${ex.setsReps ? ` — ${ex.setsReps}` : ''}${ex.load ? ` @ ${ex.load}` : ''}`).join('\n')
             : r.details || null;
           return {
             plan_version_id: version.id,
@@ -824,14 +822,14 @@ export default function PlanBuilder() {
                             <Input
                               className="h-6 w-16 text-[10px] text-center px-1"
                               placeholder="3×10"
-                              value={ex.sets ? `${ex.sets}×${ex.reps || ''}` : ''}
-                              onChange={e => {
-                                const match = e.target.value.match(/^(\d+)[×x](\d*)$/);
-                                updateExercise(row.id, eIdx, {
-                                  sets: match ? match[1] : e.target.value,
-                                  reps: match ? match[2] : '',
-                                });
-                              }}
+                              value={ex.setsReps}
+                              onChange={e => updateExercise(row.id, eIdx, { setsReps: e.target.value })}
+                            />
+                            <Input
+                              className="h-6 w-16 text-[10px] text-center px-1"
+                              placeholder="load"
+                              value={ex.load || ''}
+                              onChange={e => updateExercise(row.id, eIdx, { load: e.target.value })}
                             />
                             <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => removeExercise(row.id, eIdx)}>
                               <X className="h-3 w-3" />
@@ -861,7 +859,7 @@ export default function PlanBuilder() {
                     orgId={currentOrg?.id}
                     onSelect={(ex) => {
                       if (pickerForRow) {
-                        addExercise(pickerForRow, { exerciseId: ex.id, exerciseName: ex.name });
+                        addExercise(pickerForRow, { exerciseId: ex.id, exerciseName: ex.name, setsReps: '' });
                       }
                     }}
                   />
