@@ -554,7 +554,7 @@ export default function PlanBuilder() {
       const allSessions = Object.entries(sessionsByWeek).flatMap(([week, rows]) =>
         rows.filter(r => r.name.trim()).map((r, idx) => {
           const workoutDetailsText = r.exercises.length > 0
-            ? r.exercises.map(ex => `${ex.exerciseName}${ex.sets ? ` ${ex.sets}×${ex.reps || '?'}` : ''}${ex.load ? ` @${ex.load}` : ''}${ex.notes ? ` (${ex.notes})` : ''}`).join('\n')
+            ? r.exercises.map(ex => `${ex.exerciseName}${ex.setsReps ? ` — ${ex.setsReps}` : ''}${ex.load ? ` @ ${ex.load}` : ''}`).join('\n')
             : r.details || null;
           return {
             plan_version_id: version.id,
