@@ -859,7 +859,7 @@ export default function PlanBuilder() {
                     orgId={currentOrg?.id}
                     onSelect={(ex) => {
                       if (pickerForRow) {
-                        addExercise(pickerForRow, { exerciseId: ex.id, exerciseName: ex.name });
+                        addExercise(pickerForRow, { exerciseId: ex.id, exerciseName: ex.name, setsReps: '' });
                       }
                     }}
                   />
