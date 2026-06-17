@@ -1066,6 +1066,51 @@ export type Database = {
           },
         ]
       }
+      strava_connections: {
+        Row: {
+          access_token: string
+          athlete_avatar_url: string | null
+          athlete_name: string | null
+          athlete_username: string | null
+          created_at: string | null
+          expires_at: number
+          id: string
+          refresh_token: string
+          scope: string | null
+          strava_athlete_id: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          athlete_avatar_url?: string | null
+          athlete_name?: string | null
+          athlete_username?: string | null
+          created_at?: string | null
+          expires_at: number
+          id?: string
+          refresh_token: string
+          scope?: string | null
+          strava_athlete_id: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          athlete_avatar_url?: string | null
+          athlete_name?: string | null
+          athlete_username?: string | null
+          created_at?: string | null
+          expires_at?: number
+          id?: string
+          refresh_token?: string
+          scope?: string | null
+          strava_athlete_id?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       targets: {
         Row: {
           current_reference: string | null
