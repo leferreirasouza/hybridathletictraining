@@ -56,6 +56,15 @@ const rolePriority: Record<AppRole, number> = {
   athlete: 3,
 };
 
+interface ExerciseEntry {
+  exerciseId: string;
+  exerciseName: string;
+  sets?: string;
+  reps?: string;
+  load?: string;
+  notes?: string;
+}
+
 interface SessionRow {
   id: string;
   day: number;
@@ -66,6 +75,7 @@ interface SessionRow {
   intensity: Intensity | '';
   details: string;
   notes: string;
+  exercises: ExerciseEntry[];
 }
 
 interface AssigneeOption {
@@ -84,7 +94,113 @@ const emptyRow = (): SessionRow => ({
   intensity: '',
   details: '',
   notes: '',
+  exercises: [],
 });
+
+function ExercisePicker({
+  orgId,
+  onSelect,
+}: {
+  orgId?: string;
+  onSelect: (exercise: { id: string; name: string; category: string; discipline: string }) => void;
+}) {
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+
+  const { data: exercises = [], isLoading } = useQuery({
+    queryKey: ['exercise-library', orgId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('exercise_library')
+        .select('id, name, category, subcategory, discipline, difficulty_level, muscle_groups, hyrox_station')
+        .eq('is_approved', true)
+        .order('category', { ascending: true })
+        .order('name', { ascending: true });
+      return data || [];
+    },
+    enabled: !!orgId,
+  });
+
+  const categories = ['all', ...Array.from(new Set(exercises.map((e: any) => e.category)))];
+
+  const filtered = exercises.filter((ex: any) => {
+    const matchSearch = !search || ex.name.toLowerCase().includes(search.toLowerCase()) ||
+      ex.muscle_groups?.some((m: string) => m.toLowerCase().includes(search.toLowerCase()));
+    const matchCat = categoryFilter === 'all' || ex.category === categoryFilter;
+    return matchSearch && matchCat;
+  });
+
+  const categoryColors: Record<string, string> = {
+    hyrox: 'bg-primary/15 text-primary',
+    strength: 'bg-blue-500/15 text-blue-400',
+    prehab: 'bg-green-500/15 text-green-400',
+    run_drill: 'bg-orange-500/15 text-orange-400',
+    conditioning: 'bg-purple-500/15 text-purple-400',
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            autoFocus
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search exercises..."
+            className="pl-8 h-8 text-xs"
+          />
+        </div>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="h-8 w-[120px] text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {categories.map(c => (
+              <SelectItem key={c} value={c} className="text-xs capitalize">{c === 'all' ? 'All' : c.replace('_', ' ')}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <ScrollArea className="h-[300px]">
+        {isLoading ? (
+          <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-8">
+            <Dumbbell className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+            <p className="text-xs text-muted-foreground">No exercises found</p>
+          </div>
+        ) : (
+          <div className="space-y-1 pr-2">
+            {filtered.map((ex: any) => (
+              <button
+                key={ex.id}
+                onClick={() => onSelect({ id: ex.id, name: ex.name, category: ex.category, discipline: ex.discipline })}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-muted/60 transition-colors border border-transparent hover:border-border/50 group"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{ex.name}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full capitalize ${categoryColors[ex.category] || 'bg-muted text-muted-foreground'}`}>
+                        {ex.category?.replace('_', ' ')}
+                      </span>
+                      {ex.difficulty_level && (
+                        <span className="text-[10px] text-muted-foreground capitalize">{ex.difficulty_level}</span>
+                      )}
+                      {ex.muscle_groups?.slice(0, 2).map((m: string) => (
+                        <span key={m} className="text-[10px] text-muted-foreground">{m.replace('_', ' ')}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary shrink-0 mt-0.5 transition-colors" />
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </ScrollArea>
+    </div>
+  );
+}
 
 function CurrentPlansTab() {
   const { t } = useTranslation();
