@@ -508,16 +508,38 @@ export default function PlanBuilder() {
     }
   }, [currentWeek]);
 
+  const [pickerForRow, setPickerForRow] = useState<string | null>(null);
+
   const addRow = () => setSessions(prev => [...prev, emptyRow()]);
   const removeRow = (id: string) => setSessions(prev => prev.filter(s => s.id !== id));
   const updateRow = (id: string, field: keyof SessionRow, value: string | number) => {
     setSessions(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
   };
 
+  const addExercise = (rowId: string, ex: ExerciseEntry) => {
+    setSessions(prev => prev.map(s => s.id === rowId
+      ? { ...s, exercises: [...s.exercises, ex] }
+      : s
+    ));
+  };
+
+  const removeExercise = (rowId: string, idx: number) => {
+    setSessions(prev => prev.map(s => s.id === rowId
+      ? { ...s, exercises: s.exercises.filter((_, i) => i !== idx) }
+      : s
+    ));
+  };
+
+  const updateExercise = (rowId: string, idx: number, update: Partial<ExerciseEntry>) => {
+    setSessions(prev => prev.map(s => s.id === rowId
+      ? { ...s, exercises: s.exercises.map((ex, i) => i === idx ? { ...ex, ...update } : ex) }
+      : s
+    ));
+  };
+
   const handleSave = async () => {
     if (!planName.trim()) { toast.error('Please enter a plan name'); return; }
     if (!user || !currentOrg) { toast.error('No org context'); return; }
-    if (!targetAthleteId) { toast.error('Please select an athlete'); return; }
     if (!targetAthleteId) { toast.error('Please select an athlete'); return; }
     setSaving(true);
     try {
@@ -532,20 +554,25 @@ export default function PlanBuilder() {
         .select().single();
       if (verErr) throw verErr;
       const allSessions = Object.entries(sessionsByWeek).flatMap(([week, rows]) =>
-        rows.filter(r => r.name.trim()).map((r, idx) => ({
+        rows.filter(r => r.name.trim()).map((r, idx) => {
+          const workoutDetailsText = r.exercises.length > 0
+            ? r.exercises.map(ex => `${ex.exerciseName}${ex.sets ? ` ${ex.sets}×${ex.reps || '?'}` : ''}${ex.load ? ` @${ex.load}` : ''}${ex.notes ? ` (${ex.notes})` : ''}`).join('\n')
+            : r.details || null;
+          return {
             plan_version_id: version.id,
             athlete_id: targetAthleteId,
             week_number: Number(week),
-          day_of_week: r.day,
-          discipline: r.discipline as Discipline,
-          session_name: r.name.trim(),
-          duration_min: r.duration ? parseFloat(r.duration) : null,
-          distance_km: r.distance ? parseFloat(r.distance) : null,
-          intensity: (r.intensity || null) as Intensity | null,
-          workout_details: r.details || null,
-          notes: r.notes || null,
-          order_index: idx,
-        }))
+            day_of_week: r.day,
+            discipline: r.discipline as Discipline,
+            session_name: r.name.trim(),
+            duration_min: r.duration ? parseFloat(r.duration) : null,
+            distance_km: r.distance ? parseFloat(r.distance) : null,
+            intensity: (r.intensity || null) as Intensity | null,
+            workout_details: workoutDetailsText,
+            notes: r.notes || null,
+            order_index: idx,
+          };
+        })
       );
       if (allSessions.length > 0) {
         const { error: sessErr } = await supabase.from('planned_sessions').insert(allSessions);
