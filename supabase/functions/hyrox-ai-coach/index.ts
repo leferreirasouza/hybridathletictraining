@@ -1,5 +1,5 @@
 // Required secrets (set in Project Settings → Edge Functions → Secrets):
-//   ANTHROPIC_API_KEY    — from console.anthropic.com
+//   LOVABLE_API_KEY      — auto-provisioned by Lovable Cloud
 //   STRAVA_CLIENT_ID     — from strava.com/settings/api
 //   STRAVA_CLIENT_SECRET — from strava.com/settings/api
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
