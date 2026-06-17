@@ -753,8 +753,11 @@ export default function PlanBuilder() {
               {sessions.map((row, idx) => (
                 <motion.div key={row.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-muted-foreground">{t('planBuilder.session')} {idx + 1}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/15 text-primary">#{idx + 1}</span>
+                      <Badge variant="outline" className="text-[10px]">{['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][row.day - 1]}</Badge>
+                    </div>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeRow(row.id)}>
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
@@ -804,15 +807,66 @@ export default function PlanBuilder() {
                       </Select>
                     </div>
                   </div>
+
+                  {/* Exercises */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs flex items-center gap-1.5"><Dumbbell className="h-3 w-3" /> Exercises {row.exercises.length > 0 && <span className="text-muted-foreground">({row.exercises.length})</span>}</Label>
+                      <Button type="button" variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => setPickerForRow(row.id)}>
+                        <Plus className="h-3 w-3" /> Add Exercise
+                      </Button>
+                    </div>
+                    {row.exercises.length > 0 && (
+                      <div className="space-y-1">
+                        {row.exercises.map((ex, eIdx) => (
+                          <div key={eIdx} className="flex items-center gap-2 bg-muted/40 rounded-md px-2 py-1.5">
+                            <span className="text-xs font-medium flex-1 truncate">{ex.exerciseName}</span>
+                            <Input
+                              className="h-6 w-16 text-[10px] text-center px-1"
+                              placeholder="3×10"
+                              value={ex.sets ? `${ex.sets}×${ex.reps || ''}` : ''}
+                              onChange={e => {
+                                const match = e.target.value.match(/^(\d+)[×x](\d*)$/);
+                                updateExercise(row.id, eIdx, {
+                                  sets: match ? match[1] : e.target.value,
+                                  reps: match ? match[2] : '',
+                                });
+                              }}
+                            />
+                            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => removeExercise(row.id, eIdx)}>
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <div>
-                    <Label className="text-xs">{t('planBuilder.workoutDetails')}</Label>
-                    <Textarea className="text-xs min-h-[40px]" rows={1} value={row.details} onChange={e => updateRow(row.id, 'details', e.target.value)} placeholder="8km @ 5:00/km..." />
+                    <Label className="text-xs">Workout notes</Label>
+                    <Textarea className="text-xs min-h-[40px]" rows={1} value={row.details} onChange={e => updateRow(row.id, 'details', e.target.value)} placeholder="Additional context, pacing, cues..." />
                   </div>
                 </motion.div>
               ))}
               <Button variant="outline" className="w-full" onClick={addRow}>
                 <Plus className="h-4 w-4 mr-1" /> {t('planBuilder.addSession')}
               </Button>
+
+              <Dialog open={!!pickerForRow} onOpenChange={(open) => !open && setPickerForRow(null)}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2 text-base"><Dumbbell className="h-4 w-4 text-primary" /> Add Exercise</DialogTitle>
+                  </DialogHeader>
+                  <ExercisePicker
+                    orgId={currentOrg?.id}
+                    onSelect={(ex) => {
+                      if (pickerForRow) {
+                        addExercise(pickerForRow, { exerciseId: ex.id, exerciseName: ex.name });
+                      }
+                    }}
+                  />
+                </DialogContent>
+              </Dialog>
             </CardContent>
           </Card>
 
