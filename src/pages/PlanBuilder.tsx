@@ -59,10 +59,8 @@ const rolePriority: Record<AppRole, number> = {
 interface ExerciseEntry {
   exerciseId: string;
   exerciseName: string;
-  sets?: string;
-  reps?: string;
+  setsReps: string;
   load?: string;
-  notes?: string;
 }
 
 interface SessionRow {
