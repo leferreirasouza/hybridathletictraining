@@ -56,6 +56,23 @@ export default function Settings() {
   const [units, setUnits] = useState<Units>(getStoredUnits);
   const [calendarPref, setCalendarPref] = useState<CalendarPref>(getStoredCalendar);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [garminConnected, setGarminConnected] = useState<boolean>(() => localStorage.getItem('ha-garmin-connected') === '1');
+  const [garminLoading, setGarminLoading] = useState(false);
+
+  const handleConnectGarmin = async () => {
+    setGarminLoading(true);
+    // OAuth flow will be wired up once Garmin Health API credentials are issued.
+    setTimeout(() => {
+      setGarminLoading(false);
+      toast.info('Garmin Health API approval is pending. Connection will be enabled once credentials are issued (typically 1–4 weeks).');
+    }, 600);
+  };
+
+  const handleDisconnectGarmin = () => {
+    localStorage.removeItem('ha-garmin-connected');
+    setGarminConnected(false);
+    toast.success('Garmin disconnected.');
+  };
 
   const [notifPrefs, setNotifPrefs] = useState(getNotifPrefs);
   const [permStatus, setPermStatus] = useState(getNotificationPermission);
