@@ -379,6 +379,92 @@ export type Database = {
         }
         Relationships: []
       }
+      garmin_activities: {
+        Row: {
+          activity_id: string | null
+          activity_type: string | null
+          avg_hr: number | null
+          avg_pace_min_per_km: number | null
+          avg_speed_mps: number | null
+          calories: number | null
+          completed_session_id: string | null
+          created_at: string
+          device_name: string | null
+          discipline: Database["public"]["Enums"]["discipline"] | null
+          distance_m: number | null
+          duration_sec: number | null
+          elevation_gain_m: number | null
+          id: string
+          max_hr: number | null
+          raw: Json
+          start_time_local: string | null
+          start_time_utc: string | null
+          steps: number | null
+          summary_id: string
+          training_load: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_id?: string | null
+          activity_type?: string | null
+          avg_hr?: number | null
+          avg_pace_min_per_km?: number | null
+          avg_speed_mps?: number | null
+          calories?: number | null
+          completed_session_id?: string | null
+          created_at?: string
+          device_name?: string | null
+          discipline?: Database["public"]["Enums"]["discipline"] | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          elevation_gain_m?: number | null
+          id?: string
+          max_hr?: number | null
+          raw: Json
+          start_time_local?: string | null
+          start_time_utc?: string | null
+          steps?: number | null
+          summary_id: string
+          training_load?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_id?: string | null
+          activity_type?: string | null
+          avg_hr?: number | null
+          avg_pace_min_per_km?: number | null
+          avg_speed_mps?: number | null
+          calories?: number | null
+          completed_session_id?: string | null
+          created_at?: string
+          device_name?: string | null
+          discipline?: Database["public"]["Enums"]["discipline"] | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          elevation_gain_m?: number | null
+          id?: string
+          max_hr?: number | null
+          raw?: Json
+          start_time_local?: string | null
+          start_time_utc?: string | null
+          steps?: number | null
+          summary_id?: string
+          training_load?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "garmin_activities_completed_session_id_fkey"
+            columns: ["completed_session_id"]
+            isOneToOne: false
+            referencedRelation: "completed_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       garmin_connections: {
         Row: {
           access_token: string | null
@@ -416,6 +502,156 @@ export type Database = {
           request_token?: string | null
           request_token_secret?: string | null
           scopes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      garmin_dailies: {
+        Row: {
+          active_kilocalories: number | null
+          active_time_sec: number | null
+          avg_hr: number | null
+          avg_stress: number | null
+          bmr_kilocalories: number | null
+          body_battery_charged: number | null
+          body_battery_drained: number | null
+          calendar_date: string
+          created_at: string
+          distance_m: number | null
+          floors_climbed: number | null
+          hrv_ms: number | null
+          id: string
+          max_hr: number | null
+          max_stress: number | null
+          min_hr: number | null
+          moderate_intensity_sec: number | null
+          raw: Json
+          respiration_avg: number | null
+          resting_hr: number | null
+          spo2_avg: number | null
+          steps: number | null
+          summary_id: string
+          updated_at: string
+          user_id: string
+          vigorous_intensity_sec: number | null
+        }
+        Insert: {
+          active_kilocalories?: number | null
+          active_time_sec?: number | null
+          avg_hr?: number | null
+          avg_stress?: number | null
+          bmr_kilocalories?: number | null
+          body_battery_charged?: number | null
+          body_battery_drained?: number | null
+          calendar_date: string
+          created_at?: string
+          distance_m?: number | null
+          floors_climbed?: number | null
+          hrv_ms?: number | null
+          id?: string
+          max_hr?: number | null
+          max_stress?: number | null
+          min_hr?: number | null
+          moderate_intensity_sec?: number | null
+          raw: Json
+          respiration_avg?: number | null
+          resting_hr?: number | null
+          spo2_avg?: number | null
+          steps?: number | null
+          summary_id: string
+          updated_at?: string
+          user_id: string
+          vigorous_intensity_sec?: number | null
+        }
+        Update: {
+          active_kilocalories?: number | null
+          active_time_sec?: number | null
+          avg_hr?: number | null
+          avg_stress?: number | null
+          bmr_kilocalories?: number | null
+          body_battery_charged?: number | null
+          body_battery_drained?: number | null
+          calendar_date?: string
+          created_at?: string
+          distance_m?: number | null
+          floors_climbed?: number | null
+          hrv_ms?: number | null
+          id?: string
+          max_hr?: number | null
+          max_stress?: number | null
+          min_hr?: number | null
+          moderate_intensity_sec?: number | null
+          raw?: Json
+          respiration_avg?: number | null
+          resting_hr?: number | null
+          spo2_avg?: number | null
+          steps?: number | null
+          summary_id?: string
+          updated_at?: string
+          user_id?: string
+          vigorous_intensity_sec?: number | null
+        }
+        Relationships: []
+      }
+      garmin_sleep: {
+        Row: {
+          avg_hrv_ms: number | null
+          avg_respiration: number | null
+          avg_spo2: number | null
+          awake_sec: number | null
+          calendar_date: string
+          created_at: string
+          deep_sleep_sec: number | null
+          duration_sec: number | null
+          end_time_utc: string | null
+          id: string
+          light_sleep_sec: number | null
+          raw: Json
+          rem_sleep_sec: number | null
+          sleep_score: number | null
+          start_time_utc: string | null
+          summary_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avg_hrv_ms?: number | null
+          avg_respiration?: number | null
+          avg_spo2?: number | null
+          awake_sec?: number | null
+          calendar_date: string
+          created_at?: string
+          deep_sleep_sec?: number | null
+          duration_sec?: number | null
+          end_time_utc?: string | null
+          id?: string
+          light_sleep_sec?: number | null
+          raw: Json
+          rem_sleep_sec?: number | null
+          sleep_score?: number | null
+          start_time_utc?: string | null
+          summary_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avg_hrv_ms?: number | null
+          avg_respiration?: number | null
+          avg_spo2?: number | null
+          awake_sec?: number | null
+          calendar_date?: string
+          created_at?: string
+          deep_sleep_sec?: number | null
+          duration_sec?: number | null
+          end_time_utc?: string | null
+          id?: string
+          light_sleep_sec?: number | null
+          raw?: Json
+          rem_sleep_sec?: number | null
+          sleep_score?: number | null
+          start_time_utc?: string | null
+          summary_id?: string
           updated_at?: string
           user_id?: string
         }
