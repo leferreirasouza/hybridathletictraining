@@ -14,6 +14,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import CoachInfoCard from '@/components/dashboard/CoachInfoCard';
+import StravaCard from '@/components/profile/StravaCard';
 import RacePicker from '@/components/races/RacePicker';
 import { useTranslation } from 'react-i18next';
 
@@ -389,6 +390,9 @@ export default function Profile() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Strava */}
+        <StravaCard />
 
         {/* Coach Info */}
         <CoachInfoCard />
