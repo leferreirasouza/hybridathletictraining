@@ -510,12 +510,33 @@ function UploadDialog({
     setProgress(0);
     const total = urlList.length;
     let completed = 0;
+    let skipped = 0;
+
+    // Fetch existing source URLs for duplicate detection
+    const { data: existingDocs } = await supabase
+      .from('knowledge_documents')
+      .select('source_url, title')
+      .eq('organization_id', orgId)
+      .not('source_url', 'is', null);
+    const existingUrls = new Set((existingDocs || []).map(d => d.source_url));
 
     for (const url of urlList) {
       try {
+        if (existingUrls.has(url)) {
+          try {
+            const u = new URL(url);
+            toast.warning(`Skipped duplicate: ${u.hostname}${u.pathname.slice(0, 40)}`);
+          } catch {
+            toast.warning(`Skipped duplicate: ${url}`);
+          }
+          skipped++;
+          continue;
+        }
+
         setProgressLabel(`Scraping ${new URL(url).hostname}...`);
 
-        // Create document record
+        // Create document record (auto-verified)
+        const nowIso = new Date().toISOString();
         const { data: docData, error: docErr } = await supabase
           .from('knowledge_documents')
           .insert({
@@ -526,6 +547,9 @@ function UploadDialog({
             uploaded_by: userId,
             status: 'processing',
             metadata: { original_url: url },
+            is_verified: true,
+            verified_by: userId,
+            verified_at: nowIso,
           })
           .select('id')
           .single();
@@ -555,7 +579,7 @@ function UploadDialog({
       }
     }
 
-    toast.success(`Processed ${completed}/${total} URLs`);
+    toast.success(`Processed ${completed}/${total} URLs${skipped > 0 ? ` (${skipped} duplicates skipped)` : ''}`);
     setUrls('');
     setUploading(false);
     setProgress(0);
