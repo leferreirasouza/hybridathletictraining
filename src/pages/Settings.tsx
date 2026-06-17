@@ -59,16 +59,47 @@ export default function Settings() {
   const [garminConnected, setGarminConnected] = useState<boolean>(() => localStorage.getItem('ha-garmin-connected') === '1');
   const [garminLoading, setGarminLoading] = useState(false);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user) return;
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data } = await supabase
+        .from('garmin_connections')
+        .select('access_token')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      const connected = !!data?.access_token;
+      setGarminConnected(connected);
+      if (connected) localStorage.setItem('ha-garmin-connected', '1');
+      else localStorage.removeItem('ha-garmin-connected');
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+
   const handleConnectGarmin = async () => {
     setGarminLoading(true);
-    // OAuth flow will be wired up once Garmin Health API credentials are issued.
-    setTimeout(() => {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data, error } = await supabase.functions.invoke('garmin-oauth', { body: { action: 'start' } });
+      if (error || !data?.authorize_url) {
+        toast.error(data?.error ?? 'Garmin Health API approval is pending. Connection will be enabled once credentials are issued.');
+        return;
+      }
+      window.location.href = data.authorize_url;
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Failed to start Garmin connection');
+    } finally {
       setGarminLoading(false);
-      toast.info('Garmin Health API approval is pending. Connection will be enabled once credentials are issued (typically 1–4 weeks).');
-    }, 600);
+    }
   };
 
-  const handleDisconnectGarmin = () => {
+  const handleDisconnectGarmin = async () => {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      await supabase.functions.invoke('garmin-oauth', { body: { action: 'disconnect' } });
+    } catch { /* best-effort */ }
     localStorage.removeItem('ha-garmin-connected');
     setGarminConnected(false);
     toast.success('Garmin disconnected.');
