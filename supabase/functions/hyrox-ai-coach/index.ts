@@ -1,5 +1,5 @@
 // Required secrets (set in Project Settings → Edge Functions → Secrets):
-//   ANTHROPIC_API_KEY    — from console.anthropic.com
+//   LOVABLE_API_KEY      — auto-provisioned by Lovable Cloud
 //   STRAVA_CLIENT_ID     — from strava.com/settings/api
 //   STRAVA_CLIENT_SECRET — from strava.com/settings/api
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -152,8 +152,6 @@ serve(async (req) => {
 
     const userId = claimsData.claims.sub as string;
     const { messages } = await req.json();
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not configured");
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -316,89 +314,53 @@ serve(async (req) => {
 
     const systemPrompt = basePrompt + APPEND_RULES + athleteContext + stravaContext + knowledgeContext;
 
-    // Anthropic Messages API requires messages with only user/assistant roles.
-    const anthropicMessages = (messages as any[])
-      .filter((m) => m.role === "user" || m.role === "assistant")
-      .map((m) => ({ role: m.role, content: m.content }));
+    // Build messages array with system prompt as first message (OpenAI-compatible format)
+    const apiMessages = [
+      { role: "system", content: systemPrompt },
+      ...(messages as any[])
+        .filter((m: any) => m.role === "user" || m.role === "assistant")
+        .map((m: any) => ({ role: m.role, content: m.content })),
+    ];
 
-    const anthropicResp = await fetch("https://api.anthropic.com/v1/messages", {
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5",
-        max_tokens: 4096,
-        system: systemPrompt,
-        messages: anthropicMessages,
+        model: "anthropic/claude-sonnet-4-5",
+        messages: apiMessages,
         stream: true,
       }),
     });
 
-    if (!anthropicResp.ok) {
-      const errorText = await anthropicResp.text();
-      console.error("Anthropic error:", anthropicResp.status, errorText);
-      if (anthropicResp.status === 429) {
+    if (!response.ok) {
+      if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const errorText = await response.text();
+      console.error("AI gateway error:", response.status, errorText);
       return new Response(JSON.stringify({ error: "AI service unavailable" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Translate Anthropic SSE -> OpenAI SSE so frontend (choices[0].delta.content) keeps working.
-    const reader = anthropicResp.body!.getReader();
-    const decoder = new TextDecoder();
-    const encoder = new TextEncoder();
-
-    const stream = new ReadableStream({
-      async start(controller) {
-        let buffer = "";
-        try {
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-
-            // SSE events separated by blank lines
-            const parts = buffer.split("\n\n");
-            buffer = parts.pop() || "";
-
-            for (const part of parts) {
-              const lines = part.split("\n");
-              for (const line of lines) {
-                if (!line.startsWith("data:")) continue;
-                const dataStr = line.slice(5).trim();
-                if (!dataStr) continue;
-                try {
-                  const evt = JSON.parse(dataStr);
-                  if (evt.type === "content_block_delta" && evt.delta?.type === "text_delta") {
-                    const out = { choices: [{ delta: { content: evt.delta.text } }] };
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify(out)}\n\n`));
-                  } else if (evt.type === "message_stop") {
-                    controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
-                  }
-                } catch (_err) {
-                  // ignore non-JSON keep-alives
-                }
-              }
-            }
-          }
-          controller.close();
-        } catch (err) {
-          console.error("Stream translation error:", err);
-          controller.error(err);
-        }
-      },
-    });
-
-    return new Response(stream, {
+    // Response is already OpenAI SSE format — pass through directly
+    return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
