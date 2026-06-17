@@ -335,6 +335,47 @@ export default function Settings() {
           </CardContent>
         </Card>
 
+        {/* Wearables */}
+        <Card className="glass">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <Watch className="h-4 w-4 text-primary" />
+              Wearables
+            </CardTitle>
+            <CardDescription>Connect your wearable to auto-sync activities and health metrics.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
+                  <Watch className="h-4 w-4 text-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Garmin</p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {garminConnected ? 'Connected — activities sync automatically' : 'Sync workouts, HR, sleep and recovery'}
+                  </p>
+                </div>
+              </div>
+              {garminConnected ? (
+                <Button variant="outline" size="sm" onClick={handleDisconnectGarmin}>
+                  Disconnect
+                </Button>
+              ) : (
+                <Button size="sm" onClick={handleConnectGarmin} disabled={garminLoading} className="gradient-hyrox">
+                  {garminLoading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5 mr-1.5" />}
+                  Connect
+                </Button>
+              )}
+            </div>
+            {!garminConnected && (
+              <p className="text-[10px] text-muted-foreground">
+                Garmin Health API access is pending approval. The connect button will activate once credentials are issued.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Account & Privacy */}
         <Card className="glass">
           <CardHeader className="pb-2">
