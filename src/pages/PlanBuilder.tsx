@@ -822,14 +822,14 @@ export default function PlanBuilder() {
                             <Input
                               className="h-6 w-16 text-[10px] text-center px-1"
                               placeholder="3×10"
-                              value={ex.sets ? `${ex.sets}×${ex.reps || ''}` : ''}
-                              onChange={e => {
-                                const match = e.target.value.match(/^(\d+)[×x](\d*)$/);
-                                updateExercise(row.id, eIdx, {
-                                  sets: match ? match[1] : e.target.value,
-                                  reps: match ? match[2] : '',
-                                });
-                              }}
+                              value={ex.setsReps}
+                              onChange={e => updateExercise(row.id, eIdx, { setsReps: e.target.value })}
+                            />
+                            <Input
+                              className="h-6 w-16 text-[10px] text-center px-1"
+                              placeholder="load"
+                              value={ex.load || ''}
+                              onChange={e => updateExercise(row.id, eIdx, { load: e.target.value })}
                             />
                             <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => removeExercise(row.id, eIdx)}>
                               <X className="h-3 w-3" />
