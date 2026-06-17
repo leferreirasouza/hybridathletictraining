@@ -152,8 +152,6 @@ serve(async (req) => {
 
     const userId = claimsData.claims.sub as string;
     const { messages } = await req.json();
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not configured");
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
