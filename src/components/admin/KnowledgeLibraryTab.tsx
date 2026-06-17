@@ -167,6 +167,24 @@ export default function KnowledgeLibraryTab() {
     return text.length > 80 ? text.slice(0, 80) + '…' : text;
   };
 
+  const unverifiedCount = documents.filter(d => !d.is_verified && d.status === 'processed').length;
+
+  const handleVerifyAll = async () => {
+    if (!user) return;
+    try {
+      const { error, count } = await supabase
+        .from('knowledge_documents')
+        .update({ is_verified: true, verified_by: user.id, verified_at: new Date().toISOString() }, { count: 'exact' })
+        .eq('is_verified', false)
+        .eq('status', 'processed');
+      if (error) throw error;
+      toast.success(`${count ?? unverifiedCount} documents verified and now available to AI coach.`);
+      refetch();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to verify');
+    }
+  };
+
   return (
     <>
       <Card>
@@ -184,6 +202,11 @@ export default function KnowledgeLibraryTab() {
                 className="pl-9 h-9"
               />
             </div>
+            {unverifiedCount > 0 && (
+              <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={handleVerifyAll}>
+                <ShieldCheck className="h-4 w-4" /> Verify All ({unverifiedCount})
+              </Button>
+            )}
             <Button size="sm" className="gap-1.5 shrink-0" onClick={() => setUploadOpen(true)}>
               <Plus className="h-4 w-4" /> Add Source
             </Button>
