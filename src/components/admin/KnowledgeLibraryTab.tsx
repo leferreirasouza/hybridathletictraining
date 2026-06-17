@@ -408,11 +408,26 @@ function UploadDialog({
     setUploading(true);
     setProgress(0);
 
+    // Fetch existing titles for duplicate detection
+    const { data: existingDocs } = await supabase
+      .from('knowledge_documents')
+      .select('title')
+      .eq('organization_id', orgId);
+    const existingTitles = new Set((existingDocs || []).map(d => d.title?.toLowerCase()));
+
     const total = selectedFiles.length;
     let completed = 0;
+    let skipped = 0;
 
     for (const file of selectedFiles) {
       try {
+        const docTitle = file.name.replace('.pdf', '');
+        if (existingTitles.has(docTitle.toLowerCase())) {
+          toast.warning(`Skipped duplicate: ${file.name}`);
+          skipped++;
+          continue;
+        }
+
         setProgressLabel(`Uploading ${file.name}...`);
         const filePath = `${orgId}/${Date.now()}-${file.name}`;
 
@@ -426,17 +441,21 @@ function UploadDialog({
           continue;
         }
 
-        // Create document record
+        // Create document record (auto-verified)
+        const nowIso = new Date().toISOString();
         const { data: docData, error: docErr } = await supabase
           .from('knowledge_documents')
           .insert({
-            title: file.name.replace('.pdf', ''),
+            title: docTitle,
             source_type: 'pdf',
             file_path: filePath,
             organization_id: orgId,
             uploaded_by: userId,
             status: 'processing',
             metadata: { file_size: file.size, file_name: file.name },
+            is_verified: true,
+            verified_by: userId,
+            verified_at: nowIso,
           })
           .select('id')
           .single();
@@ -467,7 +486,7 @@ function UploadDialog({
       }
     }
 
-    toast.success(`Processed ${completed}/${total} files`);
+    toast.success(`Processed ${completed}/${total} files${skipped > 0 ? ` (${skipped} duplicates skipped)` : ''}`);
     setSelectedFiles([]);
     setUploading(false);
     setProgress(0);
