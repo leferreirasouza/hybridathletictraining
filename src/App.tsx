@@ -36,6 +36,7 @@ const ExerciseLibrary = lazy(() => import("@/pages/ExerciseLibrary"));
 const PlanHistory = lazy(() => import("@/pages/PlanHistory"));
 const MileageHistory = lazy(() => import("@/pages/MileageHistory"));
 const StravaCallback = lazy(() => import("@/pages/StravaCallback"));
+const GarminCallback = lazy(() => import("@/pages/GarminCallback"));
 
 const queryClient = new QueryClient();
 
@@ -82,6 +83,7 @@ const App = () => (
               <Route path="/faq" element={<FAQ />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/strava/callback" element={<StravaCallback />} />
+              <Route path="/garmin/callback" element={<ProtectedRoute><GarminCallback /></ProtectedRoute>} />
               <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
               <Route path="/" element={<ProtectedRoute><RequireOrg><AppLayout /></RequireOrg></ProtectedRoute>}>
                 <Route index element={<Navigate to="/dashboard" replace />} />
