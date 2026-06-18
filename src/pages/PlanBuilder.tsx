@@ -841,26 +841,34 @@ export default function PlanBuilder() {
                     </div>
                     {row.exercises.length > 0 && (
                       <div className="space-y-1">
-                        {row.exercises.map((ex, eIdx) => (
+                        {row.exercises.map((ex, eIdx) => {
+                          const srInvalid = !ex.setsReps.trim() || !SETS_REPS_RE.test(ex.setsReps);
+                          const loadInvalid = !!(ex.load && ex.load.trim()) && !LOAD_RE.test(ex.load!);
+                          return (
                           <div key={eIdx} className="flex items-center gap-2 bg-muted/40 rounded-md px-2 py-1.5">
                             <span className="text-xs font-medium flex-1 truncate">{ex.exerciseName}</span>
                             <Input
-                              className="h-6 w-16 text-[10px] text-center px-1"
+                              className={`h-6 w-16 text-[10px] text-center px-1 ${srInvalid ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                               placeholder="3×10"
                               value={ex.setsReps}
                               onChange={e => updateExercise(row.id, eIdx, { setsReps: e.target.value })}
+                              aria-invalid={srInvalid}
+                              title={srInvalid ? 'Required. Examples: 3x10, 5x30s, AMRAP 10' : ''}
                             />
                             <Input
-                              className="h-6 w-16 text-[10px] text-center px-1"
+                              className={`h-6 w-16 text-[10px] text-center px-1 ${loadInvalid ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                               placeholder="load"
                               value={ex.load || ''}
                               onChange={e => updateExercise(row.id, eIdx, { load: e.target.value })}
+                              aria-invalid={loadInvalid}
+                              title={loadInvalid ? 'Examples: 60kg, 75%, BW, RPE 8' : ''}
                             />
                             <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => removeExercise(row.id, eIdx)}>
                               <X className="h-3 w-3" />
                             </Button>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
