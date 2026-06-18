@@ -551,6 +551,19 @@ export default function PlanBuilder() {
     if (!planName.trim()) { toast.error('Please enter a plan name'); return; }
     if (!user || !currentOrg) { toast.error('No org context'); return; }
     if (!targetAthleteId) { toast.error('Please select an athlete'); return; }
+    const exerciseErrors: string[] = [];
+    Object.entries(sessionsByWeek).forEach(([week, rows]) => {
+      rows.filter(r => r.name.trim()).forEach(r => {
+        r.exercises.forEach(ex => {
+          const err = validateExercise(ex);
+          if (err) exerciseErrors.push(`W${week} ${r.name}: ${err}`);
+        });
+      });
+    });
+    if (exerciseErrors.length > 0) {
+      toast.error(exerciseErrors.slice(0, 3).join(' • ') + (exerciseErrors.length > 3 ? ` (+${exerciseErrors.length - 3} more)` : ''));
+      return;
+    }
     setSaving(true);
     try {
       const { data: plan, error: planErr } = await supabase
