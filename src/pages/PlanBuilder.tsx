@@ -63,6 +63,18 @@ interface ExerciseEntry {
   load?: string;
 }
 
+// Accepts: "3x10", "3×10", "4x8-12", "5x30s", "30s", "10 reps", "5 rounds", "AMRAP 10", "EMOM 12"
+const SETS_REPS_RE = /^(\s*(\d+\s*[x×]\s*\d+(\s*-\s*\d+)?(\s*(s|sec|secs|m|min|reps?))?|\d+\s*(s|sec|secs|m|min|reps?)|\d+\s*rounds?|amrap\s*\d+|emom\s*\d+)\s*)$/i;
+// Accepts: "60kg", "135lb", "75%", "75% 1RM", "BW", "bodyweight", "RPE 8", "RPE 8.5"
+const LOAD_RE = /^(\s*(\d+(\.\d+)?\s*(kg|lb|lbs|%|%\s*1rm)|bw|bodyweight|rpe\s*\d+(\.\d+)?)\s*)$/i;
+
+const validateExercise = (ex: ExerciseEntry): string | null => {
+  if (!ex.setsReps.trim()) return `${ex.exerciseName}: sets×reps required`;
+  if (!SETS_REPS_RE.test(ex.setsReps)) return `${ex.exerciseName}: invalid sets×reps (try "3x10", "5x30s", "AMRAP 10")`;
+  if (ex.load && ex.load.trim() && !LOAD_RE.test(ex.load)) return `${ex.exerciseName}: invalid load (try "60kg", "75%", "BW", "RPE 8")`;
+  return null;
+};
+
 interface SessionRow {
   id: string;
   day: number;
@@ -539,6 +551,19 @@ export default function PlanBuilder() {
     if (!planName.trim()) { toast.error('Please enter a plan name'); return; }
     if (!user || !currentOrg) { toast.error('No org context'); return; }
     if (!targetAthleteId) { toast.error('Please select an athlete'); return; }
+    const exerciseErrors: string[] = [];
+    Object.entries(sessionsByWeek).forEach(([week, rows]) => {
+      rows.filter(r => r.name.trim()).forEach(r => {
+        r.exercises.forEach(ex => {
+          const err = validateExercise(ex);
+          if (err) exerciseErrors.push(`W${week} ${r.name}: ${err}`);
+        });
+      });
+    });
+    if (exerciseErrors.length > 0) {
+      toast.error(exerciseErrors.slice(0, 3).join(' • ') + (exerciseErrors.length > 3 ? ` (+${exerciseErrors.length - 3} more)` : ''));
+      return;
+    }
     setSaving(true);
     try {
       const { data: plan, error: planErr } = await supabase
@@ -816,26 +841,34 @@ export default function PlanBuilder() {
                     </div>
                     {row.exercises.length > 0 && (
                       <div className="space-y-1">
-                        {row.exercises.map((ex, eIdx) => (
+                        {row.exercises.map((ex, eIdx) => {
+                          const srInvalid = !ex.setsReps.trim() || !SETS_REPS_RE.test(ex.setsReps);
+                          const loadInvalid = !!(ex.load && ex.load.trim()) && !LOAD_RE.test(ex.load!);
+                          return (
                           <div key={eIdx} className="flex items-center gap-2 bg-muted/40 rounded-md px-2 py-1.5">
                             <span className="text-xs font-medium flex-1 truncate">{ex.exerciseName}</span>
                             <Input
-                              className="h-6 w-16 text-[10px] text-center px-1"
+                              className={`h-6 w-16 text-[10px] text-center px-1 ${srInvalid ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                               placeholder="3×10"
                               value={ex.setsReps}
                               onChange={e => updateExercise(row.id, eIdx, { setsReps: e.target.value })}
+                              aria-invalid={srInvalid}
+                              title={srInvalid ? 'Required. Examples: 3x10, 5x30s, AMRAP 10' : ''}
                             />
                             <Input
-                              className="h-6 w-16 text-[10px] text-center px-1"
+                              className={`h-6 w-16 text-[10px] text-center px-1 ${loadInvalid ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                               placeholder="load"
                               value={ex.load || ''}
                               onChange={e => updateExercise(row.id, eIdx, { load: e.target.value })}
+                              aria-invalid={loadInvalid}
+                              title={loadInvalid ? 'Examples: 60kg, 75%, BW, RPE 8' : ''}
                             />
                             <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => removeExercise(row.id, eIdx)}>
                               <X className="h-3 w-3" />
                             </Button>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
