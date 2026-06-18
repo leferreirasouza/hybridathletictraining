@@ -63,6 +63,18 @@ interface ExerciseEntry {
   load?: string;
 }
 
+// Accepts: "3x10", "3×10", "4x8-12", "5x30s", "30s", "10 reps", "5 rounds", "AMRAP 10", "EMOM 12"
+const SETS_REPS_RE = /^(\s*(\d+\s*[x×]\s*\d+(\s*-\s*\d+)?(\s*(s|sec|secs|m|min|reps?))?|\d+\s*(s|sec|secs|m|min|reps?)|\d+\s*rounds?|amrap\s*\d+|emom\s*\d+)\s*)$/i;
+// Accepts: "60kg", "135lb", "75%", "75% 1RM", "BW", "bodyweight", "RPE 8", "RPE 8.5"
+const LOAD_RE = /^(\s*(\d+(\.\d+)?\s*(kg|lb|lbs|%|%\s*1rm)|bw|bodyweight|rpe\s*\d+(\.\d+)?)\s*)$/i;
+
+const validateExercise = (ex: ExerciseEntry): string | null => {
+  if (!ex.setsReps.trim()) return `${ex.exerciseName}: sets×reps required`;
+  if (!SETS_REPS_RE.test(ex.setsReps)) return `${ex.exerciseName}: invalid sets×reps (try "3x10", "5x30s", "AMRAP 10")`;
+  if (ex.load && ex.load.trim() && !LOAD_RE.test(ex.load)) return `${ex.exerciseName}: invalid load (try "60kg", "75%", "BW", "RPE 8")`;
+  return null;
+};
+
 interface SessionRow {
   id: string;
   day: number;
