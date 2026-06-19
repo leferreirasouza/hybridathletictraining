@@ -401,6 +401,45 @@ export default function CoachDashboard() {
         onAssigned={() => queryClient.invalidateQueries({ queryKey: ['coach-athletes'] })}
         existingAthleteIds={athletes?.map(a => a.id) || []}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) { setDeleteTarget(null); setConfirmText(''); } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" /> Delete athlete?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-1">
+                <p>
+                  This will <strong className="text-destructive">permanently delete</strong>{' '}
+                  <strong className="text-foreground">{deleteTarget?.name}</strong> and all related
+                  data: sessions, plans, assignments, messages, AI chats, race results, assessments,
+                  wearable connections, and role memberships. This cannot be undone.
+                </p>
+                <p className="text-xs">
+                  Type <code className="px-1 py-0.5 rounded bg-muted text-foreground font-mono">DELETE</code> to confirm.
+                </p>
+                <Input
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder="DELETE"
+                  autoFocus
+                />
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleDelete(); }}
+              disabled={confirmText !== 'DELETE' || deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete permanently'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
