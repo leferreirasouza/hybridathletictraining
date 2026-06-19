@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Clock, RefreshCw, CheckCircle2, XCircle, History, Activity } from 'lucide-react';
+import { toast } from 'sonner';
 import { CronExpressionParser } from 'cron-parser';
 
 interface CronJob {
@@ -40,7 +42,7 @@ interface AuditEntry {
 
 function nextRun(schedule: string): string {
   try {
-    const it = cronParser.parseExpression(schedule, { utc: true });
+    const it = CronExpressionParser.parse(schedule, { tz: 'UTC' });
     return it.next().toDate().toISOString();
   } catch {
     return '—';
