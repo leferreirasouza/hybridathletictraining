@@ -2,7 +2,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Users, AlertTriangle, CheckCircle, TrendingUp, ChevronRight, Plus, ArrowLeftRight, Check, X, Loader2 } from 'lucide-react';
+import { Users, AlertTriangle, CheckCircle, TrendingUp, ChevronRight, Plus, ArrowLeftRight, Check, X, Loader2, Trash2 } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -168,9 +173,28 @@ function SwapRequestsPanel() {
 export default function CoachDashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, currentRole } = useAuth();
   const queryClient = useQueryClient();
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [confirmText, setConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const canDelete = currentRole === 'master_admin' || currentRole === 'admin';
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const { data, error } = await supabase.rpc('admin_delete_athlete' as any, { _athlete_id: deleteTarget.id });
+    setDeleting(false);
+    if (error) {
+      toast.error('Failed to delete: ' + error.message);
+      return;
+    }
+    toast.success(`Deleted ${deleteTarget.name}`);
+    setDeleteTarget(null);
+    setConfirmText('');
+    queryClient.invalidateQueries({ queryKey: ['coach-athletes'] });
+  };
 
   // Fetch real assigned athletes
   const { data: athletes, isLoading: athletesLoading } = useQuery({
@@ -295,24 +319,37 @@ export default function CoachDashboard() {
                 </p>
               ) : (
                 athletes.map(athlete => (
-                  <button key={athlete.id} className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors text-left" onClick={() => {}}>
-                    <div className="flex items-center gap-3">
+                  <div key={athlete.id} className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                    <button className="flex items-center gap-3 flex-1 text-left min-w-0" onClick={() => {}}>
                       <Avatar className="h-9 w-9">
                         <AvatarFallback className="text-xs bg-secondary">
                           {athlete.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{athlete.name}</span>
-                          {athlete.painFlag && <AlertTriangle className="h-3 w-3 text-destructive" />}
-                          <Badge variant="outline" className="text-[9px] capitalize">{athlete.coachType}</Badge>
+                          <span className="text-sm font-medium truncate">{athlete.name}</span>
+                          {athlete.painFlag && <AlertTriangle className="h-3 w-3 text-destructive shrink-0" />}
+                          <Badge variant="outline" className="text-[9px] capitalize shrink-0">{athlete.coachType}</Badge>
                         </div>
                         <span className="text-xs text-muted-foreground">{athlete.sessionsThisWeek} sessions · {athlete.lastActive}</span>
                       </div>
+                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {canDelete && athlete.id !== user?.id && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: athlete.id, name: athlete.name }); setConfirmText(''); }}
+                          aria-label={`Delete ${athlete.name}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </button>
+                  </div>
                 ))
               )}
             </CardContent>
@@ -364,6 +401,45 @@ export default function CoachDashboard() {
         onAssigned={() => queryClient.invalidateQueries({ queryKey: ['coach-athletes'] })}
         existingAthleteIds={athletes?.map(a => a.id) || []}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) { setDeleteTarget(null); setConfirmText(''); } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" /> Delete athlete?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-1">
+                <p>
+                  This will <strong className="text-destructive">permanently delete</strong>{' '}
+                  <strong className="text-foreground">{deleteTarget?.name}</strong> and all related
+                  data: sessions, plans, assignments, messages, AI chats, race results, assessments,
+                  wearable connections, and role memberships. This cannot be undone.
+                </p>
+                <p className="text-xs">
+                  Type <code className="px-1 py-0.5 rounded bg-muted text-foreground font-mono">DELETE</code> to confirm.
+                </p>
+                <Input
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder="DELETE"
+                  autoFocus
+                />
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleDelete(); }}
+              disabled={confirmText !== 'DELETE' || deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete permanently'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
