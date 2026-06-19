@@ -173,9 +173,28 @@ function SwapRequestsPanel() {
 export default function CoachDashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, currentRole } = useAuth();
   const queryClient = useQueryClient();
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [confirmText, setConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const canDelete = currentRole === 'master_admin' || currentRole === 'admin';
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const { data, error } = await supabase.rpc('admin_delete_athlete' as any, { _athlete_id: deleteTarget.id });
+    setDeleting(false);
+    if (error) {
+      toast.error('Failed to delete: ' + error.message);
+      return;
+    }
+    toast.success(`Deleted ${deleteTarget.name}`);
+    setDeleteTarget(null);
+    setConfirmText('');
+    queryClient.invalidateQueries({ queryKey: ['coach-athletes'] });
+  };
 
   // Fetch real assigned athletes
   const { data: athletes, isLoading: athletesLoading } = useQuery({
