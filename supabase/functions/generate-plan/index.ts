@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { detectInterferenceConflicts, downgradeIntensity, tsbAdjustmentFactor } from "../_shared/interferenceRules.ts";
 
 const PLAN_GEN_PROMPT = `You are a HYROX and running race training plan generator. Given an athlete's profile, produce a structured multi-week training plan in JSON.
 
@@ -331,6 +332,32 @@ Plan Duration (weeks): ${profile.planWeeks || "8"}
 
     athleteDesc += existingLoadSection;
 
+    // ---- TSB / interference constraint (Phase 2, hand-coded) ----
+    const { data: loadRows } = await supabase
+      .from("training_load_daily")
+      .select("tsb")
+      .eq("athlete_id", user.id)
+      .order("date", { ascending: false })
+      .limit(1);
+
+    const currentTsb = loadRows?.[0]?.tsb != null ? Number(loadRows[0].tsb) : null;
+    const tsbAdjustment = currentTsb !== null ? tsbAdjustmentFactor(currentTsb) : null;
+
+    let periodizationSection = "";
+    if (tsbAdjustment) {
+      periodizationSection += `\n\n🔬 CURRENT TRAINING STRESS BALANCE (TSB): ${currentTsb!.toFixed(1)}\n`;
+      periodizationSection += `${tsbAdjustment.directive}\n`;
+      if (tsbAdjustment.intensityCapPct < 100 || tsbAdjustment.volumeCapPct < 100) {
+        periodizationSection += `- Reduce high-intensity session frequency to ~${tsbAdjustment.intensityCapPct}% of normal.\n`;
+        periodizationSection += `- Reduce overall weekly volume to ~${tsbAdjustment.volumeCapPct}% of normal.\n`;
+      }
+    }
+    periodizationSection += `\n\n🔁 CONCURRENT-TRAINING INTERFERENCE RULES (Hickson 1980):\n`;
+    periodizationSection += `- Do NOT schedule a hard/race-pace/max-effort endurance session (run/bike/row/skierg/stairs) on the same day as heavy strength or HYROX station work.\n`;
+    periodizationSection += `- Leave at least 1 easy/rest day between two high-intensity sessions of different qualities (endurance vs strength).\n`;
+    periodizationSection += `- If forced to pair them, downgrade one session's intensity rather than stacking two hard sessions.\n`;
+    athleteDesc += periodizationSection;
+
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -411,9 +438,72 @@ Plan Duration (weeks): ${profile.planWeeks || "8"}
       order_index: idx,
     }));
 
+    let insertedSessions: any[] = [];
     if (sessions.length > 0) {
-      const { error: sessErr } = await supabase.from("planned_sessions").insert(sessions);
+      const { data: inserted, error: sessErr } = await supabase
+        .from("planned_sessions")
+        .insert(sessions)
+        .select("id, week_number, day_of_week, discipline, intensity, duration_min, distance_km");
       if (sessErr) throw sessErr;
+      insertedSessions = inserted || [];
+    }
+
+    // ---- Deterministic post-hoc safety net (Phase 2, hand-coded) ----
+    // Independent of whether the AI followed the prompt's periodization
+    // guidance, re-check the actual generated output and surface any
+    // conflicts/caps as coach-reviewable proposals. Nothing here mutates
+    // planned_sessions directly — see periodization_adjustments table.
+    if (insertedSessions.length > 0) {
+      const adjustments: Record<string, unknown>[] = [];
+
+      const conflicts = detectInterferenceConflicts(insertedSessions);
+      for (const conflict of conflicts) {
+        const targets = insertedSessions.filter(
+          (s) => s.week_number === conflict.weekNumber && (s.day_of_week === conflict.dayA || s.day_of_week === conflict.dayB)
+        );
+        for (const target of targets) {
+          adjustments.push({
+            athlete_id: user.id,
+            target_session_id: target.id,
+            adjustment_type: "interference_spacing",
+            reason_details: conflict.reasonDetails,
+            status: "pending_coach",
+            original_intensity: target.intensity,
+            original_duration_min: target.duration_min,
+            original_distance_km: target.distance_km,
+            suggested_intensity: downgradeIntensity(target.intensity),
+            suggested_duration_min: target.duration_min,
+            suggested_distance_km: target.distance_km,
+            tsb_at_suggestion: currentTsb,
+          });
+        }
+      }
+
+      if (tsbAdjustment && (tsbAdjustment.intensityCapPct < 100 || tsbAdjustment.volumeCapPct < 100)) {
+        const highIntensitySessions = insertedSessions.filter((s) =>
+          ["hard", "race_pace", "max_effort"].includes(s.intensity)
+        );
+        for (const target of highIntensitySessions) {
+          adjustments.push({
+            athlete_id: user.id,
+            target_session_id: target.id,
+            adjustment_type: "tsb_intensity_reduction",
+            reason_details: tsbAdjustment.directive,
+            status: "pending_coach",
+            original_intensity: target.intensity,
+            original_duration_min: target.duration_min,
+            original_distance_km: target.distance_km,
+            suggested_intensity: downgradeIntensity(target.intensity),
+            suggested_duration_min: target.duration_min != null ? target.duration_min * (tsbAdjustment.volumeCapPct / 100) : null,
+            suggested_distance_km: target.distance_km != null ? target.distance_km * (tsbAdjustment.volumeCapPct / 100) : null,
+            tsb_at_suggestion: currentTsb,
+          });
+        }
+      }
+
+      if (adjustments.length > 0) {
+        await supabase.from("periodization_adjustments").insert(adjustments);
+      }
     }
 
     // If race date provided, save it as a future race_result entry for countdown

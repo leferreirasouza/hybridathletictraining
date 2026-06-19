@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { useTranslation } from 'react-i18next';
 import AthleteLoadAlertsPanel from '@/components/coach/AthleteLoadAlertsPanel';
 import AssignAthleteDialog from '@/components/coach/AssignAthleteDialog';
+import PeriodizationAdjustmentsPanel from '@/components/coach/PeriodizationAdjustmentsPanel';
 import { useLatestTsbByAthlete, fatigueRiskFromTsb, FatigueRisk } from '@/hooks/useTrainingLoad';
 
 const fatigueBadgeStyles: Record<FatigueRisk, string> = {
@@ -288,6 +289,8 @@ export default function CoachDashboard() {
         </motion.div>
 
         <motion.div variants={item}><AthleteLoadAlertsPanel /></motion.div>
+
+        <motion.div variants={item}><PeriodizationAdjustmentsPanel /></motion.div>
 
         <motion.div variants={item}><SwapRequestsPanel /></motion.div>
 
