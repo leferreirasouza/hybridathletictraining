@@ -319,24 +319,37 @@ export default function CoachDashboard() {
                 </p>
               ) : (
                 athletes.map(athlete => (
-                  <button key={athlete.id} className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors text-left" onClick={() => {}}>
-                    <div className="flex items-center gap-3">
+                  <div key={athlete.id} className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                    <button className="flex items-center gap-3 flex-1 text-left min-w-0" onClick={() => {}}>
                       <Avatar className="h-9 w-9">
                         <AvatarFallback className="text-xs bg-secondary">
                           {athlete.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{athlete.name}</span>
-                          {athlete.painFlag && <AlertTriangle className="h-3 w-3 text-destructive" />}
-                          <Badge variant="outline" className="text-[9px] capitalize">{athlete.coachType}</Badge>
+                          <span className="text-sm font-medium truncate">{athlete.name}</span>
+                          {athlete.painFlag && <AlertTriangle className="h-3 w-3 text-destructive shrink-0" />}
+                          <Badge variant="outline" className="text-[9px] capitalize shrink-0">{athlete.coachType}</Badge>
                         </div>
                         <span className="text-xs text-muted-foreground">{athlete.sessionsThisWeek} sessions · {athlete.lastActive}</span>
                       </div>
+                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {canDelete && athlete.id !== user?.id && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: athlete.id, name: athlete.name }); setConfirmText(''); }}
+                          aria-label={`Delete ${athlete.name}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </button>
+                  </div>
                 ))
               )}
             </CardContent>
