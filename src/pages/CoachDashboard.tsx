@@ -16,6 +16,21 @@ import { Label } from '@/components/ui/label';
 import { useTranslation } from 'react-i18next';
 import AthleteLoadAlertsPanel from '@/components/coach/AthleteLoadAlertsPanel';
 import AssignAthleteDialog from '@/components/coach/AssignAthleteDialog';
+import { useLatestTsbByAthlete, fatigueRiskFromTsb, FatigueRisk } from '@/hooks/useTrainingLoad';
+
+const fatigueBadgeStyles: Record<FatigueRisk, string> = {
+  fresh: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
+  neutral: 'bg-muted text-muted-foreground border-transparent',
+  fatigued: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
+  high_risk: 'bg-destructive/10 text-destructive border-destructive/30',
+};
+
+const fatigueBadgeLabels: Record<FatigueRisk, string> = {
+  fresh: 'Fresh',
+  neutral: 'Neutral',
+  fatigued: 'Fatigued',
+  high_risk: 'High Risk',
+};
 
 const container = {
   hidden: { opacity: 0 },
@@ -229,6 +244,8 @@ export default function CoachDashboard() {
     enabled: !!user?.id,
   });
 
+  const { data: tsbByAthlete } = useLatestTsbByAthlete(athletes?.map(a => a.id) || []);
+
   const totalSessions = athletes?.reduce((sum, a) => sum + a.sessionsThisWeek, 0) || 0;
   const painFlags = athletes?.filter(a => a.painFlag).length || 0;
   const athleteCount = athletes?.length || 0;
@@ -306,6 +323,14 @@ export default function CoachDashboard() {
                           <span className="text-sm font-medium">{athlete.name}</span>
                           {athlete.painFlag && <AlertTriangle className="h-3 w-3 text-destructive" />}
                           <Badge variant="outline" className="text-[9px] capitalize">{athlete.coachType}</Badge>
+                          {tsbByAthlete?.has(athlete.id) && (
+                            <Badge
+                              variant="outline"
+                              className={`text-[9px] ${fatigueBadgeStyles[fatigueRiskFromTsb(tsbByAthlete.get(athlete.id)!)]}`}
+                            >
+                              {fatigueBadgeLabels[fatigueRiskFromTsb(tsbByAthlete.get(athlete.id)!)]}
+                            </Badge>
+                          )}
                         </div>
                         <span className="text-xs text-muted-foreground">{athlete.sessionsThisWeek} sessions · {athlete.lastActive}</span>
                       </div>

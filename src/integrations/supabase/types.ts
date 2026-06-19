@@ -612,6 +612,7 @@ export type Database = {
           id: string
           max_hr: number | null
           onboarding_completed: boolean | null
+          resting_hr: number | null
           updated_at: string
           weight_kg: number | null
         }
@@ -628,6 +629,7 @@ export type Database = {
           id: string
           max_hr?: number | null
           onboarding_completed?: boolean | null
+          resting_hr?: number | null
           updated_at?: string
           weight_kg?: number | null
         }
@@ -644,6 +646,7 @@ export type Database = {
           id?: string
           max_hr?: number | null
           onboarding_completed?: boolean | null
+          resting_hr?: number | null
           updated_at?: string
           weight_kg?: number | null
         }
@@ -968,6 +971,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      training_load_daily: {
+        Row: {
+          athlete_id: string
+          atl: number
+          computed_at: string
+          ctl: number
+          date: string
+          id: string
+          trimp: number
+          tsb: number
+        }
+        Insert: {
+          athlete_id: string
+          atl?: number
+          computed_at?: string
+          ctl?: number
+          date: string
+          id?: string
+          trimp?: number
+          tsb?: number
+        }
+        Update: {
+          athlete_id?: string
+          atl?: number
+          computed_at?: string
+          ctl?: number
+          date?: string
+          id?: string
+          trimp?: number
+          tsb?: number
+        }
+        Relationships: []
       }
       training_plans: {
         Row: {

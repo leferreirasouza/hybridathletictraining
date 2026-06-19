@@ -4,13 +4,14 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, TrendingUp, Clock, MapPin, Flame, Activity, Heart } from 'lucide-react';
+import { Loader2, TrendingUp, Clock, MapPin, Flame, Activity, Heart, Gauge } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-  AreaChart, Area, LineChart, Line, Legend, PieChart, Pie, Cell,
+  AreaChart, Area, LineChart, Line, Legend, PieChart, Pie, Cell, ComposedChart,
 } from 'recharts';
 import { disciplineConfig } from '@/components/schedule/config';
+import { useTrainingLoad } from '@/hooks/useTrainingLoad';
 
 const DISCIPLINE_COLORS: Record<string, string> = {
   run: 'hsl(217, 91%, 60%)',
@@ -70,6 +71,8 @@ function getISOWeekLabel(dateStr: string): string {
 export default function Analytics() {
   const { user } = useAuth();
   const [volumeMetric, setVolumeMetric] = useState<'duration' | 'distance'>('duration');
+
+  const { data: trainingLoad } = useTrainingLoad(user?.id);
 
   const { data: completedSessions, isLoading } = useQuery({
     queryKey: ['analytics-completed', user?.id],
@@ -298,6 +301,41 @@ export default function Analytics() {
                     />
                   </LineChart>
                 </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Training Load (CTL/ATL/TSB) */}
+        {trainingLoad && trainingLoad.length > 1 && (
+          <motion.div variants={item}>
+            <Card className="glass">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-display flex items-center gap-1.5">
+                  <Gauge className="h-3.5 w-3.5 text-primary" />
+                  Training Load (Fitness / Fatigue / Form)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pb-3">
+                <ResponsiveContainer width="100%" height={200}>
+                  <ComposedChart data={trainingLoad} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} className="fill-muted-foreground" />
+                    <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" />
+                    <Tooltip
+                      contentStyle={tooltipStyle}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                      formatter={(value: number, name: string) => [Math.round(value * 10) / 10, name]}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 10 }} />
+                    <Area type="monotone" dataKey="tsb" name="Form (TSB)" stroke="hsl(271, 91%, 65%)" fill="hsl(271, 91%, 65%)" fillOpacity={0.15} />
+                    <Line type="monotone" dataKey="ctl" name="Fitness (CTL)" stroke="hsl(160, 84%, 39%)" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="atl" name="Fatigue (ATL)" stroke="hsl(0, 72%, 51%)" strokeWidth={2} dot={false} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  CTL (fitness) and ATL (fatigue) are rolling averages of daily training load; TSB (form) is fitness minus fatigue — negative values mean accumulated fatigue, positive values mean freshness.
+                </p>
               </CardContent>
             </Card>
           </motion.div>
