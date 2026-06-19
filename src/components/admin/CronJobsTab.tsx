@@ -6,10 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Clock, RefreshCw, CheckCircle2, XCircle, History, Activity } from 'lucide-react';
-import { toast } from 'sonner';
-// @ts-expect-error - cron-parser ships with its own typings; fallback if absent
-import cronParser from 'cron-parser';
+import { CronExpressionParser } from 'cron-parser';
 
 interface CronJob {
   jobid: number;
