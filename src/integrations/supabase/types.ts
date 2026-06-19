@@ -1558,6 +1558,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_delete_athlete: { Args: { _athlete_id: string }; Returns: Json }
       admin_get_cron_jobs: {
         Args: never
         Returns: {
