@@ -1558,6 +1558,33 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_get_cron_jobs: {
+        Args: never
+        Returns: {
+          active: boolean
+          failure_count: number
+          jobid: number
+          jobname: string
+          last_duration_ms: number
+          last_message: string
+          last_run_at: string
+          last_status: string
+          schedule: string
+          success_count: number
+          total_runs: number
+        }[]
+      }
+      admin_get_cron_runs: {
+        Args: { _jobname: string; _limit?: number }
+        Returns: {
+          duration_ms: number
+          end_time: string
+          return_message: string
+          runid: number
+          start_time: string
+          status: string
+        }[]
+      }
       assign_onboarding_role: {
         Args: { _org_id: string; _role: string }
         Returns: undefined
