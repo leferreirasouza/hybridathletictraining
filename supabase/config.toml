@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.ingest-knowledge]
 verify_jwt = false
+
+[functions.compute-training-load]
+verify_jwt = false
