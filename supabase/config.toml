@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.ingest-knowledge]
 verify_jwt = false
+
+[functions.cron-dispatcher]
+verify_jwt = false
