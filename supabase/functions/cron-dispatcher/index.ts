@@ -108,6 +108,22 @@ async function runRaceScrape() {
   return { ok: true, status: res.status };
 }
 
+async function runComputeTrainingLoad() {
+  const url = `${SUPABASE_URL}/functions/v1/compute-training-load`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-cron-secret": CRON_SECRET,
+    },
+    body: "{}",
+  });
+  const body = await res.text();
+  await logRun("cron.compute_training_load", { status: res.status, body: body.slice(0, 500) });
+  if (!res.ok) throw new Error(`compute-training-load failed: ${res.status} ${body.slice(0, 200)}`);
+  return { ok: true, status: res.status };
+}
+
 // ---- Handler -------------------------------------------------------------
 
 Deno.serve(async (req) => {
