@@ -104,24 +104,30 @@ export default function AuthPage() {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
-    const { error } = await lovable.auth.signInWithOAuth("google", {
+    const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
-    if (error) {
-      toast.error('Google sign-in failed: ' + (error as Error).message);
+    if (result.error) {
+      toast.error('Google sign-in failed: ' + (result.error as Error).message);
       setLoading(false);
+      return;
     }
+    if (result.redirected) return; // browser is navigating away
+    navigate('/dashboard', { replace: true });
   };
 
   const handleAppleSignIn = async () => {
     setLoading(true);
-    const { error } = await lovable.auth.signInWithOAuth("apple", {
+    const result = await lovable.auth.signInWithOAuth("apple", {
       redirect_uri: window.location.origin,
     });
-    if (error) {
-      toast.error('Apple sign-in failed: ' + (error as Error).message);
+    if (result.error) {
+      toast.error('Apple sign-in failed: ' + (result.error as Error).message);
       setLoading(false);
+      return;
     }
+    if (result.redirected) return;
+    navigate('/dashboard', { replace: true });
   };
 
   const OAuthButtons = ({ action }: { action: 'in' | 'up' }) => (
