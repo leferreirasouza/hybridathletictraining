@@ -149,8 +149,11 @@ Deno.serve(async (req) => {
       case "race-scrape":
         result = await runRaceScrape();
         break;
+      case "compute-training-load":
+        result = await runComputeTrainingLoad();
+        break;
       default:
-        return json({ error: "Unknown job", allowed: ["session-reminders", "weekly-reports", "race-scrape"] }, 400);
+        return json({ error: "Unknown job", allowed: ["session-reminders", "weekly-reports", "race-scrape", "compute-training-load"] }, 400);
     }
     return json({ ok: true, job, result });
   } catch (e) {
