@@ -20,6 +20,13 @@ type View = 'auth' | 'check-email' | 'forgot-password' | 'forgot-sent';
 export default function AuthPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // If a session is already established (e.g., returning from OAuth redirect), bounce to dashboard.
+  useEffect(() => {
+    if (user) navigate('/dashboard', { replace: true });
+  }, [user, navigate]);
+
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
