@@ -879,6 +879,68 @@ export type Database = {
         }
         Relationships: []
       }
+      periodization_adjustments: {
+        Row: {
+          adjustment_type: string
+          athlete_id: string
+          created_at: string
+          id: string
+          original_distance_km: number | null
+          original_duration_min: number | null
+          original_intensity: string | null
+          reason_details: string | null
+          source: string
+          status: string
+          suggested_distance_km: number | null
+          suggested_duration_min: number | null
+          suggested_intensity: string | null
+          target_session_id: string
+          tsb_at_suggestion: number | null
+        }
+        Insert: {
+          adjustment_type: string
+          athlete_id: string
+          created_at?: string
+          id?: string
+          original_distance_km?: number | null
+          original_duration_min?: number | null
+          original_intensity?: string | null
+          reason_details?: string | null
+          source?: string
+          status?: string
+          suggested_distance_km?: number | null
+          suggested_duration_min?: number | null
+          suggested_intensity?: string | null
+          target_session_id: string
+          tsb_at_suggestion?: number | null
+        }
+        Update: {
+          adjustment_type?: string
+          athlete_id?: string
+          created_at?: string
+          id?: string
+          original_distance_km?: number | null
+          original_duration_min?: number | null
+          original_intensity?: string | null
+          reason_details?: string | null
+          source?: string
+          status?: string
+          suggested_distance_km?: number | null
+          suggested_duration_min?: number | null
+          suggested_intensity?: string | null
+          target_session_id?: string
+          tsb_at_suggestion?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "periodization_adjustments_target_session_id_fkey"
+            columns: ["target_session_id"]
+            isOneToOne: false
+            referencedRelation: "planned_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_history: {
         Row: {
           action: string
@@ -1025,6 +1087,7 @@ export type Database = {
           id: string
           max_hr: number | null
           onboarding_completed: boolean | null
+          resting_hr: number | null
           updated_at: string
           weight_kg: number | null
         }
@@ -1041,6 +1104,7 @@ export type Database = {
           id: string
           max_hr?: number | null
           onboarding_completed?: boolean | null
+          resting_hr?: number | null
           updated_at?: string
           weight_kg?: number | null
         }
@@ -1057,6 +1121,7 @@ export type Database = {
           id?: string
           max_hr?: number | null
           onboarding_completed?: boolean | null
+          resting_hr?: number | null
           updated_at?: string
           weight_kg?: number | null
         }
@@ -1427,6 +1492,39 @@ export type Database = {
           },
         ]
       }
+      training_load_daily: {
+        Row: {
+          athlete_id: string
+          atl: number
+          computed_at: string
+          ctl: number
+          date: string
+          id: string
+          trimp: number
+          tsb: number
+        }
+        Insert: {
+          athlete_id: string
+          atl?: number
+          computed_at?: string
+          ctl?: number
+          date: string
+          id?: string
+          trimp?: number
+          tsb?: number
+        }
+        Update: {
+          athlete_id?: string
+          atl?: number
+          computed_at?: string
+          ctl?: number
+          date?: string
+          id?: string
+          trimp?: number
+          tsb?: number
+        }
+        Relationships: []
+      }
       training_plans: {
         Row: {
           archived_at: string | null
@@ -1611,6 +1709,20 @@ export type Database = {
           id: string
           name: string
         }[]
+      }
+      recompute_training_load: {
+        Args: { _athlete_id: string }
+        Returns: undefined
+      }
+      session_trimp: {
+        Args: {
+          _avg_hr: number
+          _duration_min: number
+          _max_hr: number
+          _resting_hr: number
+          _rpe: number
+        }
+        Returns: number
       }
     }
     Enums: {
