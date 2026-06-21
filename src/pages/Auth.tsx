@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable/index';
 import { storeCredential, retrieveCredential } from '@/hooks/useBiometricCredentials';
@@ -19,6 +20,13 @@ type View = 'auth' | 'check-email' | 'forgot-password' | 'forgot-sent';
 export default function AuthPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // If a session is already established (e.g., returning from OAuth redirect), bounce to dashboard.
+  useEffect(() => {
+    if (user) navigate('/dashboard', { replace: true });
+  }, [user, navigate]);
+
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -96,24 +104,30 @@ export default function AuthPage() {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
-    const { error } = await lovable.auth.signInWithOAuth("google", {
+    const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
-    if (error) {
-      toast.error('Google sign-in failed: ' + (error as Error).message);
+    if (result.error) {
+      toast.error('Google sign-in failed: ' + (result.error as Error).message);
       setLoading(false);
+      return;
     }
+    if (result.redirected) return; // browser is navigating away
+    navigate('/dashboard', { replace: true });
   };
 
   const handleAppleSignIn = async () => {
     setLoading(true);
-    const { error } = await lovable.auth.signInWithOAuth("apple", {
+    const result = await lovable.auth.signInWithOAuth("apple", {
       redirect_uri: window.location.origin,
     });
-    if (error) {
-      toast.error('Apple sign-in failed: ' + (error as Error).message);
+    if (result.error) {
+      toast.error('Apple sign-in failed: ' + (result.error as Error).message);
       setLoading(false);
+      return;
     }
+    if (result.redirected) return;
+    navigate('/dashboard', { replace: true });
   };
 
   const OAuthButtons = ({ action }: { action: 'in' | 'up' }) => (
