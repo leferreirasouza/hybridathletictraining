@@ -1,9 +1,10 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Server-to-server only (invoked by a scheduled cron job, not by end users).
 // Auth is a shared secret header rather than a user JWT, since there is no
 // user session in a cron context.
-Deno.serve(async (req) => {
+serve(async (req) => {
   const cronSecret = Deno.env.get("CRON_SECRET");
   const provided = req.headers.get("x-cron-secret");
   if (!cronSecret || provided !== cronSecret) {
@@ -40,12 +41,6 @@ Deno.serve(async (req) => {
         succeeded++;
       }
     }
-
-    await supabase.from("audit_logs").insert({
-      action: "cron.compute_training_load",
-      entity_type: "cron_job",
-      details: { athletes: athleteIds.length, succeeded, failed },
-    });
 
     return new Response(
       JSON.stringify({ success: true, athletes: athleteIds.length, succeeded, failed }),
