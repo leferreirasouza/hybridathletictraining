@@ -74,7 +74,14 @@ const prefsSchema = z.object({
     .record(z.boolean())
     .refine(
       (e) => Object.values(e).some(Boolean),
-      { message: 'Pick at least one equipment option (choose "none" if you have nothing).' }
+      { message: 'none-selected' }
+    )
+    .refine(
+      (e) => {
+        const selected = Object.keys(e).filter((k) => e[k]);
+        return !(selected.includes('none') && selected.length > 1);
+      },
+      { message: 'none-conflict' }
     ),
 });
 
@@ -152,6 +159,8 @@ export default function TrainingPreferences() {
     }
     return errs;
   };
+
+  const isValid = Object.keys(validate()).length === 0;
 
   // Re-validate after submission attempt so users see errors clear as they fix them.
   useEffect(() => {
@@ -484,14 +493,18 @@ export default function TrainingPreferences() {
               </div>
               {errors.equipment && (
                 <p id="equipment-error" className="text-sm text-destructive mt-3">
-                  {errors.equipment}
+                  {errors.equipment === 'none-selected'
+                    ? 'Pick at least one equipment option (choose "none" if you have nothing).'
+                    : errors.equipment === 'none-conflict'
+                    ? 'If you select "none", you cannot also select other equipment.'
+                    : errors.equipment}
                 </p>
               )}
             </CardContent>
           </Card>
 
           <div className="flex justify-end sticky bottom-4">
-            <Button onClick={onSave} disabled={saving} size="lg">
+            <Button onClick={onSave} disabled={saving || !isValid} size="lg">
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
               Save preferences
             </Button>
