@@ -311,6 +311,43 @@ export default function TrainingPreferences() {
             </Alert>
           )}
 
+          {presets.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  Coach presets
+                </CardTitle>
+                <CardDescription>
+                  Apply a coach-built preset to auto-fill your equipment and run-type mix. You can still tweak before saving.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col sm:flex-row gap-3 sm:items-center">
+                <Select value={appliedPresetId} onValueChange={applyPreset}>
+                  <SelectTrigger className="sm:w-[280px]">
+                    <SelectValue placeholder="Choose a preset…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {presets.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {appliedPresetId && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAppliedPresetId('')}
+                  >
+                    Clear selection
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+
           <Card>
             <CardHeader>
               <CardTitle>Available training days</CardTitle>
