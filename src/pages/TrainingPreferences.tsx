@@ -493,7 +493,11 @@ export default function TrainingPreferences() {
               </div>
               {errors.equipment && (
                 <p id="equipment-error" className="text-sm text-destructive mt-3">
-                  {errors.equipment}
+                  {errors.equipment === 'none-selected'
+                    ? 'Pick at least one equipment option (choose "none" if you have nothing).'
+                    : errors.equipment === 'none-conflict'
+                    ? 'If you select "none", you cannot also select other equipment.'
+                    : errors.equipment}
                 </p>
               )}
             </CardContent>
