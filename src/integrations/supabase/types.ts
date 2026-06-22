@@ -1080,10 +1080,12 @@ export type Database = {
           created_at: string
           fitness_level: string | null
           full_name: string
+          goal_finish_time_seconds: number | null
           goal_race_date: string | null
           goal_race_id: string | null
           goal_race_location: string | null
           goal_race_name: string | null
+          goal_run_split_seconds_per_km: number | null
           id: string
           max_hr: number | null
           onboarding_completed: boolean | null
@@ -1097,10 +1099,12 @@ export type Database = {
           created_at?: string
           fitness_level?: string | null
           full_name?: string
+          goal_finish_time_seconds?: number | null
           goal_race_date?: string | null
           goal_race_id?: string | null
           goal_race_location?: string | null
           goal_race_name?: string | null
+          goal_run_split_seconds_per_km?: number | null
           id: string
           max_hr?: number | null
           onboarding_completed?: boolean | null
@@ -1114,10 +1118,12 @@ export type Database = {
           created_at?: string
           fitness_level?: string | null
           full_name?: string
+          goal_finish_time_seconds?: number | null
           goal_race_date?: string | null
           goal_race_id?: string | null
           goal_race_location?: string | null
           goal_race_name?: string | null
+          goal_run_split_seconds_per_km?: number | null
           id?: string
           max_hr?: number | null
           onboarding_completed?: boolean | null
@@ -1572,6 +1578,45 @@ export type Database = {
           },
         ]
       }
+      training_preferences: {
+        Row: {
+          athlete_id: string
+          available_days: number[]
+          equipment: Json
+          id: string
+          mobility_technique_sessions_per_week: number
+          muscle_focus: string[]
+          run_type_weights: Json
+          session_length_min: number
+          strength_sessions_per_week: number
+          updated_at: string
+        }
+        Insert: {
+          athlete_id: string
+          available_days?: number[]
+          equipment?: Json
+          id?: string
+          mobility_technique_sessions_per_week?: number
+          muscle_focus?: string[]
+          run_type_weights?: Json
+          session_length_min?: number
+          strength_sessions_per_week?: number
+          updated_at?: string
+        }
+        Update: {
+          athlete_id?: string
+          available_days?: number[]
+          equipment?: Json
+          id?: string
+          mobility_technique_sessions_per_week?: number
+          muscle_focus?: string[]
+          run_type_weights?: Json
+          session_length_min?: number
+          strength_sessions_per_week?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1610,6 +1655,7 @@ export type Database = {
           created_at: string
           id: string
           notes: string | null
+          phase: string | null
           plan_version_id: string
           run_days: string | null
           run_km_target: number | null
@@ -1622,6 +1668,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          phase?: string | null
           plan_version_id: string
           run_days?: string | null
           run_km_target?: number | null
@@ -1634,6 +1681,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          phase?: string | null
           plan_version_id?: string
           run_days?: string | null
           run_km_target?: number | null
