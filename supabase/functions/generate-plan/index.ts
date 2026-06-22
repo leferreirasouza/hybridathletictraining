@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { detectInterferenceConflicts, downgradeIntensity, tsbAdjustmentFactor } from "../_shared/interferenceRules.ts";
+import { decomposeHyroxTarget, estimateVDOT, paceZonesFromVDOT, formatPace } from "../_shared/paceZones.ts";
+import { buildPhaseSchedule, formatPhaseTable } from "../_shared/phaseModel.ts";
+import { assignWeeklySlots, formatSlotTable, validateSlotCompliance, type RunTypeWeights } from "../_shared/sessionSlots.ts";
 
 const PLAN_GEN_PROMPT = `You are a HYROX and running race training plan generator. Given an athlete's profile, produce a structured multi-week training plan in JSON.
 
@@ -17,12 +20,13 @@ TRAINING RULES:
 - For running-only: Focus on running with supporting strength/mobility work.
 - Apply progressive overload (max 10% weekly volume increase).
 - COMBINED load across ALL of the athlete's active plans must not exceed safety limits.
-- Include a taper week as the final week if a race date is specified.
 - If athlete has injury concerns, be CONSERVATIVE: reduce intensity, add extra prehab/mobility, avoid aggravating movements.
-- ALWAYS include at least 1 strength/prehab session per week for injury prevention.
 - Prioritize weak stations/areas with extra practice sessions.
 - Keep sessions realistic (30-90 min).
 - Vary session names and content across weeks.
+- A COMPUTED WEEKLY SESSION SLOT TABLE and PHASE TABLE will be provided below when available. These are deterministic, not suggestions — fill EXACTLY the category/count specified per week (run subtype, strength with its muscle focus, or mobility/technique with its subtype). You choose the specific workout content/exercises within each slot, but do not add, drop, or change the category counts. Map mobility/technique slots to discipline "mobility" or "prehab" as appropriate.
+- COMPUTED PACE ZONES, when provided, are derived mathematically from the athlete's target time — use them as the actual pace targets in workout_details for easy/tempo/interval/long runs. Do not invent your own pace numbers when this block is present.
+- The phase table's intensity cap and volume percentage for each week replace any freeform taper/progression guessing — follow it exactly, including which week(s) are the taper.
 
 VALID discipline values: "run", "bike", "stairs", "rowing", "skierg", "mobility", "strength", "accessories", "hyrox_station", "prehab", "custom"
 VALID intensity values: "easy", "moderate", "hard", "race_pace", "max_effort"
@@ -74,6 +78,24 @@ function fmtTime(s: number): string {
   if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
   return `${m}:${String(sec).padStart(2, "0")}`;
 }
+
+function parseTimeToSeconds(time: string | undefined | null): number | null {
+  if (!time) return null;
+  const parts = time.split(":").map(Number);
+  if (parts.some(isNaN)) return null;
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return null;
+}
+
+const RUN_DISTANCE_METERS: Record<string, number> = {
+  "5k": 5000,
+  "10k": 10000,
+  half: 21097.5,
+  marathon: 42195,
+};
+
+const DEFAULT_RUN_TYPE_WEIGHTS: RunTypeWeights = { easy: 0.6, tempo: 0.15, interval: 0.1, long: 0.15, fartlek: 0 };
 
 serve(async (req) => {
   const origin = req.headers.get("Origin") ?? "";
@@ -358,6 +380,69 @@ Plan Duration (weeks): ${profile.planWeeks || "8"}
     periodizationSection += `- If forced to pair them, downgrade one session's intensity rather than stacking two hard sessions.\n`;
     athleteDesc += periodizationSection;
 
+    // ---- Plan Generator Rework Phase A (hand-coded, deterministic backbone) ----
+    const planWeeksNum = Number(profile.planWeeks) || 8;
+    const phaseSchedule = buildPhaseSchedule(planWeeksNum, profile.experience || "intermediate");
+    const weekNumbers = phaseSchedule.map((w) => w.weekNumber);
+    const phaseByWeek: Record<number, "base" | "build" | "peak" | "taper"> = {};
+    for (const w of phaseSchedule) phaseByWeek[w.weekNumber] = w.phase;
+
+    // Persistent + per-plan preferences (training_preferences row may not
+    // exist yet for athletes who haven't visited the new preferences UI —
+    // synthesize sensible defaults from the trainingDays count instead of
+    // blocking on it, per the Phase A rollout decision).
+    const { data: prefsRow } = await supabase
+      .from("training_preferences")
+      .select("available_days, run_type_weights, strength_sessions_per_week, muscle_focus, mobility_technique_sessions_per_week")
+      .eq("athlete_id", user.id)
+      .maybeSingle();
+
+    const trainingDaysCount = prefsRow?.available_days?.length || Number(profile.trainingDays) || 4;
+    const runTypeWeights: RunTypeWeights = (prefsRow?.run_type_weights as RunTypeWeights) || DEFAULT_RUN_TYPE_WEIGHTS;
+    const strengthSessionsPerWeek = prefsRow?.strength_sessions_per_week ?? 1;
+    const mobilityTechSessionsPerWeek = prefsRow?.mobility_technique_sessions_per_week ?? 1;
+    const muscleFocus: string[] = prefsRow?.muscle_focus || [];
+
+    const slotPlan = assignWeeklySlots(
+      weekNumbers,
+      trainingDaysCount,
+      runTypeWeights,
+      strengthSessionsPerWeek,
+      mobilityTechSessionsPerWeek,
+      muscleFocus,
+      phaseByWeek
+    );
+
+    let deterministicSection = `\n\n📐 PHASE SCHEDULE (deterministic — follow exactly):\n${formatPhaseTable(phaseSchedule)}\n`;
+    deterministicSection += `\n📋 WEEKLY SESSION SLOTS (deterministic — fill exactly these categories/counts per week):\n${formatSlotTable(slotPlan)}\n`;
+
+    // Pace zones — computed mathematically from the target time, not
+    // LLM-guessed, mirroring how Runna derives pace targets.
+    let paceZoneInfo: { vdot: number; zones: ReturnType<typeof paceZonesFromVDOT> } | null = null;
+    if (raceType === "running") {
+      const distanceMeters = RUN_DISTANCE_METERS[profile.runDistance] || null;
+      const targetSeconds = parseTimeToSeconds(profile.targetTime);
+      if (distanceMeters && targetSeconds) {
+        const vdot = estimateVDOT(distanceMeters, targetSeconds);
+        paceZoneInfo = { vdot, zones: paceZonesFromVDOT(vdot) };
+      }
+    } else {
+      const totalSeconds = parseTimeToSeconds(profile.totalTarget);
+      const runKmSeconds = parseTimeToSeconds(profile.runKmTarget);
+      if (totalSeconds) {
+        const decomposed = decomposeHyroxTarget(totalSeconds, runKmSeconds);
+        paceZoneInfo = { vdot: decomposed.vdot, zones: decomposed.zones };
+      }
+    }
+
+    if (paceZoneInfo) {
+      const z = paceZoneInfo.zones;
+      deterministicSection += `\n🎯 COMPUTED PACE ZONES (derived from target time, do not invent your own):\n`;
+      deterministicSection += `  Easy: ${formatPace(z.easySecPerKm)} | Marathon/steady: ${formatPace(z.marathonSecPerKm)} | Threshold/tempo: ${formatPace(z.thresholdSecPerKm)} | Interval: ${formatPace(z.intervalSecPerKm)} | Repetition/sprint: ${formatPace(z.repetitionSecPerKm)}\n`;
+    }
+
+    athleteDesc += deterministicSection;
+
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -499,6 +584,32 @@ Plan Duration (weeks): ${profile.planWeeks || "8"}
             tsb_at_suggestion: currentTsb,
           });
         }
+      }
+
+      // ---- Slot-compliance check (Plan Generator Rework Phase A) ----
+      // The slot plan is week-level, not session-level, so there's no single
+      // session a shortfall "belongs to" — we attach the adjustment to the
+      // first inserted session of that week purely so the coach-review UI
+      // has a row to anchor to; reason_details carries the real signal.
+      const slotMismatches = validateSlotCompliance(insertedSessions, slotPlan);
+      for (const mismatch of slotMismatches) {
+        const weekSessions = insertedSessions.filter((s) => s.week_number === mismatch.weekNumber);
+        if (weekSessions.length === 0) continue;
+        const target = weekSessions[0];
+        adjustments.push({
+          athlete_id: user.id,
+          target_session_id: target.id,
+          adjustment_type: "slot_mismatch",
+          reason_details: mismatch.reasonDetails,
+          status: "pending_coach",
+          original_intensity: target.intensity,
+          original_duration_min: target.duration_min,
+          original_distance_km: target.distance_km,
+          suggested_intensity: target.intensity,
+          suggested_duration_min: target.duration_min,
+          suggested_distance_km: target.distance_km,
+          tsb_at_suggestion: currentTsb,
+        });
       }
 
       if (adjustments.length > 0) {
