@@ -504,7 +504,7 @@ export default function TrainingPreferences() {
           </Card>
 
           <div className="flex justify-end sticky bottom-4">
-            <Button onClick={onSave} disabled={saving} size="lg">
+            <Button onClick={onSave} disabled={saving || !isValid} size="lg">
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
               Save preferences
             </Button>
