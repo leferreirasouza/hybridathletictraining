@@ -160,6 +160,8 @@ export default function TrainingPreferences() {
     return errs;
   };
 
+  const isValid = Object.keys(validate()).length === 0;
+
   // Re-validate after submission attempt so users see errors clear as they fix them.
   useEffect(() => {
     if (!submitted) return;
