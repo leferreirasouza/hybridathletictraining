@@ -415,6 +415,10 @@ export default function Profile() {
               <SettingsIcon className="h-4 w-4 mr-3 text-muted-foreground" />
               {t('profile.settings')}
             </Button>
+            <Button variant="ghost" className="w-full justify-start h-11" onClick={() => navigate('/training-preferences')}>
+              <Activity className="h-4 w-4 mr-3 text-muted-foreground" />
+              Training Preferences
+            </Button>
             <Button variant="ghost" className="w-full justify-start h-11" onClick={() => navigate('/activity')}>
               <Activity className="h-4 w-4 mr-3 text-muted-foreground" />
               {t('profile.activityLog')}
