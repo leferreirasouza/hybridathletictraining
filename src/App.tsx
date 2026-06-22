@@ -108,6 +108,7 @@ const App = () => (
                 <Route path="plan-history" element={<PlanHistory />} />
                 <Route path="mileage" element={<MileageHistory />} />
                 <Route path="training-preferences" element={<TrainingPreferences />} />
+                <Route path="equipment-presets" element={<EquipmentPresets />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
