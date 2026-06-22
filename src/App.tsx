@@ -36,6 +36,7 @@ const ExerciseLibrary = lazy(() => import("@/pages/ExerciseLibrary"));
 const PlanHistory = lazy(() => import("@/pages/PlanHistory"));
 const MileageHistory = lazy(() => import("@/pages/MileageHistory"));
 const TrainingPreferences = lazy(() => import("@/pages/TrainingPreferences"));
+const EquipmentPresets = lazy(() => import("@/pages/EquipmentPresets"));
 const StravaCallback = lazy(() => import("@/pages/StravaCallback"));
 const GarminCallback = lazy(() => import("@/pages/GarminCallback"));
 
