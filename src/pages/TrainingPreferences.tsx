@@ -74,7 +74,14 @@ const prefsSchema = z.object({
     .record(z.boolean())
     .refine(
       (e) => Object.values(e).some(Boolean),
-      { message: 'Pick at least one equipment option (choose "none" if you have nothing).' }
+      { message: 'none-selected' }
+    )
+    .refine(
+      (e) => {
+        const selected = Object.keys(e).filter((k) => e[k]);
+        return !(selected.includes('none') && selected.length > 1);
+      },
+      { message: 'none-conflict' }
     ),
 });
 
