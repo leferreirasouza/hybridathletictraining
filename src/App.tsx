@@ -35,6 +35,7 @@ const ActivityLog = lazy(() => import("@/pages/ActivityLog"));
 const ExerciseLibrary = lazy(() => import("@/pages/ExerciseLibrary"));
 const PlanHistory = lazy(() => import("@/pages/PlanHistory"));
 const MileageHistory = lazy(() => import("@/pages/MileageHistory"));
+const TrainingPreferences = lazy(() => import("@/pages/TrainingPreferences"));
 const StravaCallback = lazy(() => import("@/pages/StravaCallback"));
 const GarminCallback = lazy(() => import("@/pages/GarminCallback"));
 
@@ -105,6 +106,7 @@ const App = () => (
                 <Route path="exercises" element={<ExerciseLibrary />} />
                 <Route path="plan-history" element={<PlanHistory />} />
                 <Route path="mileage" element={<MileageHistory />} />
+                <Route path="training-preferences" element={<TrainingPreferences />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
