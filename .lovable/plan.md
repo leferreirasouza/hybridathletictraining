@@ -1,19 +1,31 @@
-## Diagnosis
+## Training Preferences Page
 
-Google sign-in is actually succeeding on the backend — the auth logs show a successful Google login at 22:23:00 for your account, the `/token` exchange returned 200, `/user` returned 200, and the `user_roles` query came back with your master_admin/admin memberships.
+Add a new athlete-facing screen to edit their `training_preferences` row (auto-created on first save).
 
-The bug is on the frontend: in `src/pages/Auth.tsx`, `handleGoogleSignIn` (and `handleAppleSignIn`) only handle the error and redirect cases. When `lovable.auth.signInWithOAuth` returns successfully with tokens already set (the ID-token path that runs after Google bounces back), the code does nothing — so you stay stuck on `/auth` even though you're signed in. The email/password handler correctly calls `navigate('/dashboard')` on success; the OAuth handlers don't.
+### Route & navigation
+- New route `/training-preferences` mounted inside `AppLayout` (protected, requires org).
+- Add a link from the Profile page (and Settings sidebar entry) labeled "Training Preferences" — visible to athletes only.
 
-## Fix
+### Page: `src/pages/TrainingPreferences.tsx`
+Loads the current user's row from `training_preferences` (single, by `athlete_id = auth.uid()`). If none exists, initialize with the DB defaults. On save, `upsert` on `athlete_id`.
 
-In `src/pages/Auth.tsx`:
+Sections (using existing shadcn `Card`, `Button`, `Slider`, `Input`, `Checkbox`, `Label`):
 
-1. In `handleGoogleSignIn` and `handleAppleSignIn`, after the `error` check, if `result.redirected` is true just return (browser will redirect to the provider); otherwise tokens are set — call `navigate('/dashboard')`.
-2. Add a small `useEffect` that watches `useAuth().user` and, if a user is already present while on `/auth`, navigates to `/dashboard`. This also covers the case where the OAuth callback lands back on `/auth` with the session already restored.
+1. **Available days** — 7 toggle chips (Mon–Sun) mapping to `available_days: number[]` (1=Mon … 7=Sun). At least 1 day required.
+2. **Session length** — `Slider` 20–180 min, step 5, bound to `session_length_min`.
+3. **Run type weights** — 5 sliders (easy, tempo, interval, long, fartlek) 0–100%. Show live sum; show inline warning if sum ≠ 100%. "Normalize" button to rescale to sum 1.0. Stored as `run_type_weights` jsonb of fractions.
+4. **Strength & mobility** — two number inputs: `strength_sessions_per_week` (0–7), `mobility_technique_sessions_per_week` (0–7).
+5. **Muscle focus** — multi-select chips: posterior chain, anterior chain, core, upper body, grip, none. Stored in `muscle_focus: string[]`.
+6. **Equipment** — checkbox grid: barbell, dumbbells, kettlebell, sled, ski erg, rower, assault bike, wall ball, sandbag, pull-up bar, box, none. Stored as `equipment` jsonb `{ [key]: true }`.
 
-No backend, RLS, or `src/integrations/lovable/index.ts` changes are needed (that file is auto-generated and the SDK is behaving correctly).
+### Behavior
+- Single Save button → toast on success/failure; disabled while saving or while form invalid (no days selected, or weights sum is 0).
+- Loading skeleton while fetching.
+- Coaches/admins viewing this route see read-only banner + their own prefs (since RLS only allows athletes to write their own).
 
-## Verify
+### Files
+- Create `src/pages/TrainingPreferences.tsx`
+- Edit `src/App.tsx` — register route
+- Edit `src/pages/Profile.tsx` (or relevant nav) — add a link card to Training Preferences
 
-- Sign out, click "Sign in with Google", complete the Google prompt → should land on `/dashboard` instead of staying on `/auth`.
-- Email/password sign-in keeps working as before.
+No DB migration required (table already exists with RLS).
