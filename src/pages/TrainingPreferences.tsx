@@ -145,6 +145,29 @@ export default function TrainingPreferences() {
     })();
   }, [user]);
 
+  // Load equipment presets for the athlete's current organization.
+  useEffect(() => {
+    if (!currentOrg) { setPresets([]); return; }
+    (async () => {
+      const { data, error } = await (supabase as any)
+        .from('equipment_presets')
+        .select('id, name, description, equipment, run_type_weights')
+        .eq('organization_id', currentOrg.id)
+        .order('name', { ascending: true });
+      if (!error) setPresets((data || []) as PresetRow[]);
+    })();
+  }, [currentOrg?.id]);
+
+  const applyPreset = (id: string) => {
+    const p = presets.find((x) => x.id === id);
+    if (!p) return;
+    setEquipment({ ...(p.equipment || {}) });
+    setWeights({ ...DEFAULT_WEIGHTS, ...(p.run_type_weights || {}) });
+    setAppliedPresetId(id);
+    toast.success(`Applied preset: ${p.name}`);
+  };
+
+
   const weightsPctSum = useMemo(
     () => Math.round(RUN_TYPES.reduce((s, k) => s + (weights[k] || 0), 0) * 100),
     [weights]
