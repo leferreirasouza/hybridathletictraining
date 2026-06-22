@@ -224,6 +224,50 @@ export type Database = {
         }
         Relationships: []
       }
+      equipment_presets: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          equipment: Json
+          id: string
+          name: string
+          organization_id: string
+          run_type_weights: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          equipment?: Json
+          id?: string
+          name: string
+          organization_id: string
+          run_type_weights?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          equipment?: Json
+          id?: string
+          name?: string
+          organization_id?: string
+          run_type_weights?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_presets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercise_library: {
         Row: {
           approved_at: string | null

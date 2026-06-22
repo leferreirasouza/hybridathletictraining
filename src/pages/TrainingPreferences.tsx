@@ -12,7 +12,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ArrowLeft, Loader2, Save, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, Save, AlertCircle, Sparkles } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
 const DAYS = [
@@ -91,9 +92,17 @@ type FieldErrors = Partial<Record<
   string
 >>;
 
+interface PresetRow {
+  id: string;
+  name: string;
+  description: string | null;
+  equipment: Record<string, boolean>;
+  run_type_weights: Record<RunType, number>;
+}
+
 export default function TrainingPreferences() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, currentOrg } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -106,6 +115,8 @@ export default function TrainingPreferences() {
   const [equipment, setEquipment] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitted, setSubmitted] = useState(false);
+  const [presets, setPresets] = useState<PresetRow[]>([]);
+  const [appliedPresetId, setAppliedPresetId] = useState<string>('');
 
   useEffect(() => {
     if (!user) return;
@@ -133,6 +144,29 @@ export default function TrainingPreferences() {
       setLoading(false);
     })();
   }, [user]);
+
+  // Load equipment presets for the athlete's current organization.
+  useEffect(() => {
+    if (!currentOrg) { setPresets([]); return; }
+    (async () => {
+      const { data, error } = await (supabase as any)
+        .from('equipment_presets')
+        .select('id, name, description, equipment, run_type_weights')
+        .eq('organization_id', currentOrg.id)
+        .order('name', { ascending: true });
+      if (!error) setPresets((data || []) as PresetRow[]);
+    })();
+  }, [currentOrg?.id]);
+
+  const applyPreset = (id: string) => {
+    const p = presets.find((x) => x.id === id);
+    if (!p) return;
+    setEquipment({ ...(p.equipment || {}) });
+    setWeights({ ...DEFAULT_WEIGHTS, ...(p.run_type_weights || {}) });
+    setAppliedPresetId(id);
+    toast.success(`Applied preset: ${p.name}`);
+  };
+
 
   const weightsPctSum = useMemo(
     () => Math.round(RUN_TYPES.reduce((s, k) => s + (weights[k] || 0), 0) * 100),
@@ -276,6 +310,43 @@ export default function TrainingPreferences() {
               </AlertDescription>
             </Alert>
           )}
+
+          {presets.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  Coach presets
+                </CardTitle>
+                <CardDescription>
+                  Apply a coach-built preset to auto-fill your equipment and run-type mix. You can still tweak before saving.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col sm:flex-row gap-3 sm:items-center">
+                <Select value={appliedPresetId} onValueChange={applyPreset}>
+                  <SelectTrigger className="sm:w-[280px]">
+                    <SelectValue placeholder="Choose a preset…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {presets.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {appliedPresetId && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAppliedPresetId('')}
+                  >
+                    Clear selection
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
 
           <Card>
             <CardHeader>
