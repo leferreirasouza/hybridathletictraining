@@ -92,9 +92,17 @@ type FieldErrors = Partial<Record<
   string
 >>;
 
+interface PresetRow {
+  id: string;
+  name: string;
+  description: string | null;
+  equipment: Record<string, boolean>;
+  run_type_weights: Record<RunType, number>;
+}
+
 export default function TrainingPreferences() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, currentOrg } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -107,6 +115,8 @@ export default function TrainingPreferences() {
   const [equipment, setEquipment] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitted, setSubmitted] = useState(false);
+  const [presets, setPresets] = useState<PresetRow[]>([]);
+  const [appliedPresetId, setAppliedPresetId] = useState<string>('');
 
   useEffect(() => {
     if (!user) return;
