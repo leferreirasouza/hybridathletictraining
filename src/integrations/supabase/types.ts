@@ -1340,17 +1340,23 @@ export type Database = {
           block_type: Database["public"]["Enums"]["block_type"]
           distance_m: number | null
           duration_sec: number | null
+          equipment: string | null
           exercise_name: string
           id: string
           load_kg: number | null
+          muscle_group: string | null
           notes: string | null
           order_index: number
+          part_number: number | null
+          repeat_count: number | null
           reps: number | null
           session_id: string
           sets: number | null
+          superset_group: number | null
           target_hr_max: number | null
           target_hr_min: number | null
           target_pace: string | null
+          target_pace_label: string | null
           target_power_watts: number | null
           target_rpe: number | null
         }
@@ -1358,17 +1364,23 @@ export type Database = {
           block_type?: Database["public"]["Enums"]["block_type"]
           distance_m?: number | null
           duration_sec?: number | null
+          equipment?: string | null
           exercise_name?: string
           id?: string
           load_kg?: number | null
+          muscle_group?: string | null
           notes?: string | null
           order_index?: number
+          part_number?: number | null
+          repeat_count?: number | null
           reps?: number | null
           session_id: string
           sets?: number | null
+          superset_group?: number | null
           target_hr_max?: number | null
           target_hr_min?: number | null
           target_pace?: string | null
+          target_pace_label?: string | null
           target_power_watts?: number | null
           target_rpe?: number | null
         }
@@ -1376,17 +1388,23 @@ export type Database = {
           block_type?: Database["public"]["Enums"]["block_type"]
           distance_m?: number | null
           duration_sec?: number | null
+          equipment?: string | null
           exercise_name?: string
           id?: string
           load_kg?: number | null
+          muscle_group?: string | null
           notes?: string | null
           order_index?: number
+          part_number?: number | null
+          repeat_count?: number | null
           reps?: number | null
           session_id?: string
           sets?: number | null
+          superset_group?: number | null
           target_hr_max?: number | null
           target_hr_min?: number | null
           target_pace?: string | null
+          target_pace_label?: string | null
           target_power_watts?: number | null
           target_rpe?: number | null
         }
@@ -1628,10 +1646,13 @@ export type Database = {
           available_days: number[]
           equipment: Json
           id: string
+          mobility_days: number[] | null
+          mobility_tech_weights: Json
           mobility_technique_sessions_per_week: number
           muscle_focus: string[]
           run_type_weights: Json
           session_length_min: number
+          strength_days: number[] | null
           strength_sessions_per_week: number
           updated_at: string
         }
@@ -1640,10 +1661,13 @@ export type Database = {
           available_days?: number[]
           equipment?: Json
           id?: string
+          mobility_days?: number[] | null
+          mobility_tech_weights?: Json
           mobility_technique_sessions_per_week?: number
           muscle_focus?: string[]
           run_type_weights?: Json
           session_length_min?: number
+          strength_days?: number[] | null
           strength_sessions_per_week?: number
           updated_at?: string
         }
@@ -1652,10 +1676,13 @@ export type Database = {
           available_days?: number[]
           equipment?: Json
           id?: string
+          mobility_days?: number[] | null
+          mobility_tech_weights?: Json
           mobility_technique_sessions_per_week?: number
           muscle_focus?: string[]
           run_type_weights?: Json
           session_length_min?: number
+          strength_days?: number[] | null
           strength_sessions_per_week?: number
           updated_at?: string
         }
@@ -1826,6 +1853,7 @@ export type Database = {
         | "station"
         | "strength"
         | "accessory"
+        | "superset"
       discipline:
         | "run"
         | "bike"
@@ -1974,6 +2002,7 @@ export const Constants = {
         "station",
         "strength",
         "accessory",
+        "superset",
       ],
       discipline: [
         "run",
