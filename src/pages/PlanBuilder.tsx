@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Upload, FileSpreadsheet, Trash2, Loader2, CheckCircle2, List, Eye, EyeOff, UserCircle, Search, X, Dumbbell } from 'lucide-react';
+import { Plus, Upload, FileSpreadsheet, Trash2, Loader2, CheckCircle2, List, Eye, EyeOff, UserCircle, Search, X, Dumbbell, Pencil, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,6 +22,8 @@ import type { Database } from '@/integrations/supabase/types';
 import ExcelJS from 'exceljs';
 import PlanCreationWizard from '@/pages/PlanCreationWizard';
 import { useTranslation } from 'react-i18next';
+import { useOrgPlans } from '@/hooks/useOrgPlans';
+import { SwapSessionDialog } from '@/components/schedule/SwapSessionDialog';
 
 type Discipline = Database['public']['Enums']['discipline'];
 type Intensity = Database['public']['Enums']['intensity_level'];
