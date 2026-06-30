@@ -79,6 +79,7 @@ const validateExercise = (ex: ExerciseEntry): string | null => {
 
 interface SessionRow {
   id: string;
+  dbId?: string;
   day: number;
   discipline: Discipline;
   name: string;
