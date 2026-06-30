@@ -900,9 +900,26 @@ export default function PlanBuilder() {
                       <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/15 text-primary">#{idx + 1}</span>
                       <Badge variant="outline" className="text-[10px]">{['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][row.day - 1]}</Badge>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeRow(row.id)}>
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      {row.dbId && selectedPlanId && (
+                        <div className="scale-90 origin-right">
+                          <SwapSessionDialog
+                            session={{
+                              id: row.dbId,
+                              session_name: row.name || 'Session',
+                              discipline: row.discipline,
+                              duration_min: row.duration ? parseFloat(row.duration) : null,
+                              workout_details: row.details || null,
+                              week_number: currentWeek,
+                              day_of_week: row.day,
+                            }}
+                          />
+                        </div>
+                      )}
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeRow(row.id)}>
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     <div>
