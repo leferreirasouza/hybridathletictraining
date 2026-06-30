@@ -804,15 +804,52 @@ export default function PlanBuilder() {
       <Tabs value={managerTab} onValueChange={(value) => { const next = new URLSearchParams(searchParams); next.set('tab', value); setSearchParams(next, { replace: true }); }}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="plans" className="gap-1.5"><List className="h-3.5 w-3.5" /> Current Plans</TabsTrigger>
-          <TabsTrigger value="build">{t('planBuilder.buildFromScratch')}</TabsTrigger>
+          <TabsTrigger value="build">Fine-tune a Plan</TabsTrigger>
           <TabsTrigger value="import">{t('planBuilder.importFile')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="plans" className="mt-4">
-          <CurrentPlansTab />
+          <CurrentPlansTab onFineTune={goToBuildWithPlan} />
         </TabsContent>
 
         <TabsContent value="build" className="mt-4 space-y-4">
+          {!selectedPlanId ? (
+            <Card className="glass">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-display">Pick a plan to fine-tune</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {fineTunePlans.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    No plans yet. Generate one from the wizard or import a spreadsheet, then come back here to tweak it.
+                  </p>
+                ) : (
+                  fineTunePlans.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setSelectedPlanId(p.id)}
+                      className="w-full text-left p-3 rounded-lg border border-border/60 hover:border-primary/40 hover:bg-muted/40 transition-colors flex items-center justify-between gap-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-display font-bold text-sm truncate">{p.name}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          {p.source} · {p.versionCount} version(s) · {new Date(p.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Pencil className="h-4 w-4 text-muted-foreground shrink-0" />
+                    </button>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+            <div className="flex items-center justify-between">
+              <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setSelectedPlanId('')}>
+                <ArrowLeft className="h-3.5 w-3.5" /> Back to plan picker
+              </Button>
+              <Badge variant="outline" className="text-[10px]">Editing existing plan</Badge>
+            </div>
           <Card className="glass">
             <CardContent className="p-4 space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
