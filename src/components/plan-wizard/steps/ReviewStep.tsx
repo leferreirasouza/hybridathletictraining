@@ -70,7 +70,7 @@ export default function ReviewStep({ answers, update, onGenerated }: Props) {
           available_days: answers.runDays ?? [],
           strength_days: answers.strengthDays ?? [],
           mobility_days: [],
-          run_type_weights: {},
+          run_type_weights: { easy: 0.6, tempo: 0.15, interval: 0.1, long: 0.15, fartlek: 0 },
           strength_sessions_per_week: answers.strengthSessionsPerWeek ?? 0,
           mobility_technique_sessions_per_week: answers.mobilitySessionsPerWeek ?? 0,
           muscle_focus: [],
