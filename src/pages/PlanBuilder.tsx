@@ -613,43 +613,83 @@ export default function PlanBuilder() {
     }
     setSaving(true);
     try {
-      const { data: plan, error: planErr } = await supabase
-        .from('training_plans')
-        .insert({ name: planName.trim(), organization_id: currentOrg.id, created_by: user.id, source: 'manual' })
-        .select().single();
-      if (planErr) throw planErr;
-      const { data: version, error: verErr } = await supabase
-        .from('plan_versions')
-        .insert({ plan_id: plan.id, version_number: 1, created_by: user.id })
-        .select().single();
-      if (verErr) throw verErr;
-      const allSessions = Object.entries(sessionsByWeek).flatMap(([week, rows]) =>
-        rows.filter(r => r.name.trim()).map((r, idx) => {
-          const workoutDetailsText = r.exercises.length > 0
-            ? r.exercises.map(ex => `${ex.exerciseName}${ex.setsReps ? ` — ${ex.setsReps}` : ''}${ex.load ? ` @ ${ex.load}` : ''}`).join('\n')
-            : r.details || null;
-          return {
+      const buildPayload = (r: SessionRow, week: number, idx: number) => {
+        const workoutDetailsText = r.exercises.length > 0
+          ? r.exercises.map(ex => `${ex.exerciseName}${ex.setsReps ? ` — ${ex.setsReps}` : ''}${ex.load ? ` @ ${ex.load}` : ''}`).join('\n')
+          : r.details || null;
+        return {
+          week_number: week,
+          day_of_week: r.day,
+          discipline: r.discipline as Discipline,
+          session_name: r.name.trim(),
+          duration_min: r.duration ? parseFloat(r.duration) : null,
+          distance_km: r.distance ? parseFloat(r.distance) : null,
+          intensity: (r.intensity || null) as Intensity | null,
+          workout_details: workoutDetailsText,
+          notes: r.notes || null,
+          order_index: idx,
+        };
+      };
+
+      if (loadedVersionId && selectedPlanId) {
+        // Diff-based update against the loaded plan version. No new training_plans row.
+        if (planDetails?.plan?.name && planDetails.plan.name !== planName.trim()) {
+          await supabase.from('training_plans').update({ name: planName.trim() }).eq('id', selectedPlanId);
+        }
+        const currentRows = Object.entries(sessionsByWeek).flatMap(([week, rows]) =>
+          rows.filter(r => r.name.trim()).map((r, idx) => ({ row: r, week: Number(week), idx }))
+        );
+        const presentDbIds = new Set(currentRows.map(({ row }) => row.dbId).filter(Boolean) as string[]);
+        const toDelete = [...originalSessionIds].filter(id => !presentDbIds.has(id));
+        const toUpdate: { id: string; patch: any }[] = [];
+        const toInsert: any[] = [];
+        for (const { row, week, idx } of currentRows) {
+          const payload = buildPayload(row, week, idx);
+          if (row.dbId) toUpdate.push({ id: row.dbId, patch: payload });
+          else toInsert.push({ ...payload, plan_version_id: loadedVersionId, athlete_id: targetAthleteId });
+        }
+        if (toDelete.length) {
+          const { error } = await supabase.from('planned_sessions').delete().in('id', toDelete);
+          if (error) throw error;
+        }
+        for (const { id, patch } of toUpdate) {
+          const { error } = await supabase.from('planned_sessions').update(patch).eq('id', id);
+          if (error) throw error;
+        }
+        if (toInsert.length) {
+          const { error } = await supabase.from('planned_sessions').insert(toInsert);
+          if (error) throw error;
+        }
+        toast.success(`Plan "${planName}" updated — ${toUpdate.length} edited, ${toInsert.length} added, ${toDelete.length} removed`);
+        queryClient.invalidateQueries({ queryKey: ['fine-tune-plan', selectedPlanId] });
+        queryClient.invalidateQueries({ queryKey: ['org-plans'] });
+        queryClient.invalidateQueries({ queryKey: ['planned-sessions'] });
+      } else {
+        // Legacy create-from-scratch path (no plan loaded).
+        const { data: plan, error: planErr } = await supabase
+          .from('training_plans')
+          .insert({ name: planName.trim(), organization_id: currentOrg.id, created_by: user.id, source: 'manual' })
+          .select().single();
+        if (planErr) throw planErr;
+        const { data: version, error: verErr } = await supabase
+          .from('plan_versions')
+          .insert({ plan_id: plan.id, version_number: 1, created_by: user.id })
+          .select().single();
+        if (verErr) throw verErr;
+        const allSessions = Object.entries(sessionsByWeek).flatMap(([week, rows]) =>
+          rows.filter(r => r.name.trim()).map((r, idx) => ({
+            ...buildPayload(r, Number(week), idx),
             plan_version_id: version.id,
             athlete_id: targetAthleteId,
-            week_number: Number(week),
-            day_of_week: r.day,
-            discipline: r.discipline as Discipline,
-            session_name: r.name.trim(),
-            duration_min: r.duration ? parseFloat(r.duration) : null,
-            distance_km: r.distance ? parseFloat(r.distance) : null,
-            intensity: (r.intensity || null) as Intensity | null,
-            workout_details: workoutDetailsText,
-            notes: r.notes || null,
-            order_index: idx,
-          };
-        })
-      );
-      if (allSessions.length > 0) {
-        const { error: sessErr } = await supabase.from('planned_sessions').insert(allSessions);
-        if (sessErr) throw sessErr;
+          }))
+        );
+        if (allSessions.length > 0) {
+          const { error: sessErr } = await supabase.from('planned_sessions').insert(allSessions);
+          if (sessErr) throw sessErr;
+        }
+        toast.success(`Plan "${planName}" saved with ${allSessions.length} sessions!`);
+        setPlanName(''); setWeekCount(1); setCurrentWeek(1); setSessionsByWeek({ 1: [emptyRow()] });
       }
-      toast.success(`Plan "${planName}" saved with ${allSessions.length} sessions!`);
-      setPlanName(''); setWeekCount(1); setCurrentWeek(1); setSessionsByWeek({ 1: [emptyRow()] });
     } catch (e: any) {
       toast.error(e.message || 'Failed to save plan');
     } finally { setSaving(false); }
