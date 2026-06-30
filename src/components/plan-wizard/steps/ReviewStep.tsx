@@ -64,20 +64,22 @@ export default function ReviewStep({ answers, update, onGenerated }: Props) {
     const equipmentJson = answers.equipment ?? { items: [] };
 
     await supabase.from('training_preferences').upsert(
-      {
-        athlete_id: targetAthleteId,
-        available_days: (answers.runDays ?? []).map((d) => DAY_LABELS[d]),
-        strength_days: (answers.strengthDays ?? []).map((d) => DAY_LABELS[d]),
-        mobility_days: [],
-        run_type_weights: {},
-        strength_sessions_per_week: answers.strengthSessionsPerWeek ?? 0,
-        mobility_technique_sessions_per_week: answers.mobilitySessionsPerWeek ?? 0,
-        muscle_focus: [],
-        mobility_tech_weights: answers.mobilityWeights ?? {},
-        session_length_min: answers.sessionLengthMin ?? 45,
-        equipment: equipmentJson,
-        updated_at: new Date().toISOString(),
-      },
+      [
+        {
+          athlete_id: targetAthleteId,
+          available_days: answers.runDays ?? [],
+          strength_days: answers.strengthDays ?? [],
+          mobility_days: [],
+          run_type_weights: {},
+          strength_sessions_per_week: answers.strengthSessionsPerWeek ?? 0,
+          mobility_technique_sessions_per_week: answers.mobilitySessionsPerWeek ?? 0,
+          muscle_focus: [],
+          mobility_tech_weights: answers.mobilityWeights ?? {},
+          session_length_min: answers.sessionLengthMin ?? 45,
+          equipment: equipmentJson,
+          updated_at: new Date().toISOString(),
+        },
+      ],
       { onConflict: 'athlete_id' },
     );
 
