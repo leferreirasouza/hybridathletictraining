@@ -1477,6 +1477,68 @@ export type Database = {
           },
         ]
       }
+      periodization_adjustments: {
+        Row: {
+          adjustment_type: string
+          athlete_id: string
+          created_at: string
+          id: string
+          original_distance_km: number | null
+          original_duration_min: number | null
+          original_intensity: string | null
+          reason_details: string | null
+          source: string
+          status: string
+          suggested_distance_km: number | null
+          suggested_duration_min: number | null
+          suggested_intensity: string | null
+          target_session_id: string
+          tsb_at_suggestion: number | null
+        }
+        Insert: {
+          adjustment_type: string
+          athlete_id: string
+          created_at?: string
+          id?: string
+          original_distance_km?: number | null
+          original_duration_min?: number | null
+          original_intensity?: string | null
+          reason_details?: string | null
+          source?: string
+          status?: string
+          suggested_distance_km?: number | null
+          suggested_duration_min?: number | null
+          suggested_intensity?: string | null
+          target_session_id: string
+          tsb_at_suggestion?: number | null
+        }
+        Update: {
+          adjustment_type?: string
+          athlete_id?: string
+          created_at?: string
+          id?: string
+          original_distance_km?: number | null
+          original_duration_min?: number | null
+          original_intensity?: string | null
+          reason_details?: string | null
+          source?: string
+          status?: string
+          suggested_distance_km?: number | null
+          suggested_duration_min?: number | null
+          suggested_intensity?: string | null
+          target_session_id?: string
+          tsb_at_suggestion?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "periodization_adjustments_target_session_id_fkey"
+            columns: ["target_session_id"]
+            isOneToOne: false
+            referencedRelation: "planned_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       strava_connections: {
         Row: {
           access_token: string

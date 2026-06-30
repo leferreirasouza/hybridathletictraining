@@ -9,6 +9,8 @@ type AuditAction =
   | 'substitution.created'
   | 'substitution.approved'
   | 'substitution.rejected'
+  | 'periodization.approved'
+  | 'periodization.rejected'
   | 'assignment.created'
   | 'race.added'
   | 'race.deleted'

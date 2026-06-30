@@ -30,6 +30,9 @@ function isStrength(s: SessionLite): boolean {
   return STRENGTH_DISCIPLINES.includes(s.discipline);
 }
 
+// Detects same-day hard-endurance + strength pairings (sharpest interference
+// window, 0-24h) and adjacent-day pairings where both sessions are
+// high-intensity (recommend >=1 easy/rest day between).
 export function detectInterferenceConflicts(sessions: SessionLite[]): InterferenceConflict[] {
   const conflicts: InterferenceConflict[] = [];
   const weeks = [...new Set(sessions.map((s) => s.week_number))];
@@ -83,6 +86,9 @@ export interface TsbAdjustment {
   directive: string;
 }
 
+// Mirrors the band thresholds in src/hooks/useTrainingLoad.ts'
+// fatigueRiskFromTsb for consistency between the dashboard signal and the
+// plan-generation constraint.
 export function tsbAdjustmentFactor(tsb: number): TsbAdjustment {
   if (tsb >= 5) {
     return { intensityCapPct: 100, volumeCapPct: 100, directive: "Athlete is fresh — no reduction needed." };
@@ -106,6 +112,8 @@ export function tsbAdjustmentFactor(tsb: number): TsbAdjustment {
 
 const INTENSITY_ORDER = ["easy", "moderate", "hard", "race_pace", "max_effort"];
 
+// Suggests one intensity tier down, used when a conflict or TSB cap calls
+// for a deterministic downgrade independent of what the AI actually output.
 export function downgradeIntensity(intensity: string | null): string | null {
   if (!intensity) return intensity;
   const idx = INTENSITY_ORDER.indexOf(intensity);

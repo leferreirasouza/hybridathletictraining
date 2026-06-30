@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { detectInterferenceConflicts, downgradeIntensity, tsbAdjustmentFactor } from "../_shared/interferenceRules.ts";
+import { decomposeHyroxTarget, estimateVDOT, paceZonesFromVDOT, formatPace } from "../_shared/paceZones.ts";
+import { buildPhaseSchedule, formatPhaseTable } from "../_shared/phaseModel.ts";
+import { assignWeeklySlots, formatSlotTable, validateSlotCompliance, type RunTypeWeights } from "../_shared/sessionSlots.ts";
 
 const PLAN_GEN_PROMPT = `You are a HYROX and running race training plan generator. Given an athlete's profile, produce a structured multi-week training plan in JSON.
 
@@ -17,15 +20,22 @@ TRAINING RULES:
 - For running-only: Focus on running with supporting strength/mobility work.
 - Apply progressive overload (max 10% weekly volume increase).
 - COMBINED load across ALL of the athlete's active plans must not exceed safety limits.
-- Include a taper week as the final week if a race date is specified.
 - If athlete has injury concerns, be CONSERVATIVE: reduce intensity, add extra prehab/mobility, avoid aggravating movements.
-- ALWAYS include at least 1 strength/prehab session per week for injury prevention.
 - Prioritize weak stations/areas with extra practice sessions.
 - Keep sessions realistic (30-90 min).
 - Vary session names and content across weeks.
+- A COMPUTED WEEKLY SESSION SLOT TABLE and PHASE TABLE will be provided below when available. These are deterministic, not suggestions — fill EXACTLY the category/count specified per week (run subtype, strength with its muscle focus, or mobility/technique with its subtype). You choose the specific workout content/exercises within each slot, but do not add, drop, or change the category counts. Map mobility/technique slots to discipline "mobility" or "prehab" as appropriate.
+- COMPUTED PACE ZONES, when provided, are derived mathematically from the athlete's target time — use them as the actual pace targets in workout_details for easy/tempo/interval/long runs. Do not invent your own pace numbers when this block is present.
+- The phase table's intensity cap and volume percentage for each week replace any freeform taper/progression guessing — follow it exactly, including which week(s) are the taper.
 
 VALID discipline values: "run", "bike", "stairs", "rowing", "skierg", "mobility", "strength", "accessories", "hyrox_station", "prehab", "custom"
 VALID intensity values: "easy", "moderate", "hard", "race_pace", "max_effort"
+VALID block_type values: "warmup", "main", "cooldown", "station", "strength", "accessory", "superset"
+
+STRUCTURED BLOCKS (optional but preferred when you have enough detail): in addition to the free-text workout_details, you may include a "blocks" array per session breaking it into discrete steps:
+- For RUN sessions: emit blocks in order as warmup → one or more main → cooldown. For interval-style sessions, use ONE main block with repeat_count set and target_pace_label describing both the work and recovery pace (e.g. "200m at 3:55/km, 200m at 5:30/km") rather than duplicating rows per rep. For progressive/varied-pace runs, use target_pace_label (e.g. "5km at 4:55/km, 4km at 4:35/km, 3km at 4:15/km") instead of a single target_pace.
+- For STRENGTH sessions: group exercises into numbered parts (part_number, e.g. 1,2,3...). Within a part, give exercises that should be performed back-to-back the same superset_group integer (unique per part; omit/null if the exercise stands alone). Set repeat_count for how many rounds the part/superset repeats. Tag each exercise block with equipment (one item from the athlete's available equipment list, or "bodyweight") and muscle_group (e.g. "chest", "back", "core", "shoulders", "full_body", "legs", "accessory").
+- Leave any field null/omitted when not applicable. If you cannot produce meaningful structured detail for a session, omit "blocks" entirely — workout_details alone is fine.
 
 Respond with ONLY valid JSON (no markdown, no backticks) in this exact format:
 {
@@ -41,7 +51,27 @@ Respond with ONLY valid JSON (no markdown, no backticks) in this exact format:
       "distance_km": number | null,
       "intensity": "valid_intensity" | null,
       "workout_details": "string describing the session",
-      "notes": "string" | null
+      "notes": "string" | null,
+      "blocks": [
+        {
+          "block_type": "valid_block_type",
+          "exercise_name": "string",
+          "part_number": number | null,
+          "superset_group": number | null,
+          "repeat_count": number | null,
+          "sets": number | null,
+          "reps": number | null,
+          "duration_sec": number | null,
+          "distance_m": number | null,
+          "load_kg": number | null,
+          "target_pace": "string" | null,
+          "target_pace_label": "string" | null,
+          "target_rpe": number | null,
+          "equipment": "string" | null,
+          "muscle_group": "string" | null,
+          "notes": "string" | null
+        }
+      ] | null
     }
   ]
 }`;
@@ -75,6 +105,24 @@ function fmtTime(s: number): string {
   return `${m}:${String(sec).padStart(2, "0")}`;
 }
 
+function parseTimeToSeconds(time: string | undefined | null): number | null {
+  if (!time) return null;
+  const parts = time.split(":").map(Number);
+  if (parts.some(isNaN)) return null;
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return null;
+}
+
+const RUN_DISTANCE_METERS: Record<string, number> = {
+  "5k": 5000,
+  "10k": 10000,
+  half: 21097.5,
+  marathon: 42195,
+};
+
+const DEFAULT_RUN_TYPE_WEIGHTS: RunTypeWeights = { easy: 0.6, tempo: 0.15, interval: 0.1, long: 0.15, fartlek: 0 };
+
 serve(async (req) => {
   const origin = req.headers.get("Origin") ?? "";
   const allowedOrigin = Deno.env.get("ALLOWED_ORIGIN") ?? "";
@@ -102,8 +150,25 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) throw new Error("Unauthorized");
 
-    const { profile, organizationId, predictionOnly } = await req.json();
+    const { profile, organizationId, predictionOnly, athleteId } = await req.json();
     if (!profile) throw new Error("Missing profile");
+
+    // Coach-on-behalf-of-athlete authorization: the caller (user.id) is the
+    // athlete by default; a coach can pass athleteId to generate for one of
+    // their assigned athletes instead, verified against coach_athlete_assignments.
+    let effectiveAthleteId = user.id;
+    if (athleteId && athleteId !== user.id) {
+      if (!organizationId) throw new Error("organizationId required when generating on behalf of another athlete");
+      const { data: assignment, error: assignmentErr } = await supabase
+        .from("coach_athlete_assignments")
+        .select("id")
+        .eq("coach_id", user.id)
+        .eq("athlete_id", athleteId)
+        .eq("organization_id", organizationId)
+        .maybeSingle();
+      if (assignmentErr || !assignment) throw new Error("Not authorized to generate a plan for this athlete");
+      effectiveAthleteId = athleteId;
+    }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
@@ -336,7 +401,7 @@ Plan Duration (weeks): ${profile.planWeeks || "8"}
     const { data: loadRows } = await supabase
       .from("training_load_daily")
       .select("tsb")
-      .eq("athlete_id", user.id)
+      .eq("athlete_id", effectiveAthleteId)
       .order("date", { ascending: false })
       .limit(1);
 
@@ -357,6 +422,79 @@ Plan Duration (weeks): ${profile.planWeeks || "8"}
     periodizationSection += `- Leave at least 1 easy/rest day between two high-intensity sessions of different qualities (endurance vs strength).\n`;
     periodizationSection += `- If forced to pair them, downgrade one session's intensity rather than stacking two hard sessions.\n`;
     athleteDesc += periodizationSection;
+
+    // ---- Plan Generator Rework Phase A (hand-coded, deterministic backbone) ----
+    const planWeeksNum = Number(profile.planWeeks) || 8;
+    const phaseSchedule = buildPhaseSchedule(planWeeksNum, profile.experience || "intermediate");
+    const weekNumbers = phaseSchedule.map((w) => w.weekNumber);
+    const phaseByWeek: Record<number, "base" | "build" | "peak" | "taper"> = {};
+    for (const w of phaseSchedule) phaseByWeek[w.weekNumber] = w.phase;
+
+    // Persistent + per-plan preferences (training_preferences row may not
+    // exist yet for athletes who haven't visited the new preferences UI —
+    // synthesize sensible defaults from the trainingDays count instead of
+    // blocking on it, per the Phase A rollout decision).
+    const { data: prefsRow } = await supabase
+      .from("training_preferences")
+      .select("available_days, run_type_weights, strength_sessions_per_week, muscle_focus, mobility_technique_sessions_per_week, equipment")
+      .eq("athlete_id", effectiveAthleteId)
+      .maybeSingle();
+
+    const trainingDaysCount = prefsRow?.available_days?.length || Number(profile.trainingDays) || 4;
+    const runTypeWeights: RunTypeWeights = (prefsRow?.run_type_weights as RunTypeWeights) || DEFAULT_RUN_TYPE_WEIGHTS;
+    const strengthSessionsPerWeek = prefsRow?.strength_sessions_per_week ?? 1;
+    const mobilityTechSessionsPerWeek = prefsRow?.mobility_technique_sessions_per_week ?? 1;
+    const muscleFocus: string[] = prefsRow?.muscle_focus || [];
+
+    const slotPlan = assignWeeklySlots(
+      weekNumbers,
+      trainingDaysCount,
+      runTypeWeights,
+      strengthSessionsPerWeek,
+      mobilityTechSessionsPerWeek,
+      muscleFocus,
+      phaseByWeek
+    );
+
+    let deterministicSection = `\n\n📐 PHASE SCHEDULE (deterministic — follow exactly):\n${formatPhaseTable(phaseSchedule)}\n`;
+    deterministicSection += `\n📋 WEEKLY SESSION SLOTS (deterministic — fill exactly these categories/counts per week):\n${formatSlotTable(slotPlan)}\n`;
+
+    // Equipment constraint — reads defensively since live rows may still use
+    // the old flat {gym_access,sled,rower,skierg} shape, pre-preset-migration.
+    if (prefsRow?.equipment) {
+      const equipmentSource = (prefsRow.equipment as any).items ?? prefsRow.equipment;
+      const availableItems = Object.entries(equipmentSource)
+        .filter(([, v]) => v === true)
+        .map(([k]) => k.replace(/_/g, " "));
+      deterministicSection += `\n🏋️ AVAILABLE EQUIPMENT: ${availableItems.length > 0 ? availableItems.join(", ") : "bodyweight only"}\nONLY prescribe strength/accessory exercises using this equipment (or bodyweight).\n`;
+    }
+
+    // Pace zones — computed mathematically from the target time, not
+    // LLM-guessed, mirroring how Runna derives pace targets.
+    let paceZoneInfo: { vdot: number; zones: ReturnType<typeof paceZonesFromVDOT> } | null = null;
+    if (raceType === "running") {
+      const distanceMeters = RUN_DISTANCE_METERS[profile.runDistance] || null;
+      const targetSeconds = parseTimeToSeconds(profile.targetTime);
+      if (distanceMeters && targetSeconds) {
+        const vdot = estimateVDOT(distanceMeters, targetSeconds);
+        paceZoneInfo = { vdot, zones: paceZonesFromVDOT(vdot) };
+      }
+    } else {
+      const totalSeconds = parseTimeToSeconds(profile.totalTarget);
+      const runKmSeconds = parseTimeToSeconds(profile.runKmTarget);
+      if (totalSeconds) {
+        const decomposed = decomposeHyroxTarget(totalSeconds, runKmSeconds);
+        paceZoneInfo = { vdot: decomposed.vdot, zones: decomposed.zones };
+      }
+    }
+
+    if (paceZoneInfo) {
+      const z = paceZoneInfo.zones;
+      deterministicSection += `\n🎯 COMPUTED PACE ZONES (derived from target time, do not invent your own):\n`;
+      deterministicSection += `  Easy: ${formatPace(z.easySecPerKm)} | Marathon/steady: ${formatPace(z.marathonSecPerKm)} | Threshold/tempo: ${formatPace(z.thresholdSecPerKm)} | Interval: ${formatPace(z.intervalSecPerKm)} | Repetition/sprint: ${formatPace(z.repetitionSecPerKm)}\n`;
+    }
+
+    athleteDesc += deterministicSection;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -426,6 +564,7 @@ Plan Duration (weeks): ${profile.planWeeks || "8"}
 
     const sessions = planData.sessions.map((s: any, idx: number) => ({
       plan_version_id: version.id,
+      athlete_id: effectiveAthleteId,
       week_number: s.week_number || 1,
       day_of_week: s.day_of_week || 1,
       discipline: validDisciplines.includes(s.discipline) ? s.discipline : "custom",
@@ -448,6 +587,46 @@ Plan Duration (weeks): ${profile.planWeeks || "8"}
       insertedSessions = inserted || [];
     }
 
+    // ---- Structured session_blocks (Plan Generator Rework Phase B) ----
+    // Enrichment, not the source of truth — workout_details remains the
+    // fallback, so a failure here must never fail plan generation.
+    const validBlockTypes = ["warmup", "main", "cooldown", "station", "strength", "accessory", "superset"];
+    try {
+      const blockRows: Record<string, unknown>[] = [];
+      planData.sessions.forEach((s: any, idx: number) => {
+        const sessionId = insertedSessions[idx]?.id;
+        if (!sessionId || !Array.isArray(s.blocks)) return;
+        s.blocks.forEach((b: any, bIdx: number) => {
+          blockRows.push({
+            session_id: sessionId,
+            order_index: bIdx,
+            block_type: validBlockTypes.includes(b.block_type) ? b.block_type : "main",
+            exercise_name: b.exercise_name || s.session_name || "",
+            part_number: b.part_number ?? null,
+            superset_group: b.superset_group ?? null,
+            repeat_count: b.repeat_count ?? null,
+            sets: b.sets ?? null,
+            reps: b.reps ?? null,
+            duration_sec: b.duration_sec ?? null,
+            distance_m: b.distance_m ?? null,
+            load_kg: b.load_kg ?? null,
+            target_pace: b.target_pace ?? null,
+            target_pace_label: b.target_pace_label ?? null,
+            target_rpe: b.target_rpe ?? null,
+            equipment: b.equipment ?? null,
+            muscle_group: b.muscle_group ?? null,
+            notes: b.notes ?? null,
+          });
+        });
+      });
+      if (blockRows.length > 0) {
+        const { error: blocksErr } = await supabase.from("session_blocks").insert(blockRows);
+        if (blocksErr) console.error("session_blocks insert error (non-fatal):", blocksErr);
+      }
+    } catch (e) {
+      console.error("session_blocks enrichment failed (non-fatal):", e);
+    }
+
     // ---- Deterministic post-hoc safety net (Phase 2, hand-coded) ----
     // Independent of whether the AI followed the prompt's periodization
     // guidance, re-check the actual generated output and surface any
@@ -463,7 +642,7 @@ Plan Duration (weeks): ${profile.planWeeks || "8"}
         );
         for (const target of targets) {
           adjustments.push({
-            athlete_id: user.id,
+            athlete_id: effectiveAthleteId,
             target_session_id: target.id,
             adjustment_type: "interference_spacing",
             reason_details: conflict.reasonDetails,
@@ -485,7 +664,7 @@ Plan Duration (weeks): ${profile.planWeeks || "8"}
         );
         for (const target of highIntensitySessions) {
           adjustments.push({
-            athlete_id: user.id,
+            athlete_id: effectiveAthleteId,
             target_session_id: target.id,
             adjustment_type: "tsb_intensity_reduction",
             reason_details: tsbAdjustment.directive,
@@ -501,6 +680,32 @@ Plan Duration (weeks): ${profile.planWeeks || "8"}
         }
       }
 
+      // ---- Slot-compliance check (Plan Generator Rework Phase A) ----
+      // The slot plan is week-level, not session-level, so there's no single
+      // session a shortfall "belongs to" — we attach the adjustment to the
+      // first inserted session of that week purely so the coach-review UI
+      // has a row to anchor to; reason_details carries the real signal.
+      const slotMismatches = validateSlotCompliance(insertedSessions, slotPlan);
+      for (const mismatch of slotMismatches) {
+        const weekSessions = insertedSessions.filter((s) => s.week_number === mismatch.weekNumber);
+        if (weekSessions.length === 0) continue;
+        const target = weekSessions[0];
+        adjustments.push({
+          athlete_id: effectiveAthleteId,
+          target_session_id: target.id,
+          adjustment_type: "slot_mismatch",
+          reason_details: mismatch.reasonDetails,
+          status: "pending_coach",
+          original_intensity: target.intensity,
+          original_duration_min: target.duration_min,
+          original_distance_km: target.distance_km,
+          suggested_intensity: target.intensity,
+          suggested_duration_min: target.duration_min,
+          suggested_distance_km: target.distance_km,
+          tsb_at_suggestion: currentTsb,
+        });
+      }
+
       if (adjustments.length > 0) {
         await supabase.from("periodization_adjustments").insert(adjustments);
       }
@@ -509,7 +714,7 @@ Plan Duration (weeks): ${profile.planWeeks || "8"}
     // If race date provided, save it as a future race_result entry for countdown
     if (profile.raceDate && profile.raceName) {
       await supabase.from("race_results").insert({
-        athlete_id: user.id,
+        athlete_id: effectiveAthleteId,
         race_date: profile.raceDate,
         race_name: profile.raceName,
         race_location: profile.raceLocation || null,
