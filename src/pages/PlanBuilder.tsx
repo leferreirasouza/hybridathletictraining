@@ -386,6 +386,11 @@ function CurrentPlansTab({ onFineTune }: { onFineTune: (planId: string) => void 
                   </SelectContent>
                 </Select>
               </div>
+              <div className="flex justify-end pt-1">
+                <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={() => onFineTune(plan.id)}>
+                  <Pencil className="h-3 w-3" /> Fine-tune this plan
+                </Button>
+              </div>
             </CardContent>
           </Card>
         );
