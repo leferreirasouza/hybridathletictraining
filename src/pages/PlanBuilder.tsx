@@ -1021,8 +1021,10 @@ export default function PlanBuilder() {
           </Card>
 
           <Button className="w-full gradient-hyrox" size="lg" onClick={handleSave} disabled={saving}>
-            {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {t('common.saving')}</> : <><CheckCircle2 className="h-4 w-4 mr-2" /> {t('planBuilder.savePlan')}</>}
+            {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {t('common.saving')}</> : <><CheckCircle2 className="h-4 w-4 mr-2" /> {selectedPlanId ? 'Save changes' : t('planBuilder.savePlan')}</>}
           </Button>
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="import" className="mt-4">
