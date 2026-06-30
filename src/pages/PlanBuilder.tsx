@@ -705,12 +705,7 @@ export default function PlanBuilder() {
       );
     }
 
-    return (
-      <div className="page-container py-6 space-y-5">
-        <h1 className="text-xl font-display font-bold">{t('planBuilder.createYourPlan')}</h1>
-        <AthletePlanForm />
-      </div>
-    );
+    return <PlanCreationWizard />;
   }
 
   return (
