@@ -403,10 +403,20 @@ export default function PlanBuilder() {
   const { t } = useTranslation();
   const { user, currentOrg, currentRole } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const canManagePlans = !!currentRole && ['coach', 'admin', 'master_admin'].includes(currentRole);
   const requestedTab = searchParams.get('tab');
   const managerTab = requestedTab === 'plans' || requestedTab === 'build' || requestedTab === 'import' ? requestedTab : 'plans';
   const showAthleteImport = !canManagePlans && requestedTab === 'import';
+  const selectedPlanId = searchParams.get('planId') || '';
+
+  const setSelectedPlanId = (id: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (id) next.set('planId', id); else next.delete('planId');
+    next.set('tab', 'build');
+    setSearchParams(next, { replace: true });
+  };
+  const goToBuildWithPlan = (id: string) => setSelectedPlanId(id);
 
   const [planName, setPlanName] = useState('');
   const [weekCount, setWeekCount] = useState(1);
@@ -415,6 +425,84 @@ export default function PlanBuilder() {
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const [selectedAthleteId, setSelectedAthleteId] = useState('');
+  const [loadedVersionId, setLoadedVersionId] = useState<string | null>(null);
+  const [originalSessionIds, setOriginalSessionIds] = useState<Set<string>>(new Set());
+
+  const { data: fineTunePlans = [] } = useOrgPlans(canManagePlans);
+
+  const { data: planDetails } = useQuery({
+    queryKey: ['fine-tune-plan', selectedPlanId],
+    queryFn: async () => {
+      if (!selectedPlanId) return null;
+      const { data: planRow } = await supabase
+        .from('training_plans').select('id, name').eq('id', selectedPlanId).single();
+      const { data: versions } = await supabase
+        .from('plan_versions').select('id, version_number')
+        .eq('plan_id', selectedPlanId).order('version_number', { ascending: false }).limit(1);
+      const version = versions?.[0] || null;
+      if (!version) return { plan: planRow, version: null, sessions: [] as any[], blocks: [] as any[] };
+      const { data: sessions } = await supabase
+        .from('planned_sessions').select('*')
+        .eq('plan_version_id', version.id)
+        .order('week_number').order('day_of_week').order('order_index');
+      const sessionIds = (sessions || []).map((s) => s.id);
+      let blocks: any[] = [];
+      if (sessionIds.length) {
+        const { data: b } = await supabase
+          .from('session_blocks').select('*').in('session_id', sessionIds).order('order_index');
+        blocks = b || [];
+      }
+      return { plan: planRow, version, sessions: sessions || [], blocks };
+    },
+    enabled: !!selectedPlanId && canManagePlans,
+  });
+
+  useEffect(() => {
+    if (!selectedPlanId) {
+      setLoadedVersionId(null);
+      setOriginalSessionIds(new Set());
+      return;
+    }
+    if (!planDetails || !planDetails.version) return;
+    setLoadedVersionId(planDetails.version.id);
+    setPlanName(planDetails.plan?.name || '');
+    const blocksBySession = new Map<string, any[]>();
+    for (const b of planDetails.blocks) {
+      const arr = blocksBySession.get(b.session_id) || [];
+      arr.push(b); blocksBySession.set(b.session_id, arr);
+    }
+    const byWeek: Record<number, SessionRow[]> = {};
+    let maxWeek = 1;
+    const ids = new Set<string>();
+    for (const s of planDetails.sessions as any[]) {
+      ids.add(s.id);
+      const row: SessionRow = {
+        id: crypto.randomUUID(),
+        dbId: s.id,
+        day: s.day_of_week,
+        discipline: s.discipline,
+        name: s.session_name || '',
+        duration: s.duration_min != null ? String(s.duration_min) : '',
+        distance: s.distance_km != null ? String(s.distance_km) : '',
+        intensity: (s.intensity || '') as Intensity | '',
+        details: s.workout_details || '',
+        notes: s.notes || '',
+        exercises: (blocksBySession.get(s.id) || []).map((b) => ({
+          exerciseId: '',
+          exerciseName: b.exercise_name || 'Exercise',
+          setsReps: b.sets && b.reps ? `${b.sets}x${b.reps}` : (b.duration_sec ? `${b.duration_sec}s` : ''),
+          load: b.load_kg ? `${b.load_kg}kg` : (b.target_rpe ? `RPE ${b.target_rpe}` : undefined),
+        })),
+      };
+      byWeek[s.week_number] = [...(byWeek[s.week_number] || []), row];
+      if (s.week_number > maxWeek) maxWeek = s.week_number;
+    }
+    if (!byWeek[1]) byWeek[1] = [emptyRow()];
+    setSessionsByWeek(byWeek);
+    setWeekCount(maxWeek);
+    setCurrentWeek(1);
+    setOriginalSessionIds(ids);
+  }, [planDetails, selectedPlanId]);
 
   const { data: assigneeOptions = [] } = useQuery({
     queryKey: ['plan-builder-assignees', currentOrg?.id, user?.id],
