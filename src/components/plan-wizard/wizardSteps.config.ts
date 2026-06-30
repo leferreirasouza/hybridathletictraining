@@ -72,7 +72,7 @@ export function isStepComplete(stepId: StepId, a: WizardAnswers): boolean {
     case 'strengthCount': return a.strengthSessionsPerWeek !== undefined && a.strengthSessionsPerWeek >= 0;
     case 'strengthDays':
       return !!a.strengthDays && a.strengthDays.length === (a.strengthSessionsPerWeek ?? 0);
-    case 'equipment': return true; // placeholder step
+    case 'equipment': return !!a.equipment?.preset;
     case 'mobilityCount':
       return a.mobilitySessionsPerWeek !== undefined && a.mobilitySessionsPerWeek >= 0;
     case 'mobilityFocus': return true;
