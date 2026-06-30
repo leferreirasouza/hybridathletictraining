@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Upload, FileSpreadsheet, Trash2, Loader2, CheckCircle2, List, Eye, EyeOff, UserCircle, Search, X, Dumbbell } from 'lucide-react';
+import { Plus, Upload, FileSpreadsheet, Trash2, Loader2, CheckCircle2, List, Eye, EyeOff, UserCircle, Search, X, Dumbbell, Pencil, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,6 +22,8 @@ import type { Database } from '@/integrations/supabase/types';
 import ExcelJS from 'exceljs';
 import PlanCreationWizard from '@/pages/PlanCreationWizard';
 import { useTranslation } from 'react-i18next';
+import { useOrgPlans } from '@/hooks/useOrgPlans';
+import { SwapSessionDialog } from '@/components/schedule/SwapSessionDialog';
 
 type Discipline = Database['public']['Enums']['discipline'];
 type Intensity = Database['public']['Enums']['intensity_level'];
@@ -77,6 +79,7 @@ const validateExercise = (ex: ExerciseEntry): string | null => {
 
 interface SessionRow {
   id: string;
+  dbId?: string;
   day: number;
   discipline: Discipline;
   name: string;
@@ -212,7 +215,7 @@ function ExercisePicker({
   );
 }
 
-function CurrentPlansTab() {
+function CurrentPlansTab({ onFineTune }: { onFineTune: (planId: string) => void }) {
   const { t } = useTranslation();
   const { user, currentOrg } = useAuth();
   const queryClient = useQueryClient();
@@ -244,56 +247,7 @@ function CurrentPlansTab() {
     enabled: !!currentOrg?.id && !!user?.id,
   });
 
-  const { data: plans, isLoading } = useQuery({
-    queryKey: ['org-plans', currentOrg?.id],
-    queryFn: async () => {
-      if (!currentOrg) return [];
-      const { data, error } = await supabase
-        .from('training_plans')
-        .select('id, name, description, is_template, source, created_at, archived_at, created_by')
-        .eq('organization_id', currentOrg.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      const planIds = (data || []).map(p => p.id);
-      if (planIds.length === 0) return [];
-      const { data: versions } = await supabase
-        .from('plan_versions')
-        .select('id, plan_id')
-        .in('plan_id', planIds);
-      const versionIds = (versions || []).map(v => v.id);
-      const versionMap = new Map<string, string[]>();
-      (versions || []).forEach(v => {
-        const arr = versionMap.get(v.plan_id) || [];
-        arr.push(v.id);
-        versionMap.set(v.plan_id, arr);
-      });
-      // Fetch assigned athlete_id per plan (from planned_sessions)
-      let assignmentMap = new Map<string, string | null>();
-      if (versionIds.length > 0) {
-        const { data: sessions } = await supabase
-          .from('planned_sessions')
-          .select('plan_version_id, athlete_id')
-          .in('plan_version_id', versionIds)
-          .limit(500);
-        // Map plan_id → athlete_id (take first non-null)
-        const versionToPlan = new Map((versions || []).map(v => [v.id, v.plan_id]));
-        (sessions || []).forEach(s => {
-          const pid = versionToPlan.get(s.plan_version_id);
-          if (pid && s.athlete_id && !assignmentMap.has(pid)) {
-            assignmentMap.set(pid, s.athlete_id);
-          }
-        });
-      }
-      return (data || []).map(p => ({
-        ...p,
-        isActive: !p.archived_at,
-        versionCount: versionMap.get(p.id)?.length || 0,
-        versionIds: versionMap.get(p.id) || [],
-        assignedAthleteId: assignmentMap.get(p.id) || null,
-      }));
-    },
-    enabled: !!currentOrg?.id,
-  });
+  const { data: plans, isLoading } = useOrgPlans();
 
   const handleToggleArchive = async (planId: string, currentlyActive: boolean) => {
     const { error } = await supabase
@@ -432,6 +386,11 @@ function CurrentPlansTab() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="flex justify-end pt-1">
+                <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={() => onFineTune(plan.id)}>
+                  <Pencil className="h-3 w-3" /> Fine-tune this plan
+                </Button>
+              </div>
             </CardContent>
           </Card>
         );
@@ -444,10 +403,20 @@ export default function PlanBuilder() {
   const { t } = useTranslation();
   const { user, currentOrg, currentRole } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const canManagePlans = !!currentRole && ['coach', 'admin', 'master_admin'].includes(currentRole);
   const requestedTab = searchParams.get('tab');
   const managerTab = requestedTab === 'plans' || requestedTab === 'build' || requestedTab === 'import' ? requestedTab : 'plans';
   const showAthleteImport = !canManagePlans && requestedTab === 'import';
+  const selectedPlanId = searchParams.get('planId') || '';
+
+  const setSelectedPlanId = (id: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (id) next.set('planId', id); else next.delete('planId');
+    next.set('tab', 'build');
+    setSearchParams(next, { replace: true });
+  };
+  const goToBuildWithPlan = (id: string) => setSelectedPlanId(id);
 
   const [planName, setPlanName] = useState('');
   const [weekCount, setWeekCount] = useState(1);
@@ -456,6 +425,84 @@ export default function PlanBuilder() {
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const [selectedAthleteId, setSelectedAthleteId] = useState('');
+  const [loadedVersionId, setLoadedVersionId] = useState<string | null>(null);
+  const [originalSessionIds, setOriginalSessionIds] = useState<Set<string>>(new Set());
+
+  const { data: fineTunePlans = [] } = useOrgPlans(canManagePlans);
+
+  const { data: planDetails } = useQuery({
+    queryKey: ['fine-tune-plan', selectedPlanId],
+    queryFn: async () => {
+      if (!selectedPlanId) return null;
+      const { data: planRow } = await supabase
+        .from('training_plans').select('id, name').eq('id', selectedPlanId).single();
+      const { data: versions } = await supabase
+        .from('plan_versions').select('id, version_number')
+        .eq('plan_id', selectedPlanId).order('version_number', { ascending: false }).limit(1);
+      const version = versions?.[0] || null;
+      if (!version) return { plan: planRow, version: null, sessions: [] as any[], blocks: [] as any[] };
+      const { data: sessions } = await supabase
+        .from('planned_sessions').select('*')
+        .eq('plan_version_id', version.id)
+        .order('week_number').order('day_of_week').order('order_index');
+      const sessionIds = (sessions || []).map((s) => s.id);
+      let blocks: any[] = [];
+      if (sessionIds.length) {
+        const { data: b } = await supabase
+          .from('session_blocks').select('*').in('session_id', sessionIds).order('order_index');
+        blocks = b || [];
+      }
+      return { plan: planRow, version, sessions: sessions || [], blocks };
+    },
+    enabled: !!selectedPlanId && canManagePlans,
+  });
+
+  useEffect(() => {
+    if (!selectedPlanId) {
+      setLoadedVersionId(null);
+      setOriginalSessionIds(new Set());
+      return;
+    }
+    if (!planDetails || !planDetails.version) return;
+    setLoadedVersionId(planDetails.version.id);
+    setPlanName(planDetails.plan?.name || '');
+    const blocksBySession = new Map<string, any[]>();
+    for (const b of planDetails.blocks) {
+      const arr = blocksBySession.get(b.session_id) || [];
+      arr.push(b); blocksBySession.set(b.session_id, arr);
+    }
+    const byWeek: Record<number, SessionRow[]> = {};
+    let maxWeek = 1;
+    const ids = new Set<string>();
+    for (const s of planDetails.sessions as any[]) {
+      ids.add(s.id);
+      const row: SessionRow = {
+        id: crypto.randomUUID(),
+        dbId: s.id,
+        day: s.day_of_week,
+        discipline: s.discipline,
+        name: s.session_name || '',
+        duration: s.duration_min != null ? String(s.duration_min) : '',
+        distance: s.distance_km != null ? String(s.distance_km) : '',
+        intensity: (s.intensity || '') as Intensity | '',
+        details: s.workout_details || '',
+        notes: s.notes || '',
+        exercises: (blocksBySession.get(s.id) || []).map((b) => ({
+          exerciseId: '',
+          exerciseName: b.exercise_name || 'Exercise',
+          setsReps: b.sets && b.reps ? `${b.sets}x${b.reps}` : (b.duration_sec ? `${b.duration_sec}s` : ''),
+          load: b.load_kg ? `${b.load_kg}kg` : (b.target_rpe ? `RPE ${b.target_rpe}` : undefined),
+        })),
+      };
+      byWeek[s.week_number] = [...(byWeek[s.week_number] || []), row];
+      if (s.week_number > maxWeek) maxWeek = s.week_number;
+    }
+    if (!byWeek[1]) byWeek[1] = [emptyRow()];
+    setSessionsByWeek(byWeek);
+    setWeekCount(maxWeek);
+    setCurrentWeek(1);
+    setOriginalSessionIds(ids);
+  }, [planDetails, selectedPlanId]);
 
   const { data: assigneeOptions = [] } = useQuery({
     queryKey: ['plan-builder-assignees', currentOrg?.id, user?.id],
@@ -566,43 +613,83 @@ export default function PlanBuilder() {
     }
     setSaving(true);
     try {
-      const { data: plan, error: planErr } = await supabase
-        .from('training_plans')
-        .insert({ name: planName.trim(), organization_id: currentOrg.id, created_by: user.id, source: 'manual' })
-        .select().single();
-      if (planErr) throw planErr;
-      const { data: version, error: verErr } = await supabase
-        .from('plan_versions')
-        .insert({ plan_id: plan.id, version_number: 1, created_by: user.id })
-        .select().single();
-      if (verErr) throw verErr;
-      const allSessions = Object.entries(sessionsByWeek).flatMap(([week, rows]) =>
-        rows.filter(r => r.name.trim()).map((r, idx) => {
-          const workoutDetailsText = r.exercises.length > 0
-            ? r.exercises.map(ex => `${ex.exerciseName}${ex.setsReps ? ` — ${ex.setsReps}` : ''}${ex.load ? ` @ ${ex.load}` : ''}`).join('\n')
-            : r.details || null;
-          return {
+      const buildPayload = (r: SessionRow, week: number, idx: number) => {
+        const workoutDetailsText = r.exercises.length > 0
+          ? r.exercises.map(ex => `${ex.exerciseName}${ex.setsReps ? ` — ${ex.setsReps}` : ''}${ex.load ? ` @ ${ex.load}` : ''}`).join('\n')
+          : r.details || null;
+        return {
+          week_number: week,
+          day_of_week: r.day,
+          discipline: r.discipline as Discipline,
+          session_name: r.name.trim(),
+          duration_min: r.duration ? parseFloat(r.duration) : null,
+          distance_km: r.distance ? parseFloat(r.distance) : null,
+          intensity: (r.intensity || null) as Intensity | null,
+          workout_details: workoutDetailsText,
+          notes: r.notes || null,
+          order_index: idx,
+        };
+      };
+
+      if (loadedVersionId && selectedPlanId) {
+        // Diff-based update against the loaded plan version. No new training_plans row.
+        if (planDetails?.plan?.name && planDetails.plan.name !== planName.trim()) {
+          await supabase.from('training_plans').update({ name: planName.trim() }).eq('id', selectedPlanId);
+        }
+        const currentRows = Object.entries(sessionsByWeek).flatMap(([week, rows]) =>
+          rows.filter(r => r.name.trim()).map((r, idx) => ({ row: r, week: Number(week), idx }))
+        );
+        const presentDbIds = new Set(currentRows.map(({ row }) => row.dbId).filter(Boolean) as string[]);
+        const toDelete = [...originalSessionIds].filter(id => !presentDbIds.has(id));
+        const toUpdate: { id: string; patch: any }[] = [];
+        const toInsert: any[] = [];
+        for (const { row, week, idx } of currentRows) {
+          const payload = buildPayload(row, week, idx);
+          if (row.dbId) toUpdate.push({ id: row.dbId, patch: payload });
+          else toInsert.push({ ...payload, plan_version_id: loadedVersionId, athlete_id: targetAthleteId });
+        }
+        if (toDelete.length) {
+          const { error } = await supabase.from('planned_sessions').delete().in('id', toDelete);
+          if (error) throw error;
+        }
+        for (const { id, patch } of toUpdate) {
+          const { error } = await supabase.from('planned_sessions').update(patch).eq('id', id);
+          if (error) throw error;
+        }
+        if (toInsert.length) {
+          const { error } = await supabase.from('planned_sessions').insert(toInsert);
+          if (error) throw error;
+        }
+        toast.success(`Plan "${planName}" updated — ${toUpdate.length} edited, ${toInsert.length} added, ${toDelete.length} removed`);
+        queryClient.invalidateQueries({ queryKey: ['fine-tune-plan', selectedPlanId] });
+        queryClient.invalidateQueries({ queryKey: ['org-plans'] });
+        queryClient.invalidateQueries({ queryKey: ['planned-sessions'] });
+      } else {
+        // Legacy create-from-scratch path (no plan loaded).
+        const { data: plan, error: planErr } = await supabase
+          .from('training_plans')
+          .insert({ name: planName.trim(), organization_id: currentOrg.id, created_by: user.id, source: 'manual' })
+          .select().single();
+        if (planErr) throw planErr;
+        const { data: version, error: verErr } = await supabase
+          .from('plan_versions')
+          .insert({ plan_id: plan.id, version_number: 1, created_by: user.id })
+          .select().single();
+        if (verErr) throw verErr;
+        const allSessions = Object.entries(sessionsByWeek).flatMap(([week, rows]) =>
+          rows.filter(r => r.name.trim()).map((r, idx) => ({
+            ...buildPayload(r, Number(week), idx),
             plan_version_id: version.id,
             athlete_id: targetAthleteId,
-            week_number: Number(week),
-            day_of_week: r.day,
-            discipline: r.discipline as Discipline,
-            session_name: r.name.trim(),
-            duration_min: r.duration ? parseFloat(r.duration) : null,
-            distance_km: r.distance ? parseFloat(r.distance) : null,
-            intensity: (r.intensity || null) as Intensity | null,
-            workout_details: workoutDetailsText,
-            notes: r.notes || null,
-            order_index: idx,
-          };
-        })
-      );
-      if (allSessions.length > 0) {
-        const { error: sessErr } = await supabase.from('planned_sessions').insert(allSessions);
-        if (sessErr) throw sessErr;
+          }))
+        );
+        if (allSessions.length > 0) {
+          const { error: sessErr } = await supabase.from('planned_sessions').insert(allSessions);
+          if (sessErr) throw sessErr;
+        }
+        toast.success(`Plan "${planName}" saved with ${allSessions.length} sessions!`);
+        setPlanName(''); setWeekCount(1); setCurrentWeek(1); setSessionsByWeek({ 1: [emptyRow()] });
       }
-      toast.success(`Plan "${planName}" saved with ${allSessions.length} sessions!`);
-      setPlanName(''); setWeekCount(1); setCurrentWeek(1); setSessionsByWeek({ 1: [emptyRow()] });
     } catch (e: any) {
       toast.error(e.message || 'Failed to save plan');
     } finally { setSaving(false); }
@@ -717,15 +804,52 @@ export default function PlanBuilder() {
       <Tabs value={managerTab} onValueChange={(value) => { const next = new URLSearchParams(searchParams); next.set('tab', value); setSearchParams(next, { replace: true }); }}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="plans" className="gap-1.5"><List className="h-3.5 w-3.5" /> Current Plans</TabsTrigger>
-          <TabsTrigger value="build">{t('planBuilder.buildFromScratch')}</TabsTrigger>
+          <TabsTrigger value="build">Fine-tune a Plan</TabsTrigger>
           <TabsTrigger value="import">{t('planBuilder.importFile')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="plans" className="mt-4">
-          <CurrentPlansTab />
+          <CurrentPlansTab onFineTune={goToBuildWithPlan} />
         </TabsContent>
 
         <TabsContent value="build" className="mt-4 space-y-4">
+          {!selectedPlanId ? (
+            <Card className="glass">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-display">Pick a plan to fine-tune</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {fineTunePlans.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    No plans yet. Generate one from the wizard or import a spreadsheet, then come back here to tweak it.
+                  </p>
+                ) : (
+                  fineTunePlans.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setSelectedPlanId(p.id)}
+                      className="w-full text-left p-3 rounded-lg border border-border/60 hover:border-primary/40 hover:bg-muted/40 transition-colors flex items-center justify-between gap-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-display font-bold text-sm truncate">{p.name}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          {p.source} · {p.versionCount} version(s) · {new Date(p.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Pencil className="h-4 w-4 text-muted-foreground shrink-0" />
+                    </button>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+            <div className="flex items-center justify-between">
+              <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setSelectedPlanId('')}>
+                <ArrowLeft className="h-3.5 w-3.5" /> Back to plan picker
+              </Button>
+              <Badge variant="outline" className="text-[10px]">Editing existing plan</Badge>
+            </div>
           <Card className="glass">
             <CardContent className="p-4 space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -776,9 +900,26 @@ export default function PlanBuilder() {
                       <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/15 text-primary">#{idx + 1}</span>
                       <Badge variant="outline" className="text-[10px]">{['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][row.day - 1]}</Badge>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeRow(row.id)}>
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      {row.dbId && selectedPlanId && (
+                        <div className="scale-90 origin-right">
+                          <SwapSessionDialog
+                            session={{
+                              id: row.dbId,
+                              session_name: row.name || 'Session',
+                              discipline: row.discipline,
+                              duration_min: row.duration ? parseFloat(row.duration) : null,
+                              workout_details: row.details || null,
+                              week_number: currentWeek,
+                              day_of_week: row.day,
+                            }}
+                          />
+                        </div>
+                      )}
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeRow(row.id)}>
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     <div>
@@ -897,8 +1038,10 @@ export default function PlanBuilder() {
           </Card>
 
           <Button className="w-full gradient-hyrox" size="lg" onClick={handleSave} disabled={saving}>
-            {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {t('common.saving')}</> : <><CheckCircle2 className="h-4 w-4 mr-2" /> {t('planBuilder.savePlan')}</>}
+            {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {t('common.saving')}</> : <><CheckCircle2 className="h-4 w-4 mr-2" /> {selectedPlanId ? 'Save changes' : t('planBuilder.savePlan')}</>}
           </Button>
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="import" className="mt-4">
