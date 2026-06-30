@@ -20,7 +20,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import type { Database } from '@/integrations/supabase/types';
 import ExcelJS from 'exceljs';
-import AthletePlanForm from '@/components/AthletePlanForm';
+import PlanCreationWizard from '@/pages/PlanCreationWizard';
 import { useTranslation } from 'react-i18next';
 
 type Discipline = Database['public']['Enums']['discipline'];
@@ -705,12 +705,7 @@ export default function PlanBuilder() {
       );
     }
 
-    return (
-      <div className="page-container py-6 space-y-5">
-        <h1 className="text-xl font-display font-bold">{t('planBuilder.createYourPlan')}</h1>
-        <AthletePlanForm />
-      </div>
-    );
+    return <PlanCreationWizard />;
   }
 
   return (
