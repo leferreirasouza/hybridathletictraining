@@ -247,56 +247,7 @@ function CurrentPlansTab({ onFineTune }: { onFineTune: (planId: string) => void 
     enabled: !!currentOrg?.id && !!user?.id,
   });
 
-  const { data: plans, isLoading } = useQuery({
-    queryKey: ['org-plans', currentOrg?.id],
-    queryFn: async () => {
-      if (!currentOrg) return [];
-      const { data, error } = await supabase
-        .from('training_plans')
-        .select('id, name, description, is_template, source, created_at, archived_at, created_by')
-        .eq('organization_id', currentOrg.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      const planIds = (data || []).map(p => p.id);
-      if (planIds.length === 0) return [];
-      const { data: versions } = await supabase
-        .from('plan_versions')
-        .select('id, plan_id')
-        .in('plan_id', planIds);
-      const versionIds = (versions || []).map(v => v.id);
-      const versionMap = new Map<string, string[]>();
-      (versions || []).forEach(v => {
-        const arr = versionMap.get(v.plan_id) || [];
-        arr.push(v.id);
-        versionMap.set(v.plan_id, arr);
-      });
-      // Fetch assigned athlete_id per plan (from planned_sessions)
-      let assignmentMap = new Map<string, string | null>();
-      if (versionIds.length > 0) {
-        const { data: sessions } = await supabase
-          .from('planned_sessions')
-          .select('plan_version_id, athlete_id')
-          .in('plan_version_id', versionIds)
-          .limit(500);
-        // Map plan_id → athlete_id (take first non-null)
-        const versionToPlan = new Map((versions || []).map(v => [v.id, v.plan_id]));
-        (sessions || []).forEach(s => {
-          const pid = versionToPlan.get(s.plan_version_id);
-          if (pid && s.athlete_id && !assignmentMap.has(pid)) {
-            assignmentMap.set(pid, s.athlete_id);
-          }
-        });
-      }
-      return (data || []).map(p => ({
-        ...p,
-        isActive: !p.archived_at,
-        versionCount: versionMap.get(p.id)?.length || 0,
-        versionIds: versionMap.get(p.id) || [],
-        assignedAthleteId: assignmentMap.get(p.id) || null,
-      }));
-    },
-    enabled: !!currentOrg?.id,
-  });
+  const { data: plans, isLoading } = useOrgPlans();
 
   const handleToggleArchive = async (planId: string, currentlyActive: boolean) => {
     const { error } = await supabase
