@@ -224,6 +224,50 @@ export type Database = {
         }
         Relationships: []
       }
+      equipment_presets: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          equipment: Json
+          id: string
+          name: string
+          organization_id: string
+          run_type_weights: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          equipment?: Json
+          id?: string
+          name: string
+          organization_id: string
+          run_type_weights?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          equipment?: Json
+          id?: string
+          name?: string
+          organization_id?: string
+          run_type_weights?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_presets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercise_library: {
         Row: {
           approved_at: string | null
@@ -310,6 +354,353 @@ export type Database = {
           },
         ]
       }
+      fitness_assessments: {
+        Row: {
+          assessed_by: string | null
+          assessor_notes: string | null
+          athlete_id: string
+          body_fat_pct: number | null
+          created_at: string
+          current_disciplines: string[] | null
+          current_injuries: string | null
+          id: string
+          mobility_limitations: string | null
+          nutrition_quality: number | null
+          past_injuries: string | null
+          previous_race_experience: string | null
+          recommended_fitness_level: string | null
+          resting_hr: number | null
+          sleep_hours_avg: number | null
+          stress_level: number | null
+          training_years: number | null
+          updated_at: string
+          vo2_max_estimate: number | null
+          weekly_training_hours: number | null
+        }
+        Insert: {
+          assessed_by?: string | null
+          assessor_notes?: string | null
+          athlete_id: string
+          body_fat_pct?: number | null
+          created_at?: string
+          current_disciplines?: string[] | null
+          current_injuries?: string | null
+          id?: string
+          mobility_limitations?: string | null
+          nutrition_quality?: number | null
+          past_injuries?: string | null
+          previous_race_experience?: string | null
+          recommended_fitness_level?: string | null
+          resting_hr?: number | null
+          sleep_hours_avg?: number | null
+          stress_level?: number | null
+          training_years?: number | null
+          updated_at?: string
+          vo2_max_estimate?: number | null
+          weekly_training_hours?: number | null
+        }
+        Update: {
+          assessed_by?: string | null
+          assessor_notes?: string | null
+          athlete_id?: string
+          body_fat_pct?: number | null
+          created_at?: string
+          current_disciplines?: string[] | null
+          current_injuries?: string | null
+          id?: string
+          mobility_limitations?: string | null
+          nutrition_quality?: number | null
+          past_injuries?: string | null
+          previous_race_experience?: string | null
+          recommended_fitness_level?: string | null
+          resting_hr?: number | null
+          sleep_hours_avg?: number | null
+          stress_level?: number | null
+          training_years?: number | null
+          updated_at?: string
+          vo2_max_estimate?: number | null
+          weekly_training_hours?: number | null
+        }
+        Relationships: []
+      }
+      garmin_activities: {
+        Row: {
+          activity_id: string | null
+          activity_type: string | null
+          avg_hr: number | null
+          avg_pace_min_per_km: number | null
+          avg_speed_mps: number | null
+          calories: number | null
+          completed_session_id: string | null
+          created_at: string
+          device_name: string | null
+          discipline: Database["public"]["Enums"]["discipline"] | null
+          distance_m: number | null
+          duration_sec: number | null
+          elevation_gain_m: number | null
+          id: string
+          max_hr: number | null
+          raw: Json
+          start_time_local: string | null
+          start_time_utc: string | null
+          steps: number | null
+          summary_id: string
+          training_load: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_id?: string | null
+          activity_type?: string | null
+          avg_hr?: number | null
+          avg_pace_min_per_km?: number | null
+          avg_speed_mps?: number | null
+          calories?: number | null
+          completed_session_id?: string | null
+          created_at?: string
+          device_name?: string | null
+          discipline?: Database["public"]["Enums"]["discipline"] | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          elevation_gain_m?: number | null
+          id?: string
+          max_hr?: number | null
+          raw: Json
+          start_time_local?: string | null
+          start_time_utc?: string | null
+          steps?: number | null
+          summary_id: string
+          training_load?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_id?: string | null
+          activity_type?: string | null
+          avg_hr?: number | null
+          avg_pace_min_per_km?: number | null
+          avg_speed_mps?: number | null
+          calories?: number | null
+          completed_session_id?: string | null
+          created_at?: string
+          device_name?: string | null
+          discipline?: Database["public"]["Enums"]["discipline"] | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          elevation_gain_m?: number | null
+          id?: string
+          max_hr?: number | null
+          raw?: Json
+          start_time_local?: string | null
+          start_time_utc?: string | null
+          steps?: number | null
+          summary_id?: string
+          training_load?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "garmin_activities_completed_session_id_fkey"
+            columns: ["completed_session_id"]
+            isOneToOne: false
+            referencedRelation: "completed_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      garmin_connections: {
+        Row: {
+          access_token: string | null
+          access_token_secret: string | null
+          created_at: string
+          garmin_user_id: string | null
+          id: string
+          last_sync_at: string | null
+          request_token: string | null
+          request_token_secret: string | null
+          scopes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          access_token_secret?: string | null
+          created_at?: string
+          garmin_user_id?: string | null
+          id?: string
+          last_sync_at?: string | null
+          request_token?: string | null
+          request_token_secret?: string | null
+          scopes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          access_token_secret?: string | null
+          created_at?: string
+          garmin_user_id?: string | null
+          id?: string
+          last_sync_at?: string | null
+          request_token?: string | null
+          request_token_secret?: string | null
+          scopes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      garmin_dailies: {
+        Row: {
+          active_kilocalories: number | null
+          active_time_sec: number | null
+          avg_hr: number | null
+          avg_stress: number | null
+          bmr_kilocalories: number | null
+          body_battery_charged: number | null
+          body_battery_drained: number | null
+          calendar_date: string
+          created_at: string
+          distance_m: number | null
+          floors_climbed: number | null
+          hrv_ms: number | null
+          id: string
+          max_hr: number | null
+          max_stress: number | null
+          min_hr: number | null
+          moderate_intensity_sec: number | null
+          raw: Json
+          respiration_avg: number | null
+          resting_hr: number | null
+          spo2_avg: number | null
+          steps: number | null
+          summary_id: string
+          updated_at: string
+          user_id: string
+          vigorous_intensity_sec: number | null
+        }
+        Insert: {
+          active_kilocalories?: number | null
+          active_time_sec?: number | null
+          avg_hr?: number | null
+          avg_stress?: number | null
+          bmr_kilocalories?: number | null
+          body_battery_charged?: number | null
+          body_battery_drained?: number | null
+          calendar_date: string
+          created_at?: string
+          distance_m?: number | null
+          floors_climbed?: number | null
+          hrv_ms?: number | null
+          id?: string
+          max_hr?: number | null
+          max_stress?: number | null
+          min_hr?: number | null
+          moderate_intensity_sec?: number | null
+          raw: Json
+          respiration_avg?: number | null
+          resting_hr?: number | null
+          spo2_avg?: number | null
+          steps?: number | null
+          summary_id: string
+          updated_at?: string
+          user_id: string
+          vigorous_intensity_sec?: number | null
+        }
+        Update: {
+          active_kilocalories?: number | null
+          active_time_sec?: number | null
+          avg_hr?: number | null
+          avg_stress?: number | null
+          bmr_kilocalories?: number | null
+          body_battery_charged?: number | null
+          body_battery_drained?: number | null
+          calendar_date?: string
+          created_at?: string
+          distance_m?: number | null
+          floors_climbed?: number | null
+          hrv_ms?: number | null
+          id?: string
+          max_hr?: number | null
+          max_stress?: number | null
+          min_hr?: number | null
+          moderate_intensity_sec?: number | null
+          raw?: Json
+          respiration_avg?: number | null
+          resting_hr?: number | null
+          spo2_avg?: number | null
+          steps?: number | null
+          summary_id?: string
+          updated_at?: string
+          user_id?: string
+          vigorous_intensity_sec?: number | null
+        }
+        Relationships: []
+      }
+      garmin_sleep: {
+        Row: {
+          avg_hrv_ms: number | null
+          avg_respiration: number | null
+          avg_spo2: number | null
+          awake_sec: number | null
+          calendar_date: string
+          created_at: string
+          deep_sleep_sec: number | null
+          duration_sec: number | null
+          end_time_utc: string | null
+          id: string
+          light_sleep_sec: number | null
+          raw: Json
+          rem_sleep_sec: number | null
+          sleep_score: number | null
+          start_time_utc: string | null
+          summary_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avg_hrv_ms?: number | null
+          avg_respiration?: number | null
+          avg_spo2?: number | null
+          awake_sec?: number | null
+          calendar_date: string
+          created_at?: string
+          deep_sleep_sec?: number | null
+          duration_sec?: number | null
+          end_time_utc?: string | null
+          id?: string
+          light_sleep_sec?: number | null
+          raw: Json
+          rem_sleep_sec?: number | null
+          sleep_score?: number | null
+          start_time_utc?: string | null
+          summary_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avg_hrv_ms?: number | null
+          avg_respiration?: number | null
+          avg_spo2?: number | null
+          awake_sec?: number | null
+          calendar_date?: string
+          created_at?: string
+          deep_sleep_sec?: number | null
+          duration_sec?: number | null
+          end_time_utc?: string | null
+          id?: string
+          light_sleep_sec?: number | null
+          raw?: Json
+          rem_sleep_sec?: number | null
+          sleep_score?: number | null
+          start_time_utc?: string | null
+          summary_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       garmin_workouts: {
         Row: {
           id: string
@@ -392,8 +783,10 @@ export type Database = {
           created_at: string
           file_path: string | null
           id: string
+          is_verified: boolean
           metadata: Json | null
           organization_id: string
+          safety_notes: string | null
           source_type: string
           source_url: string | null
           status: string
@@ -401,14 +794,18 @@ export type Database = {
           total_chunks: number | null
           updated_at: string
           uploaded_by: string
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           content_text?: string | null
           created_at?: string
           file_path?: string | null
           id?: string
+          is_verified?: boolean
           metadata?: Json | null
           organization_id: string
+          safety_notes?: string | null
           source_type?: string
           source_url?: string | null
           status?: string
@@ -416,14 +813,18 @@ export type Database = {
           total_chunks?: number | null
           updated_at?: string
           uploaded_by: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           content_text?: string | null
           created_at?: string
           file_path?: string | null
           id?: string
+          is_verified?: boolean
           metadata?: Json | null
           organization_id?: string
+          safety_notes?: string | null
           source_type?: string
           source_url?: string | null
           status?: string
@@ -431,6 +832,8 @@ export type Database = {
           total_chunks?: number | null
           updated_at?: string
           uploaded_by?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -465,6 +868,122 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      parq_responses: {
+        Row: {
+          athlete_id: string
+          completed_at: string
+          created_at: string
+          has_risk_flags: boolean | null
+          id: string
+          medical_notes: string | null
+          q1_heart_condition: boolean
+          q2_chest_pain_activity: boolean
+          q3_chest_pain_rest: boolean
+          q4_dizziness: boolean
+          q5_bone_joint: boolean
+          q6_blood_pressure_meds: boolean
+          q7_other_reason: boolean
+          risk_acknowledged: boolean
+          risk_acknowledged_at: string | null
+        }
+        Insert: {
+          athlete_id: string
+          completed_at?: string
+          created_at?: string
+          has_risk_flags?: boolean | null
+          id?: string
+          medical_notes?: string | null
+          q1_heart_condition?: boolean
+          q2_chest_pain_activity?: boolean
+          q3_chest_pain_rest?: boolean
+          q4_dizziness?: boolean
+          q5_bone_joint?: boolean
+          q6_blood_pressure_meds?: boolean
+          q7_other_reason?: boolean
+          risk_acknowledged?: boolean
+          risk_acknowledged_at?: string | null
+        }
+        Update: {
+          athlete_id?: string
+          completed_at?: string
+          created_at?: string
+          has_risk_flags?: boolean | null
+          id?: string
+          medical_notes?: string | null
+          q1_heart_condition?: boolean
+          q2_chest_pain_activity?: boolean
+          q3_chest_pain_rest?: boolean
+          q4_dizziness?: boolean
+          q5_bone_joint?: boolean
+          q6_blood_pressure_meds?: boolean
+          q7_other_reason?: boolean
+          risk_acknowledged?: boolean
+          risk_acknowledged_at?: string | null
+        }
+        Relationships: []
+      }
+      periodization_adjustments: {
+        Row: {
+          adjustment_type: string
+          athlete_id: string
+          created_at: string
+          id: string
+          original_distance_km: number | null
+          original_duration_min: number | null
+          original_intensity: string | null
+          reason_details: string | null
+          source: string
+          status: string
+          suggested_distance_km: number | null
+          suggested_duration_min: number | null
+          suggested_intensity: string | null
+          target_session_id: string
+          tsb_at_suggestion: number | null
+        }
+        Insert: {
+          adjustment_type: string
+          athlete_id: string
+          created_at?: string
+          id?: string
+          original_distance_km?: number | null
+          original_duration_min?: number | null
+          original_intensity?: string | null
+          reason_details?: string | null
+          source?: string
+          status?: string
+          suggested_distance_km?: number | null
+          suggested_duration_min?: number | null
+          suggested_intensity?: string | null
+          target_session_id: string
+          tsb_at_suggestion?: number | null
+        }
+        Update: {
+          adjustment_type?: string
+          athlete_id?: string
+          created_at?: string
+          id?: string
+          original_distance_km?: number | null
+          original_duration_min?: number | null
+          original_intensity?: string | null
+          reason_details?: string | null
+          source?: string
+          status?: string
+          suggested_distance_km?: number | null
+          suggested_duration_min?: number | null
+          suggested_intensity?: string | null
+          target_session_id?: string
+          tsb_at_suggestion?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "periodization_adjustments_target_session_id_fkey"
+            columns: ["target_session_id"]
+            isOneToOne: false
+            referencedRelation: "planned_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       plan_history: {
         Row: {
@@ -605,10 +1124,12 @@ export type Database = {
           created_at: string
           fitness_level: string | null
           full_name: string
+          goal_finish_time_seconds: number | null
           goal_race_date: string | null
           goal_race_id: string | null
           goal_race_location: string | null
           goal_race_name: string | null
+          goal_run_split_seconds_per_km: number | null
           id: string
           max_hr: number | null
           onboarding_completed: boolean | null
@@ -622,10 +1143,12 @@ export type Database = {
           created_at?: string
           fitness_level?: string | null
           full_name?: string
+          goal_finish_time_seconds?: number | null
           goal_race_date?: string | null
           goal_race_id?: string | null
           goal_race_location?: string | null
           goal_race_name?: string | null
+          goal_run_split_seconds_per_km?: number | null
           id: string
           max_hr?: number | null
           onboarding_completed?: boolean | null
@@ -639,10 +1162,12 @@ export type Database = {
           created_at?: string
           fitness_level?: string | null
           full_name?: string
+          goal_finish_time_seconds?: number | null
           goal_race_date?: string | null
           goal_race_id?: string | null
           goal_race_location?: string | null
           goal_race_name?: string | null
+          goal_run_split_seconds_per_km?: number | null
           id?: string
           max_hr?: number | null
           onboarding_completed?: boolean | null
@@ -815,17 +1340,23 @@ export type Database = {
           block_type: Database["public"]["Enums"]["block_type"]
           distance_m: number | null
           duration_sec: number | null
+          equipment: string | null
           exercise_name: string
           id: string
           load_kg: number | null
+          muscle_group: string | null
           notes: string | null
           order_index: number
+          part_number: number | null
+          repeat_count: number | null
           reps: number | null
           session_id: string
           sets: number | null
+          superset_group: number | null
           target_hr_max: number | null
           target_hr_min: number | null
           target_pace: string | null
+          target_pace_label: string | null
           target_power_watts: number | null
           target_rpe: number | null
         }
@@ -833,17 +1364,23 @@ export type Database = {
           block_type?: Database["public"]["Enums"]["block_type"]
           distance_m?: number | null
           duration_sec?: number | null
+          equipment?: string | null
           exercise_name?: string
           id?: string
           load_kg?: number | null
+          muscle_group?: string | null
           notes?: string | null
           order_index?: number
+          part_number?: number | null
+          repeat_count?: number | null
           reps?: number | null
           session_id: string
           sets?: number | null
+          superset_group?: number | null
           target_hr_max?: number | null
           target_hr_min?: number | null
           target_pace?: string | null
+          target_pace_label?: string | null
           target_power_watts?: number | null
           target_rpe?: number | null
         }
@@ -851,17 +1388,23 @@ export type Database = {
           block_type?: Database["public"]["Enums"]["block_type"]
           distance_m?: number | null
           duration_sec?: number | null
+          equipment?: string | null
           exercise_name?: string
           id?: string
           load_kg?: number | null
+          muscle_group?: string | null
           notes?: string | null
           order_index?: number
+          part_number?: number | null
+          repeat_count?: number | null
           reps?: number | null
           session_id?: string
           sets?: number | null
+          superset_group?: number | null
           target_hr_max?: number | null
           target_hr_min?: number | null
           target_pace?: string | null
+          target_pace_label?: string | null
           target_power_watts?: number | null
           target_rpe?: number | null
         }
@@ -996,6 +1539,51 @@ export type Database = {
           },
         ]
       }
+      strava_connections: {
+        Row: {
+          access_token: string
+          athlete_avatar_url: string | null
+          athlete_name: string | null
+          athlete_username: string | null
+          created_at: string | null
+          expires_at: number
+          id: string
+          refresh_token: string
+          scope: string | null
+          strava_athlete_id: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          athlete_avatar_url?: string | null
+          athlete_name?: string | null
+          athlete_username?: string | null
+          created_at?: string | null
+          expires_at: number
+          id?: string
+          refresh_token: string
+          scope?: string | null
+          strava_athlete_id: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          athlete_avatar_url?: string | null
+          athlete_name?: string | null
+          athlete_username?: string | null
+          created_at?: string | null
+          expires_at?: number
+          id?: string
+          refresh_token?: string
+          scope?: string | null
+          strava_athlete_id?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       targets: {
         Row: {
           current_reference: string | null
@@ -1114,6 +1702,54 @@ export type Database = {
           },
         ]
       }
+      training_preferences: {
+        Row: {
+          athlete_id: string
+          available_days: number[]
+          equipment: Json
+          id: string
+          mobility_days: number[] | null
+          mobility_tech_weights: Json
+          mobility_technique_sessions_per_week: number
+          muscle_focus: string[]
+          run_type_weights: Json
+          session_length_min: number
+          strength_days: number[] | null
+          strength_sessions_per_week: number
+          updated_at: string
+        }
+        Insert: {
+          athlete_id: string
+          available_days?: number[]
+          equipment?: Json
+          id?: string
+          mobility_days?: number[] | null
+          mobility_tech_weights?: Json
+          mobility_technique_sessions_per_week?: number
+          muscle_focus?: string[]
+          run_type_weights?: Json
+          session_length_min?: number
+          strength_days?: number[] | null
+          strength_sessions_per_week?: number
+          updated_at?: string
+        }
+        Update: {
+          athlete_id?: string
+          available_days?: number[]
+          equipment?: Json
+          id?: string
+          mobility_days?: number[] | null
+          mobility_tech_weights?: Json
+          mobility_technique_sessions_per_week?: number
+          muscle_focus?: string[]
+          run_type_weights?: Json
+          session_length_min?: number
+          strength_days?: number[] | null
+          strength_sessions_per_week?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1152,6 +1788,7 @@ export type Database = {
           created_at: string
           id: string
           notes: string | null
+          phase: string | null
           plan_version_id: string
           run_days: string | null
           run_km_target: number | null
@@ -1164,6 +1801,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          phase?: string | null
           plan_version_id: string
           run_days?: string | null
           run_km_target?: number | null
@@ -1176,6 +1814,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          phase?: string | null
           plan_version_id?: string
           run_days?: string | null
           run_km_target?: number | null
@@ -1198,6 +1837,34 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_delete_athlete: { Args: { _athlete_id: string }; Returns: Json }
+      admin_get_cron_jobs: {
+        Args: never
+        Returns: {
+          active: boolean
+          failure_count: number
+          jobid: number
+          jobname: string
+          last_duration_ms: number
+          last_message: string
+          last_run_at: string
+          last_status: string
+          schedule: string
+          success_count: number
+          total_runs: number
+        }[]
+      }
+      admin_get_cron_runs: {
+        Args: { _jobname: string; _limit?: number }
+        Returns: {
+          duration_ms: number
+          end_time: string
+          return_message: string
+          runid: number
+          start_time: string
+          status: string
+        }[]
+      }
       assign_onboarding_role: {
         Args: { _org_id: string; _role: string }
         Returns: undefined
@@ -1224,6 +1891,20 @@ export type Database = {
           name: string
         }[]
       }
+      recompute_training_load: {
+        Args: { _athlete_id: string }
+        Returns: undefined
+      }
+      session_trimp: {
+        Args: {
+          _avg_hr: number
+          _duration_min: number
+          _max_hr: number
+          _resting_hr: number
+          _rpe: number
+        }
+        Returns: number
+      }
     }
     Enums: {
       app_role: "master_admin" | "admin" | "coach" | "athlete"
@@ -1234,6 +1915,7 @@ export type Database = {
         | "station"
         | "strength"
         | "accessory"
+        | "superset"
       discipline:
         | "run"
         | "bike"
@@ -1382,6 +2064,7 @@ export const Constants = {
         "station",
         "strength",
         "accessory",
+        "superset",
       ],
       discipline: [
         "run",

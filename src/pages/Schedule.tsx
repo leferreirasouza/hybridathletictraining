@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Calendar, Loader2, CalendarPlus, Download, Eye, EyeOff } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Loader2, CalendarPlus, Download, Eye, EyeOff, LocateFixed } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useScheduleData } from '@/hooks/useScheduleData';
@@ -27,10 +27,12 @@ function getDefaultCalendarProvider(): CalendarProvider | null {
 export default function Schedule() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { currentRole, effectiveRole } = useAuth();
+  const { currentRole, effectiveRole, user, currentOrg } = useAuth();
   const isCoachOrAdmin = effectiveRole && ['master_admin', 'admin', 'coach'].includes(effectiveRole);
   const canManagePlans = !!currentRole && ['master_admin', 'admin', 'coach'].includes(currentRole);
   const {
+    authReady,
+    authLoading,
     plans, activePlanId, setSelectedPlanId, isAllPlans,
     sessions, weeklySummaries, targets, completedSessions,
     substitutionMap, maxWeek, isLoading, noPlan, planColorMap,
@@ -38,25 +40,30 @@ export default function Schedule() {
 
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDay, setSelectedDay] = useState(1);
-  const [view, setView] = useState<'day' | 'week' | 'month'>('week');
+  const [view, setView] = useState<'day' | 'week' | 'month'>('day');
   const [hiddenPlanIds, setHiddenPlanIds] = useState<Set<string>>(new Set());
   const [showAthletePlans, setShowAthletePlans] = useState(true);
   const defaultProvider = getDefaultCalendarProvider();
   const hasAutoScrolled = useRef(false);
 
-  // Auto-navigate to the current training week based on today's date
   useEffect(() => {
-    if (hasAutoScrolled.current || !sessions.length) return;
+    hasAutoScrolled.current = false;
+  }, [user?.id, currentOrg?.id, activePlanId, isAllPlans]);
+
+  useEffect(() => {
+    if (!authReady || authLoading || isLoading || noPlan || hasAutoScrolled.current || !sessions.length) return;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Try to match via weekly_summaries week_start/week_end
     if (weeklySummaries.length > 0) {
       for (const ws of weeklySummaries) {
         if (ws.week_start && ws.week_end) {
           const start = new Date(ws.week_start);
           const end = new Date(ws.week_end);
+          start.setHours(0, 0, 0, 0);
+          end.setHours(23, 59, 59, 999);
+
           if (today >= start && today <= end) {
             setWeekOffset(ws.week_number - 1);
             setSelectedDay(today.getDay() === 0 ? 7 : today.getDay());
@@ -67,20 +74,69 @@ export default function Schedule() {
       }
     }
 
-    // Fallback: match via session dates
-    const sessionsWithDate = sessions.filter((s: any) => s.date);
+    const sessionsWithDate = sessions.filter((session: any) => session.date);
     if (sessionsWithDate.length > 0) {
-      const todayStr = today.toISOString().split('T')[0];
-      // Find the session closest to today
       let bestWeek = 1;
       let bestDist = Infinity;
-      for (const s of sessionsWithDate) {
-        const d = new Date(s.date);
-        const dist = Math.abs(d.getTime() - today.getTime());
-        if (dist < bestDist) {
-          bestDist = dist;
-          bestWeek = s.week_number;
+
+      for (const session of sessionsWithDate) {
+        const sessionDate = new Date(session.date);
+        sessionDate.setHours(0, 0, 0, 0);
+
+        const distance = Math.abs(sessionDate.getTime() - today.getTime());
+        if (distance < bestDist) {
+          bestDist = distance;
+          bestWeek = session.week_number;
         }
+      }
+
+      setWeekOffset(bestWeek - 1);
+      setSelectedDay(today.getDay() === 0 ? 7 : today.getDay());
+      hasAutoScrolled.current = true;
+      return;
+    }
+
+    if (plans?.length) {
+      const oldestPlanDate = plans.reduce((oldest, plan) => {
+        const planDate = new Date(plan.created_at);
+        return planDate < oldest ? planDate : oldest;
+      }, new Date(plans[0].created_at));
+
+      const weeksSinceCreation = Math.floor((today.getTime() - oldestPlanDate.getTime()) / (7 * 24 * 60 * 60 * 1000));
+      const estimatedWeek = Math.max(1, Math.min(maxWeek, weeksSinceCreation + 1));
+      setWeekOffset(estimatedWeek - 1);
+      setSelectedDay(today.getDay() === 0 ? 7 : today.getDay());
+      hasAutoScrolled.current = true;
+    }
+  }, [authReady, authLoading, isLoading, noPlan, sessions, weeklySummaries, plans, maxWeek]);
+
+  const goToToday = () => {
+    hasAutoScrolled.current = false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (weeklySummaries.length > 0) {
+      for (const ws of weeklySummaries) {
+        if (ws.week_start && ws.week_end) {
+          const start = new Date(ws.week_start); start.setHours(0, 0, 0, 0);
+          const end = new Date(ws.week_end); end.setHours(23, 59, 59, 999);
+          if (today >= start && today <= end) {
+            setWeekOffset(ws.week_number - 1);
+            setSelectedDay(today.getDay() === 0 ? 7 : today.getDay());
+            hasAutoScrolled.current = true;
+            return;
+          }
+        }
+      }
+    }
+
+    const sessionsWithDate = sessions.filter((s: any) => s.date);
+    if (sessionsWithDate.length > 0) {
+      let bestWeek = 1, bestDist = Infinity;
+      for (const s of sessionsWithDate) {
+        const d = new Date(s.date); d.setHours(0, 0, 0, 0);
+        const dist = Math.abs(d.getTime() - today.getTime());
+        if (dist < bestDist) { bestDist = dist; bestWeek = s.week_number; }
       }
       setWeekOffset(bestWeek - 1);
       setSelectedDay(today.getDay() === 0 ? 7 : today.getDay());
@@ -88,16 +144,14 @@ export default function Schedule() {
       return;
     }
 
-    // Last fallback: estimate from plan creation date
     if (plans?.length) {
-      const planCreated = new Date(plans[plans.length - 1].created_at);
-      const weeksSinceCreation = Math.floor((today.getTime() - planCreated.getTime()) / (7 * 24 * 60 * 60 * 1000));
-      const estimatedWeek = Math.max(1, Math.min(maxWeek, weeksSinceCreation + 1));
-      setWeekOffset(estimatedWeek - 1);
+      const oldest = plans.reduce((o, p) => { const d = new Date(p.created_at); return d < o ? d : o; }, new Date(plans[0].created_at));
+      const weeks = Math.floor((today.getTime() - oldest.getTime()) / (7 * 24 * 60 * 60 * 1000));
+      setWeekOffset(Math.max(0, Math.min(maxWeek - 1, weeks)));
       setSelectedDay(today.getDay() === 0 ? 7 : today.getDay());
       hasAutoScrolled.current = true;
     }
-  }, [sessions, weeklySummaries, plans, maxWeek]);
+  };
 
   const togglePlanVisibility = (planId: string) => {
     setHiddenPlanIds(prev => {
@@ -127,6 +181,14 @@ export default function Schedule() {
 
   const displayWeek = Math.max(1, Math.min(maxWeek, 1 + weekOffset));
   const weeklySummary = weeklySummaries.find((ws: any) => ws.week_number === displayWeek);
+
+  if (authLoading) {
+    return (
+      <div className="page-container py-16 flex justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="page-container py-6 space-y-4">
@@ -241,9 +303,15 @@ export default function Schedule() {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => Math.max(0, w - 1))} disabled={displayWeek <= 1}>
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <span className="text-sm font-medium font-display">
-                      {t('schedule.week')} {displayWeek} <span className="text-muted-foreground font-normal">/ {maxWeek}</span>
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-medium font-display">
+                        {t('schedule.week')} {displayWeek} <span className="text-muted-foreground font-normal">/ {maxWeek}</span>
+                      </span>
+                      <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] text-primary" onClick={goToToday}>
+                        <LocateFixed className="h-3 w-3 mr-1" />
+                        Today
+                      </Button>
+                    </div>
                     <div className="flex items-center gap-1">
                       {defaultProvider ? (
                         <Button variant="ghost" size="icon" className="h-8 w-8" title={`Add to ${defaultProvider} calendar`} onClick={() => handleCalendarExport(defaultProvider)}>

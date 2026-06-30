@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { UserPlus, Users, Trash2, ShieldCheck, Search, X } from 'lucide-react';
+import { UserPlus, Users, Trash2, ShieldCheck, Search, X, UserX } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -304,6 +304,27 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
     }
   };
 
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ userId }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to delete user');
+      toast.success(`${userName} permanently deleted`);
+      await fetchMembers();
+      await fetchAssignments();
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to delete user');
+    }
+  };
+
   // Bulk actions
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -429,6 +450,58 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+
+              {isMasterAdmin && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10">
+                      <UserX className="h-3.5 w-3.5" /> Delete Accounts
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Permanently delete {selectedIds.size} account(s)?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete all selected user accounts and all their data. This cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={async () => {
+                          setBulkActionLoading(true);
+                          const selectedMembers = filteredMembers.filter(m => selectedIds.has(m.id));
+                          const userIdsToDelete = [...new Set(
+                            selectedMembers
+                              .filter(m => m.user_id !== user?.id)
+                              .map(m => m.user_id)
+                          )];
+                          let successCount = 0;
+                          for (const uid of userIdsToDelete) {
+                            try {
+                              const { data: { session } } = await supabase.auth.getSession();
+                              const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+                                body: JSON.stringify({ userId: uid }),
+                              });
+                              if (res.ok) successCount++;
+                            } catch {}
+                          }
+                          toast.success(`Permanently deleted ${successCount} account(s)`);
+                          setBulkActionLoading(false);
+                          await fetchMembers();
+                          await fetchAssignments();
+                        }}
+                        disabled={bulkActionLoading}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {bulkActionLoading ? 'Deleting...' : `Delete ${selectedIds.size} Account(s)`}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
           )}
 
@@ -584,6 +657,33 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
+
+                    {isMasterAdmin && m.user_id !== user?.id && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="text-destructive/60 hover:text-destructive hover:bg-destructive/10" title="Permanently delete account">
+                            <UserX className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Permanently delete account?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will <strong>permanently delete</strong> {m.profiles?.full_name || 'this user'}'s account and all their data. This cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteUser(m.user_id, m.profiles?.full_name || 'User')}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete Permanently
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

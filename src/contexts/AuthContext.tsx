@@ -74,8 +74,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const effectiveRole = viewAsRole ?? currentRole;
 
+  /**
+   * UI-ONLY role downgrade. This does NOT change server-side permissions.
+   * All authorization is enforced server-side via RLS policies that consult
+   * `user_roles` using `auth.uid()`. `viewAsRole` is purely a cosmetic preview
+   * so higher-privileged users can see what a lower role's UI looks like; it
+   * can only switch to the user's own role or a lower role in the hierarchy.
+   * Never rely on `viewAsRole`/`effectiveRole` for security decisions.
+   */
   const setViewAsRole = (role: AppRole) => {
-    // Only allow switching to same or lower role
     if (currentRole && getRoleLevel(role) >= getRoleLevel(currentRole)) {
       setViewAsRoleState(role);
     }
@@ -140,8 +147,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (currentOrg && memberships.length > 0) {
-      const m = memberships.find(m => m.organization_id === currentOrg.id);
-      setCurrentRole(m?.role ?? null);
+      // Pick the highest-ranked role for this org (handles users with multiple roles in same org)
+      const orgRoles = memberships
+        .filter(m => m.organization_id === currentOrg.id)
+        .sort((a, b) => getRoleLevel(a.role) - getRoleLevel(b.role));
+      setCurrentRole(orgRoles[0]?.role ?? null);
       setViewAsRoleState(null); // reset view-as when org changes
     }
   }, [currentOrg, memberships]);

@@ -14,6 +14,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import CoachInfoCard from '@/components/dashboard/CoachInfoCard';
+import StravaCard from '@/components/profile/StravaCard';
 import RacePicker from '@/components/races/RacePicker';
 import { useTranslation } from 'react-i18next';
 
@@ -390,6 +391,9 @@ export default function Profile() {
           </CardContent>
         </Card>
 
+        {/* Strava */}
+        <StravaCard />
+
         {/* Coach Info */}
         <CoachInfoCard />
 
@@ -411,6 +415,16 @@ export default function Profile() {
               <SettingsIcon className="h-4 w-4 mr-3 text-muted-foreground" />
               {t('profile.settings')}
             </Button>
+            <Button variant="ghost" className="w-full justify-start h-11" onClick={() => navigate('/training-preferences')}>
+              <Activity className="h-4 w-4 mr-3 text-muted-foreground" />
+              Training Preferences
+            </Button>
+            {(effectiveRole === 'coach' || effectiveRole === 'admin' || effectiveRole === 'master_admin') && (
+              <Button variant="ghost" className="w-full justify-start h-11" onClick={() => navigate('/equipment-presets')}>
+                <Activity className="h-4 w-4 mr-3 text-muted-foreground" />
+                Equipment Presets
+              </Button>
+            )}
             <Button variant="ghost" className="w-full justify-start h-11" onClick={() => navigate('/activity')}>
               <Activity className="h-4 w-4 mr-3 text-muted-foreground" />
               {t('profile.activityLog')}

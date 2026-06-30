@@ -9,7 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Upload, FileSpreadsheet, Trash2, Loader2, CheckCircle2, List, Eye, EyeOff, UserCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Plus, Upload, FileSpreadsheet, Trash2, Loader2, CheckCircle2, List, Eye, EyeOff, UserCircle, Search, X, Dumbbell } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -54,6 +56,25 @@ const rolePriority: Record<AppRole, number> = {
   athlete: 3,
 };
 
+interface ExerciseEntry {
+  exerciseId: string;
+  exerciseName: string;
+  setsReps: string;
+  load?: string;
+}
+
+// Accepts: "3x10", "3×10", "4x8-12", "5x30s", "30s", "10 reps", "5 rounds", "AMRAP 10", "EMOM 12"
+const SETS_REPS_RE = /^(\s*(\d+\s*[x×]\s*\d+(\s*-\s*\d+)?(\s*(s|sec|secs|m|min|reps?))?|\d+\s*(s|sec|secs|m|min|reps?)|\d+\s*rounds?|amrap\s*\d+|emom\s*\d+)\s*)$/i;
+// Accepts: "60kg", "135lb", "75%", "75% 1RM", "BW", "bodyweight", "RPE 8", "RPE 8.5"
+const LOAD_RE = /^(\s*(\d+(\.\d+)?\s*(kg|lb|lbs|%|%\s*1rm)|bw|bodyweight|rpe\s*\d+(\.\d+)?)\s*)$/i;
+
+const validateExercise = (ex: ExerciseEntry): string | null => {
+  if (!ex.setsReps.trim()) return `${ex.exerciseName}: sets×reps required`;
+  if (!SETS_REPS_RE.test(ex.setsReps)) return `${ex.exerciseName}: invalid sets×reps (try "3x10", "5x30s", "AMRAP 10")`;
+  if (ex.load && ex.load.trim() && !LOAD_RE.test(ex.load)) return `${ex.exerciseName}: invalid load (try "60kg", "75%", "BW", "RPE 8")`;
+  return null;
+};
+
 interface SessionRow {
   id: string;
   day: number;
@@ -64,6 +85,7 @@ interface SessionRow {
   intensity: Intensity | '';
   details: string;
   notes: string;
+  exercises: ExerciseEntry[];
 }
 
 interface AssigneeOption {
@@ -82,7 +104,113 @@ const emptyRow = (): SessionRow => ({
   intensity: '',
   details: '',
   notes: '',
+  exercises: [],
 });
+
+function ExercisePicker({
+  orgId,
+  onSelect,
+}: {
+  orgId?: string;
+  onSelect: (exercise: { id: string; name: string; category: string; discipline: string }) => void;
+}) {
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+
+  const { data: exercises = [], isLoading } = useQuery({
+    queryKey: ['exercise-library', orgId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('exercise_library')
+        .select('id, name, category, subcategory, discipline, difficulty_level, muscle_groups, hyrox_station')
+        .eq('is_approved', true)
+        .order('category', { ascending: true })
+        .order('name', { ascending: true });
+      return data || [];
+    },
+    enabled: !!orgId,
+  });
+
+  const categories = ['all', ...Array.from(new Set(exercises.map((e: any) => e.category)))];
+
+  const filtered = exercises.filter((ex: any) => {
+    const matchSearch = !search || ex.name.toLowerCase().includes(search.toLowerCase()) ||
+      ex.muscle_groups?.some((m: string) => m.toLowerCase().includes(search.toLowerCase()));
+    const matchCat = categoryFilter === 'all' || ex.category === categoryFilter;
+    return matchSearch && matchCat;
+  });
+
+  const categoryColors: Record<string, string> = {
+    hyrox: 'bg-primary/15 text-primary',
+    strength: 'bg-blue-500/15 text-blue-400',
+    prehab: 'bg-green-500/15 text-green-400',
+    run_drill: 'bg-orange-500/15 text-orange-400',
+    conditioning: 'bg-purple-500/15 text-purple-400',
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            autoFocus
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search exercises..."
+            className="pl-8 h-8 text-xs"
+          />
+        </div>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="h-8 w-[120px] text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {categories.map(c => (
+              <SelectItem key={c} value={c} className="text-xs capitalize">{c === 'all' ? 'All' : c.replace('_', ' ')}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <ScrollArea className="h-[300px]">
+        {isLoading ? (
+          <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-8">
+            <Dumbbell className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+            <p className="text-xs text-muted-foreground">No exercises found</p>
+          </div>
+        ) : (
+          <div className="space-y-1 pr-2">
+            {filtered.map((ex: any) => (
+              <button
+                key={ex.id}
+                onClick={() => onSelect({ id: ex.id, name: ex.name, category: ex.category, discipline: ex.discipline })}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-muted/60 transition-colors border border-transparent hover:border-border/50 group"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{ex.name}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full capitalize ${categoryColors[ex.category] || 'bg-muted text-muted-foreground'}`}>
+                        {ex.category?.replace('_', ' ')}
+                      </span>
+                      {ex.difficulty_level && (
+                        <span className="text-[10px] text-muted-foreground capitalize">{ex.difficulty_level}</span>
+                      )}
+                      {ex.muscle_groups?.slice(0, 2).map((m: string) => (
+                        <span key={m} className="text-[10px] text-muted-foreground">{m.replace('_', ' ')}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary shrink-0 mt-0.5 transition-colors" />
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </ScrollArea>
+    </div>
+  );
+}
 
 function CurrentPlansTab() {
   const { t } = useTranslation();
@@ -390,17 +518,52 @@ export default function PlanBuilder() {
     }
   }, [currentWeek]);
 
+  const [pickerForRow, setPickerForRow] = useState<string | null>(null);
+
   const addRow = () => setSessions(prev => [...prev, emptyRow()]);
   const removeRow = (id: string) => setSessions(prev => prev.filter(s => s.id !== id));
   const updateRow = (id: string, field: keyof SessionRow, value: string | number) => {
     setSessions(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
   };
 
+  const addExercise = (rowId: string, ex: ExerciseEntry) => {
+    setSessions(prev => prev.map(s => s.id === rowId
+      ? { ...s, exercises: [...s.exercises, ex] }
+      : s
+    ));
+  };
+
+  const removeExercise = (rowId: string, idx: number) => {
+    setSessions(prev => prev.map(s => s.id === rowId
+      ? { ...s, exercises: s.exercises.filter((_, i) => i !== idx) }
+      : s
+    ));
+  };
+
+  const updateExercise = (rowId: string, idx: number, update: Partial<ExerciseEntry>) => {
+    setSessions(prev => prev.map(s => s.id === rowId
+      ? { ...s, exercises: s.exercises.map((ex, i) => i === idx ? { ...ex, ...update } : ex) }
+      : s
+    ));
+  };
+
   const handleSave = async () => {
     if (!planName.trim()) { toast.error('Please enter a plan name'); return; }
     if (!user || !currentOrg) { toast.error('No org context'); return; }
     if (!targetAthleteId) { toast.error('Please select an athlete'); return; }
-    if (!targetAthleteId) { toast.error('Please select an athlete'); return; }
+    const exerciseErrors: string[] = [];
+    Object.entries(sessionsByWeek).forEach(([week, rows]) => {
+      rows.filter(r => r.name.trim()).forEach(r => {
+        r.exercises.forEach(ex => {
+          const err = validateExercise(ex);
+          if (err) exerciseErrors.push(`W${week} ${r.name}: ${err}`);
+        });
+      });
+    });
+    if (exerciseErrors.length > 0) {
+      toast.error(exerciseErrors.slice(0, 3).join(' • ') + (exerciseErrors.length > 3 ? ` (+${exerciseErrors.length - 3} more)` : ''));
+      return;
+    }
     setSaving(true);
     try {
       const { data: plan, error: planErr } = await supabase
@@ -414,20 +577,25 @@ export default function PlanBuilder() {
         .select().single();
       if (verErr) throw verErr;
       const allSessions = Object.entries(sessionsByWeek).flatMap(([week, rows]) =>
-        rows.filter(r => r.name.trim()).map((r, idx) => ({
+        rows.filter(r => r.name.trim()).map((r, idx) => {
+          const workoutDetailsText = r.exercises.length > 0
+            ? r.exercises.map(ex => `${ex.exerciseName}${ex.setsReps ? ` — ${ex.setsReps}` : ''}${ex.load ? ` @ ${ex.load}` : ''}`).join('\n')
+            : r.details || null;
+          return {
             plan_version_id: version.id,
             athlete_id: targetAthleteId,
             week_number: Number(week),
-          day_of_week: r.day,
-          discipline: r.discipline as Discipline,
-          session_name: r.name.trim(),
-          duration_min: r.duration ? parseFloat(r.duration) : null,
-          distance_km: r.distance ? parseFloat(r.distance) : null,
-          intensity: (r.intensity || null) as Intensity | null,
-          workout_details: r.details || null,
-          notes: r.notes || null,
-          order_index: idx,
-        }))
+            day_of_week: r.day,
+            discipline: r.discipline as Discipline,
+            session_name: r.name.trim(),
+            duration_min: r.duration ? parseFloat(r.duration) : null,
+            distance_km: r.distance ? parseFloat(r.distance) : null,
+            intensity: (r.intensity || null) as Intensity | null,
+            workout_details: workoutDetailsText,
+            notes: r.notes || null,
+            order_index: idx,
+          };
+        })
       );
       if (allSessions.length > 0) {
         const { error: sessErr } = await supabase.from('planned_sessions').insert(allSessions);
@@ -608,8 +776,11 @@ export default function PlanBuilder() {
               {sessions.map((row, idx) => (
                 <motion.div key={row.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-muted-foreground">{t('planBuilder.session')} {idx + 1}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/15 text-primary">#{idx + 1}</span>
+                      <Badge variant="outline" className="text-[10px]">{['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][row.day - 1]}</Badge>
+                    </div>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeRow(row.id)}>
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
@@ -659,15 +830,74 @@ export default function PlanBuilder() {
                       </Select>
                     </div>
                   </div>
+
+                  {/* Exercises */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs flex items-center gap-1.5"><Dumbbell className="h-3 w-3" /> Exercises {row.exercises.length > 0 && <span className="text-muted-foreground">({row.exercises.length})</span>}</Label>
+                      <Button type="button" variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => setPickerForRow(row.id)}>
+                        <Plus className="h-3 w-3" /> Add Exercise
+                      </Button>
+                    </div>
+                    {row.exercises.length > 0 && (
+                      <div className="space-y-1">
+                        {row.exercises.map((ex, eIdx) => {
+                          const srInvalid = !ex.setsReps.trim() || !SETS_REPS_RE.test(ex.setsReps);
+                          const loadInvalid = !!(ex.load && ex.load.trim()) && !LOAD_RE.test(ex.load!);
+                          return (
+                          <div key={eIdx} className="flex items-center gap-2 bg-muted/40 rounded-md px-2 py-1.5">
+                            <span className="text-xs font-medium flex-1 truncate">{ex.exerciseName}</span>
+                            <Input
+                              className={`h-6 w-16 text-[10px] text-center px-1 ${srInvalid ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                              placeholder="3×10"
+                              value={ex.setsReps}
+                              onChange={e => updateExercise(row.id, eIdx, { setsReps: e.target.value })}
+                              aria-invalid={srInvalid}
+                              title={srInvalid ? 'Required. Examples: 3x10, 5x30s, AMRAP 10' : ''}
+                            />
+                            <Input
+                              className={`h-6 w-16 text-[10px] text-center px-1 ${loadInvalid ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                              placeholder="load"
+                              value={ex.load || ''}
+                              onChange={e => updateExercise(row.id, eIdx, { load: e.target.value })}
+                              aria-invalid={loadInvalid}
+                              title={loadInvalid ? 'Examples: 60kg, 75%, BW, RPE 8' : ''}
+                            />
+                            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => removeExercise(row.id, eIdx)}>
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
                   <div>
-                    <Label className="text-xs">{t('planBuilder.workoutDetails')}</Label>
-                    <Textarea className="text-xs min-h-[40px]" rows={1} value={row.details} onChange={e => updateRow(row.id, 'details', e.target.value)} placeholder="8km @ 5:00/km..." />
+                    <Label className="text-xs">Workout notes</Label>
+                    <Textarea className="text-xs min-h-[40px]" rows={1} value={row.details} onChange={e => updateRow(row.id, 'details', e.target.value)} placeholder="Additional context, pacing, cues..." />
                   </div>
                 </motion.div>
               ))}
               <Button variant="outline" className="w-full" onClick={addRow}>
                 <Plus className="h-4 w-4 mr-1" /> {t('planBuilder.addSession')}
               </Button>
+
+              <Dialog open={!!pickerForRow} onOpenChange={(open) => !open && setPickerForRow(null)}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2 text-base"><Dumbbell className="h-4 w-4 text-primary" /> Add Exercise</DialogTitle>
+                  </DialogHeader>
+                  <ExercisePicker
+                    orgId={currentOrg?.id}
+                    onSelect={(ex) => {
+                      if (pickerForRow) {
+                        addExercise(pickerForRow, { exerciseId: ex.id, exerciseName: ex.name, setsReps: '' });
+                      }
+                    }}
+                  />
+                </DialogContent>
+              </Dialog>
             </CardContent>
           </Card>
 

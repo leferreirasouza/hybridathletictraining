@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { BookOpen, Search, FileText, Globe, Upload, Trash2, ExternalLink, Plus, Loader2, Link, FileUp, ChevronRight, Eye } from 'lucide-react';
+import { BookOpen, Search, FileText, Globe, Upload, Trash2, ExternalLink, Plus, Loader2, Link, FileUp, ChevronRight, Eye, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
@@ -41,8 +41,13 @@ interface KnowledgeDocument {
   organization_id: string;
   content_text: string | null;
   metadata: any;
+  is_verified: boolean;
+  verified_by: string | null;
+  verified_at: string | null;
+  safety_notes: string | null;
   org_name?: string;
   uploader_name?: string;
+  verifier_name?: string;
 }
 
 const sourceTypeIcon = (type: string) => {
@@ -71,6 +76,7 @@ export default function KnowledgeLibraryTab() {
   const [deleting, setDeleting] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [viewDoc, setViewDoc] = useState<KnowledgeDocument | null>(null);
+  const [verifying, setVerifying] = useState<string | null>(null);
 
   const { data: documents = [], isLoading, refetch } = useQuery({
     queryKey: ['admin-knowledge-documents'],
@@ -83,14 +89,17 @@ export default function KnowledgeLibraryTab() {
       if (error) throw error;
 
       const orgIds = [...new Set((docs || []).map(d => d.organization_id))];
-      const uploaderIds = [...new Set((docs || []).map(d => d.uploaded_by))];
+      const allUserIds = [...new Set([
+        ...(docs || []).map(d => d.uploaded_by),
+        ...(docs || []).map(d => d.verified_by).filter(Boolean),
+      ])];
 
       const [orgsRes, profilesRes] = await Promise.all([
         orgIds.length > 0
           ? supabase.from('organizations').select('id, name').in('id', orgIds)
           : { data: [] },
-        uploaderIds.length > 0
-          ? supabase.from('profiles').select('id, full_name').in('id', uploaderIds)
+        allUserIds.length > 0
+          ? supabase.from('profiles').select('id, full_name').in('id', allUserIds)
           : { data: [] },
       ]);
 
@@ -101,6 +110,7 @@ export default function KnowledgeLibraryTab() {
         ...doc,
         org_name: orgMap.get(doc.organization_id) || 'Unknown',
         uploader_name: profileMap.get(doc.uploaded_by) || 'Unknown',
+        verifier_name: doc.verified_by ? profileMap.get(doc.verified_by) || 'Unknown' : null,
       })) as KnowledgeDocument[];
     },
   });
@@ -122,6 +132,29 @@ export default function KnowledgeLibraryTab() {
     }
   };
 
+  const handleToggleVerify = async (doc: KnowledgeDocument) => {
+    if (!user) return;
+    setVerifying(doc.id);
+    try {
+      const newVerified = !doc.is_verified;
+      const { error } = await supabase
+        .from('knowledge_documents')
+        .update({
+          is_verified: newVerified,
+          verified_by: newVerified ? user.id : null,
+          verified_at: newVerified ? new Date().toISOString() : null,
+        })
+        .eq('id', doc.id);
+      if (error) throw error;
+      toast.success(newVerified ? 'Document verified as safe' : 'Verification removed');
+      refetch();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update');
+    } finally {
+      setVerifying(null);
+    }
+  };
+
   const filtered = documents.filter(doc =>
     doc.title.toLowerCase().includes(search.toLowerCase()) ||
     doc.org_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -132,6 +165,24 @@ export default function KnowledgeLibraryTab() {
   const contentPreview = (text: string | null) => {
     if (!text) return '—';
     return text.length > 80 ? text.slice(0, 80) + '…' : text;
+  };
+
+  const unverifiedCount = documents.filter(d => !d.is_verified && d.status === 'processed').length;
+
+  const handleVerifyAll = async () => {
+    if (!user) return;
+    try {
+      const { error, count } = await supabase
+        .from('knowledge_documents')
+        .update({ is_verified: true, verified_by: user.id, verified_at: new Date().toISOString() }, { count: 'exact' })
+        .eq('is_verified', false)
+        .eq('status', 'processed');
+      if (error) throw error;
+      toast.success(`${count ?? unverifiedCount} documents verified and now available to AI coach.`);
+      refetch();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to verify');
+    }
   };
 
   return (
@@ -151,6 +202,11 @@ export default function KnowledgeLibraryTab() {
                 className="pl-9 h-9"
               />
             </div>
+            {unverifiedCount > 0 && (
+              <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={handleVerifyAll}>
+                <ShieldCheck className="h-4 w-4" /> Verify All ({unverifiedCount})
+              </Button>
+            )}
             <Button size="sm" className="gap-1.5 shrink-0" onClick={() => setUploadOpen(true)}>
               <Plus className="h-4 w-4" /> Add Source
             </Button>
@@ -177,6 +233,7 @@ export default function KnowledgeLibraryTab() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Title</TableHead>
+                    <TableHead>Verified</TableHead>
                     <TableHead>Source</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-center">Chunks</TableHead>
@@ -202,6 +259,21 @@ export default function KnowledgeLibraryTab() {
                             </p>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`h-7 gap-1 text-[10px] ${doc.is_verified ? 'text-emerald-600' : 'text-muted-foreground'}`}
+                          onClick={(e) => { e.stopPropagation(); handleToggleVerify(doc); }}
+                          disabled={verifying === doc.id}
+                        >
+                          {doc.is_verified ? <ShieldCheck className="h-3.5 w-3.5" /> : <ShieldAlert className="h-3.5 w-3.5" />}
+                          {doc.is_verified ? 'Safe' : 'Unverified'}
+                        </Button>
+                        {doc.is_verified && doc.verifier_name && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">by {doc.verifier_name}</p>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
@@ -336,11 +408,26 @@ function UploadDialog({
     setUploading(true);
     setProgress(0);
 
+    // Fetch existing titles for duplicate detection
+    const { data: existingDocs } = await supabase
+      .from('knowledge_documents')
+      .select('title')
+      .eq('organization_id', orgId);
+    const existingTitles = new Set((existingDocs || []).map(d => d.title?.toLowerCase()));
+
     const total = selectedFiles.length;
     let completed = 0;
+    let skipped = 0;
 
     for (const file of selectedFiles) {
       try {
+        const docTitle = file.name.replace('.pdf', '');
+        if (existingTitles.has(docTitle.toLowerCase())) {
+          toast.warning(`Skipped duplicate: ${file.name}`);
+          skipped++;
+          continue;
+        }
+
         setProgressLabel(`Uploading ${file.name}...`);
         const filePath = `${orgId}/${Date.now()}-${file.name}`;
 
@@ -354,17 +441,21 @@ function UploadDialog({
           continue;
         }
 
-        // Create document record
+        // Create document record (auto-verified)
+        const nowIso = new Date().toISOString();
         const { data: docData, error: docErr } = await supabase
           .from('knowledge_documents')
           .insert({
-            title: file.name.replace('.pdf', ''),
+            title: docTitle,
             source_type: 'pdf',
             file_path: filePath,
             organization_id: orgId,
             uploaded_by: userId,
             status: 'processing',
             metadata: { file_size: file.size, file_name: file.name },
+            is_verified: true,
+            verified_by: userId,
+            verified_at: nowIso,
           })
           .select('id')
           .single();
@@ -395,7 +486,7 @@ function UploadDialog({
       }
     }
 
-    toast.success(`Processed ${completed}/${total} files`);
+    toast.success(`Processed ${completed}/${total} files${skipped > 0 ? ` (${skipped} duplicates skipped)` : ''}`);
     setSelectedFiles([]);
     setUploading(false);
     setProgress(0);
@@ -419,12 +510,33 @@ function UploadDialog({
     setProgress(0);
     const total = urlList.length;
     let completed = 0;
+    let skipped = 0;
+
+    // Fetch existing source URLs for duplicate detection
+    const { data: existingDocs } = await supabase
+      .from('knowledge_documents')
+      .select('source_url, title')
+      .eq('organization_id', orgId)
+      .not('source_url', 'is', null);
+    const existingUrls = new Set((existingDocs || []).map(d => d.source_url));
 
     for (const url of urlList) {
       try {
+        if (existingUrls.has(url)) {
+          try {
+            const u = new URL(url);
+            toast.warning(`Skipped duplicate: ${u.hostname}${u.pathname.slice(0, 40)}`);
+          } catch {
+            toast.warning(`Skipped duplicate: ${url}`);
+          }
+          skipped++;
+          continue;
+        }
+
         setProgressLabel(`Scraping ${new URL(url).hostname}...`);
 
-        // Create document record
+        // Create document record (auto-verified)
+        const nowIso = new Date().toISOString();
         const { data: docData, error: docErr } = await supabase
           .from('knowledge_documents')
           .insert({
@@ -435,6 +547,9 @@ function UploadDialog({
             uploaded_by: userId,
             status: 'processing',
             metadata: { original_url: url },
+            is_verified: true,
+            verified_by: userId,
+            verified_at: nowIso,
           })
           .select('id')
           .single();
@@ -464,7 +579,7 @@ function UploadDialog({
       }
     }
 
-    toast.success(`Processed ${completed}/${total} URLs`);
+    toast.success(`Processed ${completed}/${total} URLs${skipped > 0 ? ` (${skipped} duplicates skipped)` : ''}`);
     setUrls('');
     setUploading(false);
     setProgress(0);

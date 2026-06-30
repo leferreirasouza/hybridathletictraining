@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Moon, Sun, Ruler, Bell, ShieldCheck, Trash2, BellRing, BellOff, Globe, CalendarPlus } from 'lucide-react';
+import { ArrowLeft, Moon, Sun, Ruler, Bell, ShieldCheck, Trash2, BellRing, BellOff, Globe, CalendarPlus, Watch, Link2, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -56,6 +56,54 @@ export default function Settings() {
   const [units, setUnits] = useState<Units>(getStoredUnits);
   const [calendarPref, setCalendarPref] = useState<CalendarPref>(getStoredCalendar);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [garminConnected, setGarminConnected] = useState<boolean>(() => localStorage.getItem('ha-garmin-connected') === '1');
+  const [garminLoading, setGarminLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user) return;
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data } = await supabase
+        .from('garmin_connections')
+        .select('access_token')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      const connected = !!data?.access_token;
+      setGarminConnected(connected);
+      if (connected) localStorage.setItem('ha-garmin-connected', '1');
+      else localStorage.removeItem('ha-garmin-connected');
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+
+  const handleConnectGarmin = async () => {
+    setGarminLoading(true);
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data, error } = await supabase.functions.invoke('garmin-oauth', { body: { action: 'start' } });
+      if (error || !data?.authorize_url) {
+        toast.error(data?.error ?? 'Garmin Health API approval is pending. Connection will be enabled once credentials are issued.');
+        return;
+      }
+      window.location.href = data.authorize_url;
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Failed to start Garmin connection');
+    } finally {
+      setGarminLoading(false);
+    }
+  };
+
+  const handleDisconnectGarmin = async () => {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      await supabase.functions.invoke('garmin-oauth', { body: { action: 'disconnect' } });
+    } catch { /* best-effort */ }
+    localStorage.removeItem('ha-garmin-connected');
+    setGarminConnected(false);
+    toast.success('Garmin disconnected.');
+  };
 
   const [notifPrefs, setNotifPrefs] = useState(getNotifPrefs);
   const [permStatus, setPermStatus] = useState(getNotificationPermission);
@@ -314,6 +362,47 @@ export default function Settings() {
                 )}
                 <Badge variant="secondary" className="text-[10px]">{t('settings.notifEnabled')}</Badge>
               </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Wearables */}
+        <Card className="glass">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <Watch className="h-4 w-4 text-primary" />
+              Wearables
+            </CardTitle>
+            <CardDescription>Connect your wearable to auto-sync activities and health metrics.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
+                  <Watch className="h-4 w-4 text-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Garmin</p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {garminConnected ? 'Connected — activities sync automatically' : 'Sync workouts, HR, sleep and recovery'}
+                  </p>
+                </div>
+              </div>
+              {garminConnected ? (
+                <Button variant="outline" size="sm" onClick={handleDisconnectGarmin}>
+                  Disconnect
+                </Button>
+              ) : (
+                <Button size="sm" onClick={handleConnectGarmin} disabled={garminLoading} className="gradient-hyrox">
+                  {garminLoading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5 mr-1.5" />}
+                  Connect
+                </Button>
+              )}
+            </div>
+            {!garminConnected && (
+              <p className="text-[10px] text-muted-foreground">
+                Garmin Health API access is pending approval. The connect button will activate once credentials are issued.
+              </p>
             )}
           </CardContent>
         </Card>

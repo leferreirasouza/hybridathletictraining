@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useMemo } from 'react';
 
-// Consistent plan colors for visual distinction
 const PLAN_COLORS = [
   'hsl(var(--primary))',
   'hsl(210, 80%, 55%)',
@@ -13,8 +12,10 @@ const PLAN_COLORS = [
 ];
 
 export function useScheduleData() {
-  const { currentOrg, user } = useAuth();
+  const { currentOrg, user, loading, membershipsLoading } = useAuth();
   const [selectedPlanId, setSelectedPlanId] = useState<string>('');
+  const authLoading = loading || membershipsLoading;
+  const authReady = !authLoading && !!currentOrg?.id && !!user?.id;
 
   const { data: plans, isLoading: plansLoading } = useQuery({
     queryKey: ['org-plans', currentOrg?.id, user?.id],
@@ -71,15 +72,13 @@ export function useScheduleData() {
 
       return orgPlans.filter((plan) => visiblePlanIds.has(plan.id));
     },
-    enabled: !!currentOrg?.id && !!user?.id,
+    enabled: authReady,
   });
 
-  // Auto-default to 'all' when multiple plans exist
   const effectiveSelection = selectedPlanId || ((plans?.length ?? 0) > 1 ? 'all' : (plans?.[0]?.id || ''));
   const isAllPlans = effectiveSelection === 'all';
   const activePlanId = isAllPlans ? '' : effectiveSelection;
 
-  // Build a color map for plans
   const planColorMap = useMemo(() => {
     const map: Record<string, string> = {};
     (plans || []).forEach((p, i) => {
@@ -90,11 +89,12 @@ export function useScheduleData() {
 
   const planNameMap = useMemo(() => {
     const map: Record<string, string> = {};
-    (plans || []).forEach(p => { map[p.id] = p.name; });
+    (plans || []).forEach((p) => {
+      map[p.id] = p.name;
+    });
     return map;
   }, [plans]);
 
-  // Fetch latest version for single plan
   const { data: version } = useQuery({
     queryKey: ['plan-version', activePlanId],
     queryFn: async () => {
@@ -107,12 +107,11 @@ export function useScheduleData() {
         .single();
       return error ? null : data;
     },
-    enabled: !!activePlanId && !isAllPlans,
+    enabled: authReady && !!activePlanId && !isAllPlans,
   });
 
-  // Fetch all plan versions (latest per plan) for "all" mode
   const { data: allVersions } = useQuery({
-    queryKey: ['all-plan-versions', plans?.map(p => p.id).join(',')],
+    queryKey: ['all-plan-versions', currentOrg?.id, plans?.map((p) => p.id).join(',')],
     queryFn: async () => {
       if (!plans?.length) return [];
       const results: Array<{ id: string; plan_id: string; version_number: number }> = [];
@@ -128,10 +127,9 @@ export function useScheduleData() {
       }
       return results;
     },
-    enabled: isAllPlans && (plans?.length ?? 0) > 0,
+    enabled: authReady && isAllPlans && (plans?.length ?? 0) > 0,
   });
 
-  // Sessions for single plan
   const { data: sessions, isLoading: sessionsLoading } = useQuery({
     queryKey: ['planned-sessions', version?.id],
     queryFn: async () => {
@@ -145,15 +143,14 @@ export function useScheduleData() {
         .order('order_index', { ascending: true });
       return error ? [] : data || [];
     },
-    enabled: !!version?.id && !isAllPlans,
+    enabled: authReady && !!version?.id && !isAllPlans,
   });
 
-  // Sessions for ALL plans (merged)
   const { data: allSessions, isLoading: allSessionsLoading } = useQuery({
-    queryKey: ['all-planned-sessions', allVersions?.map(v => v.id).join(',')],
+    queryKey: ['all-planned-sessions', currentOrg?.id, allVersions?.map((v) => v.id).join(',')],
     queryFn: async () => {
       if (!allVersions?.length) return [];
-      const versionIds = allVersions.map(v => v.id);
+      const versionIds = allVersions.map((v) => v.id);
       const { data, error } = await supabase
         .from('planned_sessions')
         .select('*')
@@ -162,19 +159,20 @@ export function useScheduleData() {
         .order('day_of_week', { ascending: true })
         .order('order_index', { ascending: true });
       if (error) return [];
-      // Annotate each session with plan info
+
       const versionToPlan: Record<string, string> = {};
       for (const v of allVersions) {
         versionToPlan[v.id] = v.plan_id;
       }
-      return (data || []).map(s => ({
-        ...s,
-        _planId: versionToPlan[s.plan_version_id],
-        _planName: planNameMap[versionToPlan[s.plan_version_id]] || 'Plan',
-        _planColor: planColorMap[versionToPlan[s.plan_version_id]] || PLAN_COLORS[0],
+
+      return (data || []).map((session) => ({
+        ...session,
+        _planId: versionToPlan[session.plan_version_id],
+        _planName: planNameMap[versionToPlan[session.plan_version_id]] || 'Plan',
+        _planColor: planColorMap[versionToPlan[session.plan_version_id]] || PLAN_COLORS[0],
       }));
     },
-    enabled: isAllPlans && (allVersions?.length ?? 0) > 0,
+    enabled: authReady && isAllPlans && (allVersions?.length ?? 0) > 0,
   });
 
   const activeSessions = isAllPlans ? (allSessions || []) : (sessions || []);
@@ -190,7 +188,7 @@ export function useScheduleData() {
         .order('week_number', { ascending: true });
       return error ? [] : (data as any[]) || [];
     },
-    enabled: !!version?.id && !isAllPlans,
+    enabled: authReady && !!version?.id && !isAllPlans,
   });
 
   const { data: targets } = useQuery({
@@ -203,7 +201,7 @@ export function useScheduleData() {
         .eq('plan_version_id', version.id);
       return error ? [] : data || [];
     },
-    enabled: !!version?.id && !isAllPlans,
+    enabled: authReady && !!version?.id && !isAllPlans,
   });
 
   const { data: completedSessions } = useQuery({
@@ -216,7 +214,7 @@ export function useScheduleData() {
         .eq('athlete_id', user.id);
       return error ? [] : data || [];
     },
-    enabled: !!user?.id,
+    enabled: authReady && !!user?.id,
   });
 
   const { data: substitutions } = useQuery({
@@ -230,23 +228,27 @@ export function useScheduleData() {
         .in('status', ['active', 'pending_coach']);
       return error ? [] : (data as any[]) || [];
     },
-    enabled: !!user?.id,
+    enabled: authReady && !!user?.id,
   });
 
   const maxWeek = useMemo(() => {
     if (!activeSessions?.length) return 1;
-    return Math.max(...activeSessions.map(s => s.week_number));
+    return Math.max(...activeSessions.map((session) => session.week_number));
   }, [activeSessions]);
 
   const substitutionMap = useMemo(() => {
     const map: Record<string, any> = {};
-    for (const sub of (substitutions || [])) {
+    for (const sub of substitutions || []) {
       map[sub.original_session_id] = sub;
     }
     return map;
   }, [substitutions]);
 
+  const scheduleLoading = authLoading || (authReady && (plansLoading || (isAllPlans ? allSessionsLoading : sessionsLoading)));
+
   return {
+    authReady,
+    authLoading,
     plans,
     plansLoading,
     activePlanId,
@@ -260,8 +262,8 @@ export function useScheduleData() {
     completedSessions: completedSessions || [],
     substitutionMap,
     maxWeek,
-    isLoading: plansLoading || (isAllPlans ? allSessionsLoading : sessionsLoading),
-    noPlan: !plansLoading && (!plans || plans.length === 0),
+    isLoading: scheduleLoading,
+    noPlan: authReady && !plansLoading && (!plans || plans.length === 0),
     planColorMap,
     planNameMap,
   };
