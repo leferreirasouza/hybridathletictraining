@@ -691,7 +691,7 @@ Plan Duration (weeks): ${profile.planWeeks || "8"}
         if (weekSessions.length === 0) continue;
         const target = weekSessions[0];
         adjustments.push({
-          athlete_id: user.id,
+          athlete_id: effectiveAthleteId,
           target_session_id: target.id,
           adjustment_type: "slot_mismatch",
           reason_details: mismatch.reasonDetails,
