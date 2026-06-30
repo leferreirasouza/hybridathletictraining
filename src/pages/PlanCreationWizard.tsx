@@ -134,7 +134,7 @@ function renderStep(
     case 'sessionLength': return <SessionLengthStep answers={answers} update={update} />;
     case 'strengthCount': return <SessionCountStep answers={answers} update={update} variant="strength" />;
     case 'strengthDays': return <DaysOfWeekStep answers={answers} update={update} variant="strength" />;
-    case 'equipment': return <EquipmentStep />;
+    case 'equipment': return <EquipmentStep answers={answers} update={update} />;
     case 'mobilityCount': return <SessionCountStep answers={answers} update={update} variant="mobility" />;
     case 'mobilityFocus': return <MobilityFocusStep answers={answers} update={update} />;
     case 'review': return <ReviewStep answers={answers} update={update} onGenerated={onGenerated} />;
