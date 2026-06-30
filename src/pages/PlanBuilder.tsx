@@ -215,7 +215,7 @@ function ExercisePicker({
   );
 }
 
-function CurrentPlansTab() {
+function CurrentPlansTab({ onFineTune }: { onFineTune: (planId: string) => void }) {
   const { t } = useTranslation();
   const { user, currentOrg } = useAuth();
   const queryClient = useQueryClient();
