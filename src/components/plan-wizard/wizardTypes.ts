@@ -22,7 +22,7 @@ export interface WizardAnswers {
   sessionLengthMin?: 30 | 45 | 60;
   strengthSessionsPerWeek?: number;
   strengthDays?: number[];
-  equipment?: { preset?: string; items: string[] };
+  equipment?: { preset?: EquipmentPresetKey | 'custom'; items: Record<string, boolean> };
   mobilitySessionsPerWeek?: number;
   mobilityWeights?: Record<string, number>;
   ageGroup?: string;
