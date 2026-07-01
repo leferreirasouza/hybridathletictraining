@@ -61,7 +61,7 @@ export default function ReviewStep({ answers, update, onGenerated }: Props) {
   // Persist preferences + profile goal fields before generating.
   const persistAnswers = async () => {
     if (!targetAthleteId) return;
-    const equipmentJson = answers.equipment ?? { items: [] };
+    const equipmentJson = answers.equipment ?? { items: {} };
 
     await supabase.from('training_preferences').upsert(
       [

@@ -4,6 +4,12 @@
 export type GoalType = 'hyrox' | 'general_fitness' | 'marathon' | 'custom';
 export type AbilityLevel = 'beginner' | 'intermediate' | 'advanced' | 'elite';
 export type StrengthGoal = 'running_focus' | 'all_round';
+export type EquipmentPresetKey = 'bodyweight_only' | 'basic_home' | 'hyrox_box' | 'full_gym';
+export type EquipmentItemKey =
+  | 'gym_access' | 'sled' | 'rower' | 'skierg' | 'wall_ball' | 'sandbag' | 'rope'
+  | 'kettlebell' | 'barbell' | 'dumbbell' | 'pull_up_bar' | 'bench' | 'box'
+  | 'resistance_band' | 'swiss_ball';
+
 export type RaceDistance = '5k' | '10k' | 'half' | 'marathon' | 'hyrox' | 'other';
 
 export interface WizardAnswers {
@@ -22,7 +28,7 @@ export interface WizardAnswers {
   sessionLengthMin?: 30 | 45 | 60;
   strengthSessionsPerWeek?: number;
   strengthDays?: number[];
-  equipment?: { preset?: string; items: string[] };
+  equipment?: { preset?: EquipmentPresetKey | 'custom'; items: Record<string, boolean> };
   mobilitySessionsPerWeek?: number;
   mobilityWeights?: Record<string, number>;
   ageGroup?: string;
