@@ -71,6 +71,57 @@ serve(async (req) => {
       });
     }
 
+    // Authorization: caller must be coach/admin/master_admin. The knowledge
+    // base is org-scoped, so match the document's organization when known.
+    const { data: docRow } = await serviceClient
+      .from("knowledge_documents")
+      .select("organization_id")
+      .eq("id", document_id)
+      .maybeSingle();
+    const docOrgId = docRow?.organization_id ?? null;
+
+    const { data: callerRoles, error: callerRolesErr } = await serviceClient
+      .from("user_roles")
+      .select("role, organization_id")
+      .eq("user_id", userId);
+    if (callerRolesErr) {
+      return new Response(JSON.stringify({ error: "Failed to verify permissions" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const isGlobalMaster = (callerRoles || []).some((r) => r.role === "master_admin");
+    const hasOrgRole = docOrgId
+      ? (callerRoles || []).some(
+          (r) => r.organization_id === docOrgId && ["coach", "admin", "master_admin"].includes(r.role)
+        )
+      : (callerRoles || []).some((r) => ["coach", "admin", "master_admin"].includes(r.role));
+    if (!isGlobalMaster && !hasOrgRole) {
+      return new Response(JSON.stringify({ error: "Forbidden: coach or admin role required" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // SSRF guard for user-supplied source_url: only public http(s) hosts.
+    function isSafePublicHttpUrl(raw: string): boolean {
+      let u: URL;
+      try { u = new URL(raw); } catch { return false; }
+      if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+      const host = u.hostname.toLowerCase();
+      if (!host || host === "localhost" || host.endsWith(".localhost")) return false;
+      // Block IP-literal hosts entirely (covers link-local, loopback, private
+      // ranges, IPv6 ::1 / fc00::/7, cloud metadata 169.254.169.254 etc.).
+      const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
+      if (ipv4) return false;
+      if (host.includes(":")) return false; // bare IPv6
+      if (host.startsWith("[") && host.endsWith("]")) return false;
+      // Block obvious internal TLDs.
+      const blockedTlds = [".internal", ".local", ".lan", ".intranet", ".corp", ".home"];
+      if (blockedTlds.some((tld) => host.endsWith(tld))) return false;
+      return true;
+    }
+
     let extractedText = "";
 
     if (source_type === "url" && source_url) {
