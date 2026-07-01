@@ -71,6 +71,33 @@ serve(async (req) => {
       });
     }
 
+    // Authorization: match exercise_library RLS — only master_admin for the
+    // target org (or global master_admin) may seed. Verified with the service
+    // client so the check itself is not subject to RLS visibility.
+    const authzClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    const { data: callerRoles, error: callerRolesErr } = await authzClient
+      .from("user_roles")
+      .select("role, organization_id")
+      .eq("user_id", user.id);
+    if (callerRolesErr) {
+      return new Response(JSON.stringify({ error: "Failed to verify permissions" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const allowed = (callerRoles || []).some(
+      (r) => r.role === "master_admin" && (r.organization_id === null || r.organization_id === organization_id)
+    );
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: "Forbidden: master_admin role required for this organization" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
