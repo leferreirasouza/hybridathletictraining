@@ -44,9 +44,11 @@ export default function RaceTimeStep({ answers, update }: { answers: WizardAnswe
         <div className="space-y-2">
           <Label>Time (h:mm:ss or mm:ss)</Label>
           <Input
-            value={value}
+            value={raw}
+            inputMode="numeric"
             onChange={(e) => {
               const v = e.target.value;
+              setRaw(v);
               const secs = parseHMS(v);
               update({ raceTimeSeconds: secs ?? undefined, raceDistance: distance });
             }}
