@@ -17,7 +17,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import type { Database } from '@/integrations/supabase/types';
 import ExcelJS from 'exceljs';
 import PlanCreationWizard from '@/pages/PlanCreationWizard';
@@ -219,6 +219,7 @@ function CurrentPlansTab({ onFineTune }: { onFineTune: (planId: string) => void 
   const { t } = useTranslation();
   const { user, currentOrg } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Fetch org members for assignment dropdown
   const { data: orgMembers = [] } = useQuery({
@@ -305,6 +306,9 @@ function CurrentPlansTab({ onFineTune }: { onFineTune: (planId: string) => void 
           <List className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
           <p className="font-display font-bold">No plans yet</p>
           <p className="text-sm text-muted-foreground mt-1">Create a plan from scratch or import one from a spreadsheet.</p>
+          <Button className="gradient-hyrox mt-3" onClick={() => navigate('/create-plan')}>
+            <Plus className="h-4 w-4 mr-2" /> Generate a Plan
+          </Button>
         </CardContent>
       </Card>
     );
@@ -312,6 +316,11 @@ function CurrentPlansTab({ onFineTune }: { onFineTune: (planId: string) => void 
 
   return (
     <div className="space-y-3">
+      <div className="flex justify-end">
+        <Button size="sm" className="gradient-hyrox gap-1.5" onClick={() => navigate('/create-plan')}>
+          <Plus className="h-3.5 w-3.5" /> New Plan
+        </Button>
+      </div>
       {plans.map(plan => {
         const assignedMember = orgMembers.find(m => m.id === plan.assignedAthleteId);
         return (
