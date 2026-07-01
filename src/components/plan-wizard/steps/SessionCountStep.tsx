@@ -17,8 +17,8 @@ const COPY: Record<Props['variant'], { title: string; subtitle: string; field: k
     max: 6,
   },
   mobility: {
-    title: 'How many mobility / technique sessions per week?',
-    subtitle: 'Short focused sessions — 15–30 min each. Set 0 to skip.',
+    title: 'Mobility / physio sessions (optional)',
+    subtitle: 'Short focused sessions — 15–30 min each. Leave at 0 to skip entirely.',
     field: 'mobilitySessionsPerWeek',
     max: 7,
   },
