@@ -125,8 +125,16 @@ serve(async (req) => {
     let extractedText = "";
 
     if (source_type === "url" && source_url) {
+      if (!isSafePublicHttpUrl(source_url)) {
+        return new Response(JSON.stringify({ error: "Invalid or blocked source_url (must be a public http(s) URL)" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       // Scrape URL content using AI to extract and summarize
       console.log("Scraping URL:", source_url);
+
+
 
       try {
         const fetchRes = await fetch(source_url, {
