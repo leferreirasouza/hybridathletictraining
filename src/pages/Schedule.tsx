@@ -164,18 +164,67 @@ export default function Schedule() {
     }
   };
 
+  const jumpWeeks = (delta: number) => {
+    setWeekOffset(w => Math.max(0, Math.min(maxWeek - 1, w + delta)));
+  };
+
+  const goToRaceDay = () => {
+    // Prefer the athlete's goal race date if it maps into a plan week
+    if (goalRaceDate && weeklySummaries.length > 0) {
+      const race = new Date(goalRaceDate + 'T00:00:00');
+      for (const ws of weeklySummaries) {
+        if (!ws.week_start || !ws.week_end) continue;
+        const start = new Date(ws.week_start); start.setHours(0, 0, 0, 0);
+        const end = new Date(ws.week_end); end.setHours(23, 59, 59, 999);
+        if (race >= start && race <= end) {
+          setWeekOffset(ws.week_number - 1);
+          const dow = race.getDay() === 0 ? 7 : race.getDay();
+          setSelectedDay(dow);
+          return;
+        }
+      }
+    }
+    // Fallback: final week of the plan
+    setWeekOffset(maxWeek - 1);
+  };
+
+  // Load per-user hidden plans (managed from the My Plans page)
+  useEffect(() => {
+    if (!user?.id) return;
+    const load = () => {
+      try {
+        const raw = localStorage.getItem(`ha-hidden-plans:${user.id}`);
+        setHiddenPlanIds(new Set(raw ? JSON.parse(raw) : []));
+      } catch {
+        setHiddenPlanIds(new Set());
+      }
+    };
+    load();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === `ha-hidden-plans:${user.id}`) load();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [user?.id]);
+
   const togglePlanVisibility = (planId: string) => {
     setHiddenPlanIds(prev => {
       const next = new Set(prev);
       if (next.has(planId)) next.delete(planId); else next.add(planId);
+      if (user?.id) {
+        try { localStorage.setItem(`ha-hidden-plans:${user.id}`, JSON.stringify([...next])); } catch {}
+      }
       return next;
     });
   };
 
   const visibleSessions = useMemo(() => {
-    if (!isAllPlans || hiddenPlanIds.size === 0) return sessions;
-    return sessions.filter((s: any) => !hiddenPlanIds.has(s._planId));
-  }, [sessions, isAllPlans, hiddenPlanIds]);
+    if (hiddenPlanIds.size === 0) return sessions;
+    if (isAllPlans) return sessions.filter((s: any) => !hiddenPlanIds.has(s._planId));
+    // For single-plan view, hide everything if that plan is hidden
+    if (activePlanId && hiddenPlanIds.has(activePlanId)) return [];
+    return sessions;
+  }, [sessions, isAllPlans, hiddenPlanIds, activePlanId]);
 
   const handleCalendarExport = (provider: CalendarProvider) => {
     exportWeekToCalendar(provider, sessions, displayWeek);
