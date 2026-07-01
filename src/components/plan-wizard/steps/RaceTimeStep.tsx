@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,6 +8,7 @@ import { StepShell } from './_shared';
 const DISTANCES: RaceDistance[] = ['5k', '10k', 'half', 'marathon', 'hyrox', 'other'];
 
 function parseHMS(value: string): number | null {
+  if (!value.includes(':')) return null;
   const parts = value.split(':').map((p) => parseInt(p, 10));
   if (parts.some((n) => isNaN(n) || n < 0)) return null;
   if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
@@ -16,7 +18,13 @@ function parseHMS(value: string): number | null {
 
 export default function RaceTimeStep({ answers, update }: { answers: WizardAnswers; update: (p: Partial<WizardAnswers>) => void }) {
   const distance = answers.raceDistance ?? '10k';
-  const value = answers.raceTimeSeconds ? fmtTime(answers.raceTimeSeconds) : '';
+  const [raw, setRaw] = useState<string>(answers.raceTimeSeconds ? fmtTime(answers.raceTimeSeconds) : '');
+
+  // Keep local input in sync if answers change externally (e.g. navigation back)
+  useEffect(() => {
+    if (answers.raceTimeSeconds && !raw) setRaw(fmtTime(answers.raceTimeSeconds));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answers.raceTimeSeconds]);
 
   return (
     <StepShell
