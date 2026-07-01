@@ -34,7 +34,20 @@ function nonce() {
   return crypto.randomUUID().replace(/-/g, "");
 }
 
-function signRequest(opts: {
+async function hmacSha1Base64(key: string, message: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(key),
+    { name: "HMAC", hash: "SHA-1" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", cryptoKey, encoder.encode(message));
+  return btoa(String.fromCharCode(...new Uint8Array(signature)));
+}
+
+async function signRequest(opts: {
   method: string;
   url: string;
   consumerKey: string;
@@ -63,7 +76,7 @@ function signRequest(opts: {
   ].join("&");
 
   const signingKey = `${percentEncode(opts.consumerSecret)}&${percentEncode(opts.tokenSecret ?? "")}`;
-  const sig = hmac("sha1", signingKey, baseString, "utf8", "base64") as string;
+  const sig = await hmacSha1Base64(signingKey, baseString);
 
   const authParams = { ...oauthParams, oauth_signature: sig };
   const authHeader =
