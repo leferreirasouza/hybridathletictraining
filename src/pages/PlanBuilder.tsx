@@ -11,7 +11,8 @@ import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Upload, FileSpreadsheet, Trash2, Loader2, CheckCircle2, List, Eye, EyeOff, UserCircle, Search, X, Dumbbell, Pencil, ArrowLeft } from 'lucide-react';
+import { Plus, Upload, FileSpreadsheet, Trash2, Loader2, CheckCircle2, List, Eye, EyeOff, UserCircle, Search, X, Dumbbell, Pencil, ArrowLeft, Archive, RotateCcw, ChevronDown } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -314,96 +315,136 @@ function CurrentPlansTab({ onFineTune }: { onFineTune: (planId: string) => void 
     );
   }
 
+  const activePlans = plans.filter(p => p.isActive);
+  const archivedPlans = plans.filter(p => !p.isActive);
+
+  const renderPlanCard = (plan: typeof plans[number]) => (
+    <Card key={plan.id} className={`glass transition-opacity ${!plan.isActive ? 'opacity-70' : ''}`}>
+      <CardContent className="p-4 space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-display font-bold text-sm truncate">{plan.name}</p>
+              <Badge
+                variant={plan.isActive ? 'default' : 'secondary'}
+                className="text-[10px] shrink-0"
+              >
+                {plan.isActive ? 'Active' : 'Archived'}
+              </Badge>
+              <Badge variant="outline" className="text-[10px] shrink-0 capitalize">{plan.source}</Badge>
+              {plan.is_template && <Badge variant="secondary" className="text-[10px] shrink-0">Template</Badge>}
+            </div>
+            {plan.description && (
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">{plan.description}</p>
+            )}
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Created {new Date(plan.created_at).toLocaleDateString()} · {plan.versionCount} version(s)
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {plan.isActive ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs gap-1.5"
+                onClick={() => handleToggleArchive(plan.id, true)}
+              >
+                <Archive className="h-3.5 w-3.5" /> Archive
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs gap-1.5"
+                onClick={() => handleToggleArchive(plan.id, false)}
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Restore
+              </Button>
+            )}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete plan permanently?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete "{plan.name}" and all its sessions, versions, and data. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleDelete(plan.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Delete Forever
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+        {/* Assign athlete row */}
+        <div className="flex items-center gap-2 pt-1 border-t border-border/50">
+          <UserCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+          <span className="text-xs text-muted-foreground shrink-0">Assigned to:</span>
+          <Select
+            value={plan.assignedAthleteId || ''}
+            onValueChange={(val) => handleAssignAthlete(plan.id, plan.versionIds, val)}
+          >
+            <SelectTrigger className="h-7 text-xs flex-1 min-w-0">
+              <SelectValue placeholder="Unassigned" />
+            </SelectTrigger>
+            <SelectContent>
+              {orgMembers.map(m => (
+                <SelectItem key={m.id} value={m.id} className="text-xs">
+                  {m.id === user?.id ? `${m.fullName} (You)` : m.fullName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex justify-end pt-1">
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={() => onFineTune(plan.id)}>
+            <Pencil className="h-3 w-3" /> Fine-tune this plan
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
-    <div className="space-y-3">
-      <div className="flex justify-end">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Active Plans</p>
         <Button size="sm" className="gradient-hyrox gap-1.5" onClick={() => navigate('/create-plan')}>
           <Plus className="h-3.5 w-3.5" /> New Plan
         </Button>
       </div>
-      {plans.map(plan => {
-        const assignedMember = orgMembers.find(m => m.id === plan.assignedAthleteId);
-        return (
-          <Card key={plan.id} className={`glass transition-opacity ${!plan.isActive ? 'opacity-60' : ''}`}>
-            <CardContent className="p-4 space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-display font-bold text-sm truncate">{plan.name}</p>
-                    <Badge variant="outline" className="text-[10px] shrink-0 capitalize">{plan.source}</Badge>
-                    {plan.is_template && <Badge variant="secondary" className="text-[10px] shrink-0">Template</Badge>}
-                  </div>
-                  {plan.description && (
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{plan.description}</p>
-                  )}
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    Created {new Date(plan.created_at).toLocaleDateString()} · {plan.versionCount} version(s)
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <div className="flex items-center gap-2">
-                    {plan.isActive ? (
-                      <Eye className="h-3.5 w-3.5 text-success" />
-                    ) : (
-                      <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
-                    )}
-                    <Switch
-                      checked={plan.isActive}
-                      onCheckedChange={() => handleToggleArchive(plan.id, plan.isActive)}
-                    />
-                  </div>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete plan permanently?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will permanently delete "{plan.name}" and all its sessions, versions, and data. This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDelete(plan.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                          Delete Forever
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </div>
-              {/* Assign athlete row */}
-              <div className="flex items-center gap-2 pt-1 border-t border-border/50">
-                <UserCircle className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="text-xs text-muted-foreground shrink-0">Assigned to:</span>
-                <Select
-                  value={plan.assignedAthleteId || ''}
-                  onValueChange={(val) => handleAssignAthlete(plan.id, plan.versionIds, val)}
-                >
-                  <SelectTrigger className="h-7 text-xs flex-1 min-w-0">
-                    <SelectValue placeholder="Unassigned" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {orgMembers.map(m => (
-                      <SelectItem key={m.id} value={m.id} className="text-xs">
-                        {m.id === user?.id ? `${m.fullName} (You)` : m.fullName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex justify-end pt-1">
-                <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={() => onFineTune(plan.id)}>
-                  <Pencil className="h-3 w-3" /> Fine-tune this plan
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+      <div className="space-y-3">
+        {activePlans.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">No active plans — restore one below or create a new plan.</p>
+        ) : (
+          activePlans.map(renderPlanCard)
+        )}
+      </div>
+
+      {archivedPlans.length > 0 && (
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-full justify-between text-xs text-muted-foreground hover:text-foreground group">
+              <span className="flex items-center gap-2">
+                <Archive className="h-3.5 w-3.5" />
+                Archived Plans ({archivedPlans.length})
+              </span>
+              <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3 pt-3">
+            {archivedPlans.map(renderPlanCard)}
+          </CollapsibleContent>
+        </Collapsible>
+      )}
     </div>
   );
 }
