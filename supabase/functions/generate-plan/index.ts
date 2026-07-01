@@ -458,8 +458,15 @@ Current Running Volume: ${profile.currentWeeklyKm ?? 0} km/week across ${profile
       phaseByWeek
     );
 
+    const runVolumePlan = buildRunVolumePlan(
+      Number(profile.currentWeeklyKm),
+      phaseSchedule,
+      slotPlan
+    );
+
     let deterministicSection = `\n\n📐 PHASE SCHEDULE (deterministic — follow exactly):\n${formatPhaseTable(phaseSchedule)}\n`;
     deterministicSection += `\n📋 WEEKLY SESSION SLOTS (deterministic — fill exactly these categories/counts per week):\n${formatSlotTable(slotPlan)}\n`;
+    deterministicSection += `\n🏃 WEEKLY RUN VOLUME TARGETS (deterministic — derived from athlete's ${runVolumePlan.baselineKm} km/week baseline via the 10%-rule and phase multipliers). Each run session's distance_km MUST match its assigned per-slot km within ±10%. Do NOT exceed the week total.\n${formatRunVolumeTable(runVolumePlan)}\n`;
 
     // Equipment constraint — reads defensively since live rows may still use
     // the old flat {gym_access,sled,rower,skierg} shape, pre-preset-migration.
