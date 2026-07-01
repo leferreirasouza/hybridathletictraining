@@ -53,12 +53,10 @@ export default function RunDaysCountStep({ answers, update }: { answers: WizardA
   const volumeOvershoot = currentKm > 0 && impliedTargetKm > currentKm * 1.1;
   const dayOvershoot = currentDays > 0 && target > currentDays + 1;
 
-  const warning = volumeOvershoot
-    ? `Adding ${target} run days at your current per-session distance implies ~${impliedTargetKm.toFixed(0)} km/week — that's more than +10% over your current ${currentKm} km. Increasing weekly volume by more than ~10% raises injury risk.`
-    : dayOvershoot
-      ? `Jumping from ${currentDays} to ${target} run days/week increases injury risk. Aim for at most one more than you currently do.`
-      : 'Recommended: keep weekly km growth under ~10% and add at most one more run day than you currently do.';
-  const warningTone = volumeOvershoot || dayOvershoot;
+  // Safe week-1 ceiling (10%-rule) and a realistic 4-week ramp using ~10% weekly growth.
+  const safeWeek1Km = currentKm > 0 ? currentKm * 1.1 : impliedTargetKm;
+  const safeWeek4Km = currentKm > 0 ? currentKm * Math.pow(1.1, 4) : impliedTargetKm;
+
 
   return (
     <StepShell title="How many days a week do you want to run?" subtitle="Volume matters more than day-count — tell us both.">
