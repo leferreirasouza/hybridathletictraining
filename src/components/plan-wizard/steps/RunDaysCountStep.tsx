@@ -138,3 +138,80 @@ export default function RunDaysCountStep({ answers, update }: { answers: WizardA
     </StepShell>
   );
 }
+
+type Tone = 'info' | 'warn' | 'danger';
+
+const TONE_STYLES: Record<Tone, { wrap: string; icon: string; label: string; Icon: typeof Info }> = {
+  info:   { wrap: 'bg-muted/30 border-border',                icon: 'text-muted-foreground', label: 'text-foreground',        Icon: ShieldCheck },
+  warn:   { wrap: 'bg-warning/10 border-warning/30',          icon: 'text-warning',          label: 'text-warning-foreground', Icon: AlertTriangle },
+  danger: { wrap: 'bg-destructive/10 border-destructive/30',  icon: 'text-destructive',      label: 'text-destructive',        Icon: AlertTriangle },
+};
+
+interface CalloutProps {
+  tone: Tone;
+  currentKm: number;
+  currentDays: number;
+  target: number;
+  impliedTargetKm: number;
+  safeWeek1Km: number;
+  safeWeek4Km: number;
+  volumeOvershoot: boolean;
+  dayOvershoot: boolean;
+}
+
+function RuleCallout(p: CalloutProps) {
+  const styles = TONE_STYLES[p.tone];
+  const { Icon } = styles;
+  const headline =
+    p.tone === 'danger' ? 'Plan will cap your weekly km growth' :
+    p.tone === 'warn'   ? 'Plan will ease you into extra run days' :
+                          'You’re inside the safe zone';
+
+  const plainExplainer =
+    p.tone === 'danger'
+      ? `You asked for ${p.target} runs on top of your current ${p.currentKm} km/week (~${p.impliedTargetKm.toFixed(0)} km implied). That’s more than +10% in a single week — the classic threshold linked to overuse injury.`
+      : p.tone === 'warn'
+        ? `Going from ${p.currentDays} to ${p.target} run days is a big jump. Weekly running load will still grow, just spread over more days.`
+        : `Adding at most one extra run day and keeping weekly km growth under ~10% keeps you inside evidence-based safe ramp rates.`;
+
+  return (
+    <div className={`rounded-lg border p-3 space-y-3 ${styles.wrap}`}>
+      <div className={`flex items-start gap-2 text-xs leading-relaxed ${styles.label}`}>
+        <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${styles.icon}`} />
+        <div className="space-y-1">
+          <p className="font-semibold text-sm">{headline}</p>
+          <p className="text-xs opacity-90">{plainExplainer}</p>
+        </div>
+      </div>
+
+      {p.currentKm > 0 && (
+        <div className="rounded-md border border-border/60 bg-background/40 p-2.5 space-y-1.5">
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+            <TrendingUp className="h-3 w-3" /> Impact on your generated plan
+          </div>
+          <ul className="text-xs space-y-1">
+            <li className="flex justify-between gap-3">
+              <span className="text-muted-foreground">Week 1 max</span>
+              <span className="font-mono font-medium">{p.safeWeek1Km.toFixed(1)} km</span>
+            </li>
+            <li className="flex justify-between gap-3">
+              <span className="text-muted-foreground">Week 4 target</span>
+              <span className="font-mono font-medium">{p.safeWeek4Km.toFixed(1)} km</span>
+            </li>
+            {p.volumeOvershoot && (
+              <li className="flex justify-between gap-3 pt-1 border-t border-border/40">
+                <span className="text-muted-foreground">Your implied ask</span>
+                <span className="font-mono font-medium text-destructive">
+                  {p.impliedTargetKm.toFixed(1)} km → will be capped
+                </span>
+              </li>
+            )}
+          </ul>
+          <p className="text-[10px] text-muted-foreground pt-1">
+            The AI planner enforces the 10%-rule week over week — it won’t exceed these ceilings.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
