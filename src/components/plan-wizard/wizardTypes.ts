@@ -19,6 +19,7 @@ export interface WizardAnswers {
   raceDistance?: RaceDistance;
   raceTimeSeconds?: number;
   currentRunDaysPerWeek?: number;
+  currentWeeklyKm?: number;
   runDaysPerWeek?: number;
   runDays?: number[]; // 0=Mon..6=Sun
   raceDate?: string; // yyyy-mm-dd
