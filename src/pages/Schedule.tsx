@@ -359,20 +359,37 @@ export default function Schedule() {
                 </TabsList>
 
                 {view !== 'month' && (
-                  <div className="flex items-center justify-between mt-3">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => Math.max(0, w - 1))} disabled={displayWeek <= 1}>
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <div className="flex items-center gap-1.5">
+                  <div className="flex items-center justify-between mt-3 gap-1">
+                    <div className="flex items-center gap-0.5">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title="Jump back 4 weeks" onClick={() => jumpWeeks(-4)} disabled={displayWeek <= 1}>
+                        <ChevronsLeft className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => Math.max(0, w - 1))} disabled={displayWeek <= 1}>
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap justify-center">
                       <span className="text-sm font-medium font-display">
                         {t('schedule.week')} {displayWeek} <span className="text-muted-foreground font-normal">/ {maxWeek}</span>
+                        <span className="text-muted-foreground font-normal"> · M{Math.ceil(displayWeek / 4)}</span>
                       </span>
                       <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] text-primary" onClick={goToToday}>
                         <LocateFixed className="h-3 w-3 mr-1" />
                         Today
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-[10px] text-primary"
+                        onClick={goToRaceDay}
+                        title={goalRaceDate ? 'Jump to race week' : 'Jump to final week'}
+                        disabled={maxWeek <= 1}
+                      >
+                        <Flag className="h-3 w-3 mr-1" />
+                        Race day
+                      </Button>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-0.5">
                       {defaultProvider ? (
                         <Button variant="ghost" size="icon" className="h-8 w-8" title={`Add to ${defaultProvider} calendar`} onClick={() => handleCalendarExport(defaultProvider)}>
                           <CalendarPlus className="h-4 w-4 text-primary" />
@@ -397,6 +414,9 @@ export default function Schedule() {
                       )}
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => w + 1)} disabled={displayWeek >= maxWeek}>
                         <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title="Jump forward 4 weeks" onClick={() => jumpWeeks(4)} disabled={displayWeek >= maxWeek}>
+                        <ChevronsRight className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
