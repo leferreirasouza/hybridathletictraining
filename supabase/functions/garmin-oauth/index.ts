@@ -137,7 +137,7 @@ serve(async (req) => {
     const action = body?.action as string | undefined;
 
     if (action === "start") {
-      const authHeaderOAuth = signRequest({
+      const authHeaderOAuth = await signRequest({
         method: "POST",
         url: REQUEST_TOKEN_URL,
         consumerKey,
