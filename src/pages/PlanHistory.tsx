@@ -1,12 +1,14 @@
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useEffect, useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Archive, RotateCcw, FileSpreadsheet, Sparkles, PenTool, Loader2, History, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Archive, RotateCcw, FileSpreadsheet, Sparkles, PenTool, Loader2, ListChecks, AlertTriangle, Trash2, Eye, EyeOff, CalendarDays } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -28,14 +30,35 @@ const sourceLabel: Record<string, string> = {
   manual: 'Manual',
 };
 
+function readHidden(userId?: string): Set<string> {
+  if (!userId) return new Set();
+  try {
+    const raw = localStorage.getItem(`ha-hidden-plans:${userId}`);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeHidden(userId: string, set: Set<string>) {
+  const key = `ha-hidden-plans:${userId}`;
+  const value = JSON.stringify([...set]);
+  localStorage.setItem(key, value);
+  // Trigger cross-tab + intra-tab listeners
+  window.dispatchEvent(new StorageEvent('storage', { key, newValue: value }));
+}
+
 export default function PlanHistory() {
-  const { t } = useTranslation();
+  useTranslation();
   const { user, currentOrg, effectiveRole } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [acting, setActing] = useState<string | null>(null);
+  const [hidden, setHidden] = useState<Set<string>>(() => readHidden(user?.id));
   const isCoachOrAdmin = effectiveRole === 'coach' || effectiveRole === 'admin' || effectiveRole === 'master_admin';
 
-  // Fetch ALL plans (active + archived)
+  useEffect(() => { setHidden(readHidden(user?.id)); }, [user?.id]);
+
   const { data: allPlans, isLoading } = useQuery({
     queryKey: ['all-plans-history', currentOrg?.id],
     queryFn: async () => {
@@ -50,24 +73,6 @@ export default function PlanHistory() {
     enabled: !!currentOrg,
   });
 
-  // Fetch plan history events
-  const { data: historyEvents } = useQuery({
-    queryKey: ['plan-history-events', currentOrg?.id],
-    queryFn: async () => {
-      if (!allPlans?.length) return [];
-      const planIds = allPlans.map(p => p.id);
-      const { data, error } = await supabase
-        .from('plan_history' as any)
-        .select('*')
-        .in('plan_id', planIds)
-        .order('created_at', { ascending: false })
-        .limit(50);
-      return error ? [] : (data as any[]) || [];
-    },
-    enabled: (allPlans?.length ?? 0) > 0,
-  });
-
-  // Fetch session counts per plan version
   const { data: sessionCounts } = useQuery({
     queryKey: ['plan-session-counts', allPlans?.map(p => p.id).join(',')],
     queryFn: async () => {
@@ -94,6 +99,16 @@ export default function PlanHistory() {
     enabled: (allPlans?.length ?? 0) > 0,
   });
 
+  const toggleVisibility = (planId: string) => {
+    if (!user?.id) return;
+    setHidden(prev => {
+      const next = new Set(prev);
+      if (next.has(planId)) next.delete(planId); else next.add(planId);
+      writeHidden(user.id, next);
+      return next;
+    });
+  };
+
   const handleArchive = async (planId: string) => {
     setActing(planId);
     try {
@@ -102,14 +117,9 @@ export default function PlanHistory() {
         .update({ archived_at: new Date().toISOString() } as any)
         .eq('id', planId);
       if (error) throw error;
-
-      // Log history
       await supabase.from('plan_history' as any).insert({
-        plan_id: planId,
-        action: 'archived',
-        performed_by: user!.id,
+        plan_id: planId, action: 'archived', performed_by: user!.id,
       });
-
       toast.success('Plan archived — it can be restored anytime');
       queryClient.invalidateQueries({ queryKey: ['all-plans-history'] });
       queryClient.invalidateQueries({ queryKey: ['org-plans'] });
@@ -128,18 +138,43 @@ export default function PlanHistory() {
         .update({ archived_at: null } as any)
         .eq('id', planId);
       if (error) throw error;
-
       await supabase.from('plan_history' as any).insert({
-        plan_id: planId,
-        action: 'restored',
-        performed_by: user!.id,
+        plan_id: planId, action: 'restored', performed_by: user!.id,
       });
-
-      toast.success('Plan restored and now active again');
+      toast.success('Plan restored');
       queryClient.invalidateQueries({ queryKey: ['all-plans-history'] });
       queryClient.invalidateQueries({ queryKey: ['org-plans'] });
     } catch (e: any) {
       toast.error(e.message || 'Failed to restore');
+    } finally {
+      setActing(null);
+    }
+  };
+
+  const handleDelete = async (planId: string) => {
+    setActing(planId);
+    try {
+      // Find versions to clean up dependent rows
+      const { data: versions } = await supabase.from('plan_versions').select('id').eq('plan_id', planId);
+      const versionIds = (versions || []).map(v => v.id);
+      if (versionIds.length > 0) {
+        await supabase.from('planned_sessions').delete().in('plan_version_id', versionIds);
+        await supabase.from('targets').delete().in('plan_version_id', versionIds);
+        await supabase.from('plan_versions').delete().in('id', versionIds);
+      }
+      const { error } = await supabase.from('training_plans').delete().eq('id', planId);
+      if (error) throw error;
+      // Remove from hidden set too
+      if (user?.id) {
+        const next = new Set(hidden); next.delete(planId);
+        writeHidden(user.id, next);
+        setHidden(next);
+      }
+      toast.success('Plan deleted permanently');
+      queryClient.invalidateQueries({ queryKey: ['all-plans-history'] });
+      queryClient.invalidateQueries({ queryKey: ['org-plans'] });
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to delete');
     } finally {
       setActing(null);
     }
@@ -156,23 +191,27 @@ export default function PlanHistory() {
     );
   }
 
+  const canDelete = (plan: any) => isCoachOrAdmin || plan.created_by === user?.id;
+
   return (
     <div className="page-container py-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <History className="h-5 w-5 text-primary" />
-        <h1 className="text-xl font-display font-bold">Plan History</h1>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <ListChecks className="h-5 w-5 text-primary" />
+          <h1 className="text-xl font-display font-bold">My Plans</h1>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => navigate('/schedule')} className="gap-1.5">
+          <CalendarDays className="h-4 w-4" /> Open Schedule
+        </Button>
       </div>
 
-      {/* Protection notice */}
-      <Card className="border-destructive/30 bg-destructive/5">
+      <Card className="border-primary/20 bg-primary/5">
         <CardContent className="p-4 flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-          <div className="text-sm">
-            <p className="font-medium text-destructive">Plan Protection Active</p>
-            <p className="text-muted-foreground mt-1">
-              Coach-imported plans are never deleted or overwritten. AI-generated athlete plans are added alongside existing plans.
-              Archived plans retain all sessions and can be restored at any time.
-            </p>
+          <AlertTriangle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+          <div className="text-sm text-muted-foreground">
+            Toggle <strong>Show on Schedule</strong> to hide a plan from your calendar without deleting it.
+            <strong> Archive</strong> keeps everything safe and reversible.
+            <strong> Delete</strong> is permanent and removes all sessions.
           </div>
         </CardContent>
       </Card>
@@ -185,17 +224,18 @@ export default function PlanHistory() {
         )}
         {activePlans.map((plan, i) => {
           const Icon = sourceIcon[plan.source] || PenTool;
+          const isHidden = hidden.has(plan.id);
           return (
             <motion.div key={plan.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-              <Card className="glass">
-                <CardContent className="p-4 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 min-w-0">
+              <Card className={`glass ${isHidden ? 'opacity-60' : ''}`}>
+                <CardContent className="p-4 flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                       <Icon className="h-4 w-4 text-primary" />
                     </div>
                     <div className="min-w-0">
                       <p className="font-medium truncate">{plan.name}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                           {sourceLabel[plan.source] || plan.source}
                         </Badge>
@@ -210,11 +250,16 @@ export default function PlanHistory() {
                       </div>
                     </div>
                   </div>
-                  {isCoachOrAdmin && (
+                  <div className="flex items-center gap-3 shrink-0">
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                      {isHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      <span>Show on Schedule</span>
+                      <Switch checked={!isHidden} onCheckedChange={() => toggleVisibility(plan.id)} />
+                    </label>
+
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="sm" className="shrink-0 text-muted-foreground hover:text-destructive"
-                          disabled={acting === plan.id}>
+                        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" disabled={acting === plan.id}>
                           {acting === plan.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />}
                         </Button>
                       </AlertDialogTrigger>
@@ -222,7 +267,7 @@ export default function PlanHistory() {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Archive "{plan.name}"?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This plan will be hidden from the schedule but all data is preserved. You can restore it anytime from this page.
+                            Hidden from your schedule; all sessions preserved and restorable anytime.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -231,7 +276,34 @@ export default function PlanHistory() {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
-                  )}
+
+                    {canDelete(plan) && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive" disabled={acting === plan.id}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete "{plan.name}" permanently?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This removes the plan and all its sessions. This cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              onClick={() => handleDelete(plan.id)}
+                            >
+                              Delete permanently
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
@@ -248,14 +320,14 @@ export default function PlanHistory() {
             return (
               <motion.div key={plan.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
                 <Card className="glass opacity-70">
-                  <CardContent className="p-4 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 min-w-0">
+                  <CardContent className="p-4 flex items-center justify-between gap-4 flex-wrap">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="h-9 w-9 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
                         <Icon className="h-4 w-4 text-muted-foreground" />
                       </div>
                       <div className="min-w-0">
                         <p className="font-medium truncate text-muted-foreground">{plan.name}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                           <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                             {sourceLabel[plan.source] || plan.source}
                           </Badge>
@@ -270,36 +342,43 @@ export default function PlanHistory() {
                         </div>
                       </div>
                     </div>
-                    {isCoachOrAdmin && (
-                      <Button variant="outline" size="sm" className="shrink-0" onClick={() => handleRestore(plan.id)}
-                        disabled={acting === plan.id}>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button variant="outline" size="sm" onClick={() => handleRestore(plan.id)} disabled={acting === plan.id}>
                         {acting === plan.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-1" />}
                         Restore
                       </Button>
-                    )}
+                      {canDelete(plan) && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive" disabled={acting === plan.id}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete "{plan.name}" permanently?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This removes the plan and all its sessions. This cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={() => handleDelete(plan.id)}
+                              >
+                                Delete permanently
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </motion.div>
             );
           })}
-        </section>
-      )}
-
-      {/* Recent History Events */}
-      {(historyEvents?.length ?? 0) > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Recent Activity</h2>
-          <Card className="glass">
-            <CardContent className="p-4 space-y-2">
-              {historyEvents!.slice(0, 20).map((evt: any) => (
-                <div key={evt.id} className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span className="font-mono">{format(new Date(evt.created_at), 'dd/MM HH:mm')}</span>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 capitalize">{evt.action}</Badge>
-                  {evt.details?.plan_name && <span className="truncate">— {evt.details.plan_name}</span>}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
         </section>
       )}
     </div>
