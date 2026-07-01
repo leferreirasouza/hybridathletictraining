@@ -188,7 +188,7 @@ Goal Race Date: ${profile.raceDate || "no specific date"}
 Injuries/Limitations: ${profile.injuries || "none"}
 Additional Goals: ${profile.goals || "general preparation"}
 Plan Duration (weeks): ${profile.planWeeks || "8"}
-Current Running Volume: ${profile.currentWeeklyKm ?? 0} km/week across ${profile.currentRunDaysPerWeek ?? 0} days. Apply the 10%-rule — do NOT increase weekly running km by more than ~10% week-over-week from this baseline.
+Current Running Volume: ${profile.currentWeeklyKm ?? 0} km/week across ${profile.currentRunDaysPerWeek ?? 0} days. A COMPUTED WEEKLY RUN VOLUME TABLE (below) already applies the 10%-rule and phase multipliers to this baseline — use its per-week km totals and per-slot km values as the source of truth for distance_km on run sessions. Do not invent your own weekly km progression.
 `.trim();
 
     if (raceType === "running") {
