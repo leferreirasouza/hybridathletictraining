@@ -171,6 +171,33 @@ serve(async (req) => {
       effectiveAthleteId = athleteId;
     }
 
+    // Authorization: if an organizationId is supplied (used to tag the plan
+    // and to scope cross-plan load queries), the caller must be a member of
+    // that organization in any role. Global master_admins pass through.
+    if (organizationId) {
+      const { data: orgMembership, error: orgMembershipErr } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("organization_id", organizationId);
+      if (orgMembershipErr) throw new Error("Failed to verify organization membership");
+      const isGlobalMaster = (orgMembership || []).some((r) => r.role === "master_admin");
+      if (!isGlobalMaster && (!orgMembership || orgMembership.length === 0)) {
+        const { data: globalMaster } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .eq("role", "master_admin")
+          .limit(1);
+        if (!globalMaster || globalMaster.length === 0) {
+          return new Response(JSON.stringify({ error: "Forbidden: not a member of this organization" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
