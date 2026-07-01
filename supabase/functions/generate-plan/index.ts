@@ -187,6 +187,7 @@ Goal Race Date: ${profile.raceDate || "no specific date"}
 Injuries/Limitations: ${profile.injuries || "none"}
 Additional Goals: ${profile.goals || "general preparation"}
 Plan Duration (weeks): ${profile.planWeeks || "8"}
+Current Running Volume: ${profile.currentWeeklyKm ?? 0} km/week across ${profile.currentRunDaysPerWeek ?? 0} days. Apply the 10%-rule — do NOT increase weekly running km by more than ~10% week-over-week from this baseline.
 `.trim();
 
     if (raceType === "running") {

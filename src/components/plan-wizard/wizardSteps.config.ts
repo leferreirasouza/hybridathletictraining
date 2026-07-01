@@ -49,8 +49,9 @@ export function buildWizardSteps(answers: WizardAnswers, opts: BuildOpts): StepI
     'equipment',
   );
 
-  // Mobility module
-  steps.push('mobilityCount', 'mobilityFocus');
+  // Mobility module — focus step only when the athlete opts in (>0 sessions).
+  steps.push('mobilityCount');
+  if ((answers.mobilitySessionsPerWeek ?? 0) > 0) steps.push('mobilityFocus');
 
   steps.push('review');
   return steps;

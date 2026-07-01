@@ -55,6 +55,8 @@ export default function ReviewStep({ answers, update, onGenerated }: Props) {
     totalTarget:
       isHyrox && answers.raceTimeSeconds ? fmtTime(answers.raceTimeSeconds) : undefined,
     ageGroup,
+    currentRunDaysPerWeek: answers.currentRunDaysPerWeek ?? 0,
+    currentWeeklyKm: answers.currentWeeklyKm ?? 0,
     ...(forPrediction ? {} : { planWeeks: 8, planFocus: answers.strengthGoal }),
   });
 
@@ -160,10 +162,17 @@ export default function ReviewStep({ answers, update, onGenerated }: Props) {
               value={`${answers.runDaysPerWeek ?? 0} / week · ${(answers.runDays ?? []).map((d) => DAY_LABELS[d]).join(', ') || '—'}`}
             />
             <SummaryRow
+              label="Current volume"
+              value={`${answers.currentRunDaysPerWeek ?? 0} days · ${answers.currentWeeklyKm ?? 0} km / week`}
+            />
+            <SummaryRow
               label="Strength"
               value={`${answers.strengthSessionsPerWeek ?? 0} × ${answers.sessionLengthMin ?? 45}min · ${(answers.strengthDays ?? []).map((d) => DAY_LABELS[d]).join(', ') || '—'}`}
             />
-            <SummaryRow label="Mobility" value={`${answers.mobilitySessionsPerWeek ?? 0} / week`} />
+            <SummaryRow
+              label="Mobility"
+              value={(answers.mobilitySessionsPerWeek ?? 0) === 0 ? 'Skipped' : `${answers.mobilitySessionsPerWeek} / week`}
+            />
             {answers.raceDate && <SummaryRow label="Race" value={`${answers.raceName ?? 'Race'} · ${answers.raceDate}`} />}
           </CardContent>
         </Card>

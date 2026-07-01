@@ -1,31 +1,40 @@
-## Training Preferences Page
 
-Add a new athlete-facing screen to edit their `training_preferences` row (auto-created on first save).
+## 1. Add "current weekly running volume" to the run-days step
 
-### Route & navigation
-- New route `/training-preferences` mounted inside `AppLayout` (protected, requires org).
-- Add a link from the Profile page (and Settings sidebar entry) labeled "Training Preferences" — visible to athletes only.
+Volume matters more than day-count for injury-safe progression, so we capture it right next to "how many days do you currently run".
 
-### Page: `src/pages/TrainingPreferences.tsx`
-Loads the current user's row from `training_preferences` (single, by `athlete_id = auth.uid()`). If none exists, initialize with the DB defaults. On save, `upsert` on `athlete_id`.
+**`src/components/plan-wizard/wizardTypes.ts`**
+- Add `currentWeeklyKm?: number` to `WizardAnswers`.
 
-Sections (using existing shadcn `Card`, `Button`, `Slider`, `Input`, `Checkbox`, `Label`):
+**`src/components/plan-wizard/steps/RunDaysCountStep.tsx`**
+- Add a second input above the target slider: **"Current weekly running volume (km)"** — number input, min 0, step 1.
+- Rework the warning banner to combine both signals:
+  - If the target implies more than **+10% weekly km** relative to `currentWeeklyKm`, show a volume-overshoot warning ("Increasing weekly volume by more than ~10% raises injury risk").
+  - Keep the existing day-count overshoot warning (+1 day rule) but demote it — volume overshoot takes precedence when both trigger.
+  - When `currentWeeklyKm` is 0/blank, show the neutral copy.
+- Estimate implied target volume from `runDaysPerWeek` using a simple heuristic (e.g. current avg per session × target days) purely for the warning message — nothing is persisted beyond `currentWeeklyKm` and `runDaysPerWeek`.
 
-1. **Available days** — 7 toggle chips (Mon–Sun) mapping to `available_days: number[]` (1=Mon … 7=Sun). At least 1 day required.
-2. **Session length** — `Slider` 20–180 min, step 5, bound to `session_length_min`.
-3. **Run type weights** — 5 sliders (easy, tempo, interval, long, fartlek) 0–100%. Show live sum; show inline warning if sum ≠ 100%. "Normalize" button to rescale to sum 1.0. Stored as `run_type_weights` jsonb of fractions.
-4. **Strength & mobility** — two number inputs: `strength_sessions_per_week` (0–7), `mobility_technique_sessions_per_week` (0–7).
-5. **Muscle focus** — multi-select chips: posterior chain, anterior chain, core, upper body, grip, none. Stored in `muscle_focus: string[]`.
-6. **Equipment** — checkbox grid: barbell, dumbbells, kettlebell, sled, ski erg, rower, assault bike, wall ball, sandbag, pull-up bar, box, none. Stored as `equipment` jsonb `{ [key]: true }`.
+**`src/components/plan-wizard/steps/ReviewStep.tsx`**
+- Show `currentWeeklyKm` in the summary block alongside current/target run days.
 
-### Behavior
-- Single Save button → toast on success/failure; disabled while saving or while form invalid (no days selected, or weights sum is 0).
-- Loading skeleton while fetching.
-- Coaches/admins viewing this route see read-only banner + their own prefs (since RLS only allows athletes to write their own).
+**`generate-plan` edge function prompt (small addition, no logic change)**
+- Include `currentWeeklyKm` in the athlete-context block so the AI respects the 10 %-rule when scheduling weekly mileage. No changes to guardrails or slot allocation.
 
-### Files
-- Create `src/pages/TrainingPreferences.tsx`
-- Edit `src/App.tsx` — register route
-- Edit `src/pages/Profile.tsx` (or relevant nav) — add a link card to Training Preferences
+## 2. Make mobility / physio sessions truly optional
 
-No DB migration required (table already exists with RLS).
+The slider already allows 0, but the flow still forces the user through the focus-weighting step and the review implies a session will happen.
+
+**`src/components/plan-wizard/steps/SessionCountStep.tsx`** (mobility variant only)
+- Update copy to make "0 = skip entirely" explicit and rename the header to **"Mobility / physio sessions (optional)"**.
+- Default value stays 0 (currently defaults to 0 via `?? 0`).
+
+**`src/components/plan-wizard/wizardSteps.config.ts`**
+- In `buildWizardSteps`, only push `'mobilityFocus'` when `answers.mobilitySessionsPerWeek && answers.mobilitySessionsPerWeek > 0`. Users who pick 0 skip straight to Review.
+
+**`src/components/plan-wizard/steps/ReviewStep.tsx`**
+- When `mobilitySessionsPerWeek === 0`, show "Mobility: skipped" instead of listing focus weights.
+
+## Out of scope
+
+- No schema changes — `currentWeeklyKm` is a wizard-only input consumed by the AI prompt; we can persist it to `training_preferences` in a follow-up if you want it tracked over time.
+- No changes to strength or equipment steps.
