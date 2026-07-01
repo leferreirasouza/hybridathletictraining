@@ -120,9 +120,18 @@ export default function RunDaysCountStep({ answers, update }: { answers: WizardA
           </div>
         </div>
 
-        <p className={`text-xs rounded-lg p-3 border ${warningTone ? 'bg-warning/10 border-warning/30 text-warning-foreground' : 'bg-muted/30 border-border text-muted-foreground'}`}>
-          {warning}
-        </p>
+        <RuleCallout
+          tone={volumeOvershoot ? 'danger' : dayOvershoot ? 'warn' : 'info'}
+          currentKm={currentKm}
+          currentDays={currentDays}
+          target={target}
+          impliedTargetKm={impliedTargetKm}
+          safeWeek1Km={safeWeek1Km}
+          safeWeek4Km={safeWeek4Km}
+          volumeOvershoot={volumeOvershoot}
+          dayOvershoot={dayOvershoot}
+        />
+
       </div>
     </StepShell>
   );
