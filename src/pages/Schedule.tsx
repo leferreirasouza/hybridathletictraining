@@ -42,8 +42,19 @@ export default function Schedule() {
   const [view, setView] = useState<'day' | 'week' | 'month'>('day');
   const [hiddenPlanIds, setHiddenPlanIds] = useState<Set<string>>(new Set());
   const [showAthletePlans, setShowAthletePlans] = useState(true);
+  const [goalRaceDate, setGoalRaceDate] = useState<string | null>(null);
   const defaultProvider = getDefaultCalendarProvider();
   const hasAutoScrolled = useRef(false);
+
+  // Load athlete's goal race date for the "Race day" jump button
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    supabase.from('profiles').select('goal_race_date').eq('id', user.id).maybeSingle().then(({ data }) => {
+      if (!cancelled) setGoalRaceDate((data as any)?.goal_race_date ?? null);
+    });
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   useEffect(() => {
     hasAutoScrolled.current = false;
