@@ -64,7 +64,11 @@ export function isStepComplete(stepId: StepId, a: WizardAnswers): boolean {
     case 'goalType': return !!a.goalType;
     case 'runAbility': return !!a.runAbility;
     case 'raceTime': return !!a.raceDistance && !!a.raceTimeSeconds && a.raceTimeSeconds > 0;
-    case 'runDaysCount': return !!a.runDaysPerWeek && a.runDaysPerWeek >= 2;
+    case 'runDaysCount': {
+      const kmOk = a.currentWeeklyKm === undefined
+        || (Number.isFinite(a.currentWeeklyKm) && a.currentWeeklyKm >= 0 && a.currentWeeklyKm <= 300);
+      return !!a.runDaysPerWeek && a.runDaysPerWeek >= 2 && kmOk;
+    }
     case 'runDaysSelect': return !!a.runDays && a.runDays.length === a.runDaysPerWeek;
     case 'raceDetails': return !!a.raceDate;
     case 'strengthAbility': return !!a.strengthAbility;
