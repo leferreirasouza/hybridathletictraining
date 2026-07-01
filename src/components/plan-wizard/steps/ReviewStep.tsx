@@ -218,11 +218,7 @@ export default function ReviewStep({ answers, update, onGenerated }: Props) {
                 {loadingPrediction ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Preview'}
               </Button>
             </div>
-            {prediction && (
-              <pre className="text-xs whitespace-pre-wrap bg-muted/30 rounded-lg p-3">
-                {typeof prediction === 'string' ? prediction : JSON.stringify(prediction, null, 2)}
-              </pre>
-            )}
+            {prediction && <PredictionView prediction={prediction} />}
           </CardContent>
         </Card>
 
