@@ -1,40 +1,38 @@
 
-## 1. Add "current weekly running volume" to the run-days step
+Two focused UX fixes.
 
-Volume matters more than day-count for injury-safe progression, so we capture it right next to "how many days do you currently run".
+## 1. Month + race-day navigation in Schedule (`src/pages/Schedule.tsx`)
 
-**`src/components/plan-wizard/wizardTypes.ts`**
-- Add `currentWeeklyKm?: number` to `WizardAnswers`.
+Today the only way to move through a 12–24 week plan is the single-week `<` / `>` chevrons. Add coarser jumps next to them:
 
-**`src/components/plan-wizard/steps/RunDaysCountStep.tsx`**
-- Add a second input above the target slider: **"Current weekly running volume (km)"** — number input, min 0, step 1.
-- Rework the warning banner to combine both signals:
-  - If the target implies more than **+10% weekly km** relative to `currentWeeklyKm`, show a volume-overshoot warning ("Increasing weekly volume by more than ~10% raises injury risk").
-  - Keep the existing day-count overshoot warning (+1 day rule) but demote it — volume overshoot takes precedence when both trigger.
-  - When `currentWeeklyKm` is 0/blank, show the neutral copy.
-- Estimate implied target volume from `runDaysPerWeek` using a simple heuristic (e.g. current avg per session × target days) purely for the warning message — nothing is persisted beyond `currentWeeklyKm` and `runDaysPerWeek`.
+- Add `«` / `»` buttons that jump ±4 weeks (one "month"), clamped to `[1, maxWeek]`.
+- Add a **"Race day"** button (target/flag icon) beside the existing **Today** button. Behavior:
+  - If a goal race date exists on the profile (or the last week's `week_end`), jump `weekOffset` to that week and set `selectedDay` to the race weekday.
+  - Otherwise jump to `maxWeek` (last week of the plan) with a small tooltip "Jump to final week".
+- Show a compact "Week X / Y · ~Month M" label so the user can see plan progress at a glance.
+- Same controls appear in `day` and `week` views (they share the nav row); `month` view already lists all weeks so no change there.
 
-**`src/components/plan-wizard/steps/ReviewStep.tsx`**
-- Show `currentWeeklyKm` in the summary block alongside current/target run days.
+No changes to data fetching or plan generation — this is pure navigation state (`weekOffset` / `selectedDay`).
 
-**`generate-plan` edge function prompt (small addition, no logic change)**
-- Include `currentWeeklyKm` in the athlete-context block so the AI respects the 10 %-rule when scheduling weekly mileage. No changes to guardrails or slot allocation.
+## 2. Plan management page for athletes
 
-## 2. Make mobility / physio sessions truly optional
+Athletes currently see `/plan-history` (archive + restore only). Coaches get the full `/plans` PlanBuilder with delete. Extend `PlanHistory.tsx` so athletes can also:
 
-The slider already allows 0, but the flow still forces the user through the focus-weighting step and the review implies a session will happen.
+- **Toggle visibility on Schedule** — a "Show on Schedule" switch per plan. Persist the hidden set in `localStorage` (key `ha-hidden-plans:{userId}`), and have `useScheduleData` read it so hidden plans are filtered out of both the selector and the "All Plans" merged view.
+- **Select / deselect as active** — a "View on Schedule" primary action per active plan that navigates to `/schedule` with the plan pre-selected (reuse existing `setSelectedPlanId`).
+- **Delete permanently** — a destructive button behind a confirm dialog (same pattern as PlanBuilder's `handleDelete`, lines 267+). RLS already allows athletes to delete plans they created; for coach-assigned plans, hide the delete button and show only Archive.
 
-**`src/components/plan-wizard/steps/SessionCountStep.tsx`** (mobility variant only)
-- Update copy to make "0 = skip entirely" explicit and rename the header to **"Mobility / physio sessions (optional)"**.
-- Default value stays 0 (currently defaults to 0 via `?? 0`).
+Rename the page title/nav label from "History" to **"My Plans"** for athletes so it's discoverable as a management surface.
 
-**`src/components/plan-wizard/wizardSteps.config.ts`**
-- In `buildWizardSteps`, only push `'mobilityFocus'` when `answers.mobilitySessionsPerWeek && answers.mobilitySessionsPerWeek > 0`. Users who pick 0 skip straight to Review.
+## Technical notes
 
-**`src/components/plan-wizard/steps/ReviewStep.tsx`**
-- When `mobilitySessionsPerWeek === 0`, show "Mobility: skipped" instead of listing focus weights.
+- New Schedule nav buttons: reuse `Button variant="ghost" size="icon"`, icons `ChevronsLeft`, `ChevronsRight`, `Flag` from lucide-react.
+- Race date source: `profiles.goal_race_date` (already selected elsewhere) — add a small query in `Schedule.tsx` or lift into `useScheduleData`.
+- Hidden-plans persistence: read once on mount, write on toggle, broadcast via a simple `storage` event listener so Schedule updates live when the user comes back from PlanHistory.
+- No DB migration needed. No edge function changes.
 
 ## Out of scope
 
-- No schema changes — `currentWeeklyKm` is a wizard-only input consumed by the AI prompt; we can persist it to `training_preferences` in a follow-up if you want it tracked over time.
-- No changes to strength or equipment steps.
+- Bulk delete / multi-select.
+- Reordering plans.
+- Changing coach-side PlanBuilder behavior.
