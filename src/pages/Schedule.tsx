@@ -27,9 +27,8 @@ function getDefaultCalendarProvider(): CalendarProvider | null {
 export default function Schedule() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { currentRole, effectiveRole, user, currentOrg } = useAuth();
+  const { effectiveRole, user, currentOrg } = useAuth();
   const isCoachOrAdmin = effectiveRole && ['master_admin', 'admin', 'coach'].includes(effectiveRole);
-  const canManagePlans = !!currentRole && ['master_admin', 'admin', 'coach'].includes(currentRole);
   const {
     authReady,
     authLoading,
@@ -244,7 +243,7 @@ export default function Schedule() {
             <p className="font-display font-bold">{t('schedule.noPlan')}</p>
             <p className="text-sm text-muted-foreground">{t('schedule.noPlanDesc')}</p>
             <div className="flex gap-2 justify-center">
-              <Button className="gradient-hyrox" onClick={() => navigate(canManagePlans ? '/plans?tab=build' : '/plans')}>
+              <Button className="gradient-hyrox" onClick={() => navigate('/create-plan')}>
                 {t('schedule.generateAiPlan')}
               </Button>
               <Button variant="outline" onClick={() => navigate('/plans?tab=import')}>

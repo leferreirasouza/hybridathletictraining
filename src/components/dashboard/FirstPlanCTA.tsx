@@ -3,13 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Sparkles, FileUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '@/contexts/AuthContext';
 
 export default function FirstPlanCTA() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { currentRole } = useAuth();
-  const canManagePlans = !!currentRole && ['master_admin', 'admin', 'coach'].includes(currentRole);
 
   return (
     <Card className="glass border-primary/20 overflow-hidden">
@@ -23,7 +20,7 @@ export default function FirstPlanCTA() {
           <p className="text-sm text-muted-foreground mt-1">{t('dashboard.firstPlanDesc')}</p>
         </div>
         <div className="flex gap-2">
-          <Button className="flex-1 gradient-hyrox" onClick={() => navigate(canManagePlans ? '/plans?tab=build' : '/plans')}>
+          <Button className="flex-1 gradient-hyrox" onClick={() => navigate('/create-plan')}>
             <Sparkles className="h-4 w-4 mr-2" /> {t('dashboard.generatePlan')}
           </Button>
           <Button variant="outline" className="flex-1" onClick={() => navigate('/plans?tab=import')}>
