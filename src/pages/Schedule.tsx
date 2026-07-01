@@ -3,11 +3,12 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Calendar, Loader2, CalendarPlus, Download, Eye, EyeOff, LocateFixed } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Calendar, Loader2, CalendarPlus, Download, Eye, EyeOff, LocateFixed, Flag } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useScheduleData } from '@/hooks/useScheduleData';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import WeeklyView from '@/components/schedule/WeeklyView';
 import MonthlyView from '@/components/schedule/MonthlyView';
 import DailyView from '@/components/schedule/DailyView';
@@ -42,8 +43,19 @@ export default function Schedule() {
   const [view, setView] = useState<'day' | 'week' | 'month'>('day');
   const [hiddenPlanIds, setHiddenPlanIds] = useState<Set<string>>(new Set());
   const [showAthletePlans, setShowAthletePlans] = useState(true);
+  const [goalRaceDate, setGoalRaceDate] = useState<string | null>(null);
   const defaultProvider = getDefaultCalendarProvider();
   const hasAutoScrolled = useRef(false);
+
+  // Load athlete's goal race date for the "Race day" jump button
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    supabase.from('profiles').select('goal_race_date').eq('id', user.id).maybeSingle().then(({ data }) => {
+      if (!cancelled) setGoalRaceDate((data as any)?.goal_race_date ?? null);
+    });
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   useEffect(() => {
     hasAutoScrolled.current = false;
@@ -152,18 +164,67 @@ export default function Schedule() {
     }
   };
 
+  const jumpWeeks = (delta: number) => {
+    setWeekOffset(w => Math.max(0, Math.min(maxWeek - 1, w + delta)));
+  };
+
+  const goToRaceDay = () => {
+    // Prefer the athlete's goal race date if it maps into a plan week
+    if (goalRaceDate && weeklySummaries.length > 0) {
+      const race = new Date(goalRaceDate + 'T00:00:00');
+      for (const ws of weeklySummaries) {
+        if (!ws.week_start || !ws.week_end) continue;
+        const start = new Date(ws.week_start); start.setHours(0, 0, 0, 0);
+        const end = new Date(ws.week_end); end.setHours(23, 59, 59, 999);
+        if (race >= start && race <= end) {
+          setWeekOffset(ws.week_number - 1);
+          const dow = race.getDay() === 0 ? 7 : race.getDay();
+          setSelectedDay(dow);
+          return;
+        }
+      }
+    }
+    // Fallback: final week of the plan
+    setWeekOffset(maxWeek - 1);
+  };
+
+  // Load per-user hidden plans (managed from the My Plans page)
+  useEffect(() => {
+    if (!user?.id) return;
+    const load = () => {
+      try {
+        const raw = localStorage.getItem(`ha-hidden-plans:${user.id}`);
+        setHiddenPlanIds(new Set(raw ? JSON.parse(raw) : []));
+      } catch {
+        setHiddenPlanIds(new Set());
+      }
+    };
+    load();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === `ha-hidden-plans:${user.id}`) load();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [user?.id]);
+
   const togglePlanVisibility = (planId: string) => {
     setHiddenPlanIds(prev => {
       const next = new Set(prev);
       if (next.has(planId)) next.delete(planId); else next.add(planId);
+      if (user?.id) {
+        try { localStorage.setItem(`ha-hidden-plans:${user.id}`, JSON.stringify([...next])); } catch {}
+      }
       return next;
     });
   };
 
   const visibleSessions = useMemo(() => {
-    if (!isAllPlans || hiddenPlanIds.size === 0) return sessions;
-    return sessions.filter((s: any) => !hiddenPlanIds.has(s._planId));
-  }, [sessions, isAllPlans, hiddenPlanIds]);
+    if (hiddenPlanIds.size === 0) return sessions;
+    if (isAllPlans) return sessions.filter((s: any) => !hiddenPlanIds.has(s._planId));
+    // For single-plan view, hide everything if that plan is hidden
+    if (activePlanId && hiddenPlanIds.has(activePlanId)) return [];
+    return sessions;
+  }, [sessions, isAllPlans, hiddenPlanIds, activePlanId]);
 
   const handleCalendarExport = (provider: CalendarProvider) => {
     exportWeekToCalendar(provider, sessions, displayWeek);
@@ -298,20 +359,37 @@ export default function Schedule() {
                 </TabsList>
 
                 {view !== 'month' && (
-                  <div className="flex items-center justify-between mt-3">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => Math.max(0, w - 1))} disabled={displayWeek <= 1}>
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <div className="flex items-center gap-1.5">
+                  <div className="flex items-center justify-between mt-3 gap-1">
+                    <div className="flex items-center gap-0.5">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title="Jump back 4 weeks" onClick={() => jumpWeeks(-4)} disabled={displayWeek <= 1}>
+                        <ChevronsLeft className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => Math.max(0, w - 1))} disabled={displayWeek <= 1}>
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap justify-center">
                       <span className="text-sm font-medium font-display">
                         {t('schedule.week')} {displayWeek} <span className="text-muted-foreground font-normal">/ {maxWeek}</span>
+                        <span className="text-muted-foreground font-normal"> · M{Math.ceil(displayWeek / 4)}</span>
                       </span>
                       <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] text-primary" onClick={goToToday}>
                         <LocateFixed className="h-3 w-3 mr-1" />
                         Today
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-[10px] text-primary"
+                        onClick={goToRaceDay}
+                        title={goalRaceDate ? 'Jump to race week' : 'Jump to final week'}
+                        disabled={maxWeek <= 1}
+                      >
+                        <Flag className="h-3 w-3 mr-1" />
+                        Race day
+                      </Button>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-0.5">
                       {defaultProvider ? (
                         <Button variant="ghost" size="icon" className="h-8 w-8" title={`Add to ${defaultProvider} calendar`} onClick={() => handleCalendarExport(defaultProvider)}>
                           <CalendarPlus className="h-4 w-4 text-primary" />
@@ -336,6 +414,9 @@ export default function Schedule() {
                       )}
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => w + 1)} disabled={displayWeek >= maxWeek}>
                         <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title="Jump forward 4 weeks" onClick={() => jumpWeeks(4)} disabled={displayWeek >= maxWeek}>
+                        <ChevronsRight className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
