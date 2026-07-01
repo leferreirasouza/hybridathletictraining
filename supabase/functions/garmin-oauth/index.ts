@@ -190,7 +190,7 @@ serve(async (req) => {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const authHeaderOAuth = signRequest({
+      const authHeaderOAuth = await signRequest({
         method: "POST",
         url: ACCESS_TOKEN_URL,
         consumerKey,
