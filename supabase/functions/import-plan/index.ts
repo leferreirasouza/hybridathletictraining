@@ -109,6 +109,23 @@ serve(async (req) => {
       throw new Error("Missing required fields: organizationId, planName");
     }
 
+    // Authorization: caller must be coach/admin/master_admin in the target org.
+    const { data: callerRoles, error: callerRolesError } = await supabase
+      .from("user_roles")
+      .select("role, organization_id")
+      .eq("user_id", user.id);
+    if (callerRolesError) throw new Error("Failed to verify caller permissions");
+    const isGlobalMasterAdmin = (callerRoles || []).some((r) => r.role === "master_admin");
+    const hasOrgWriteRole = (callerRoles || []).some(
+      (r) => r.organization_id === organizationId && ["coach", "admin", "master_admin"].includes(r.role)
+    );
+    if (!isGlobalMasterAdmin && !hasOrgWriteRole) {
+      return new Response(JSON.stringify({ error: "Forbidden: coach or admin role required for this organization" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Support legacy single-CSV mode
     const sheetsData: Record<string, any[][]> = sheets || {};
     if (csvData && !sheets) {
