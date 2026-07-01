@@ -218,11 +218,7 @@ export default function ReviewStep({ answers, update, onGenerated }: Props) {
                 {loadingPrediction ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Preview'}
               </Button>
             </div>
-            {prediction && (
-              <pre className="text-xs whitespace-pre-wrap bg-muted/30 rounded-lg p-3">
-                {typeof prediction === 'string' ? prediction : JSON.stringify(prediction, null, 2)}
-              </pre>
-            )}
+            {prediction && <PredictionView prediction={prediction} />}
           </CardContent>
         </Card>
 
@@ -239,6 +235,103 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
     <div className="flex justify-between gap-3 border-b border-border/40 last:border-0 py-1">
       <span className="text-muted-foreground">{label}</span>
       <span className="font-medium text-right">{value}</span>
+    </div>
+  );
+}
+
+function riskStyles(level?: string) {
+  switch ((level ?? '').toLowerCase()) {
+    case 'low':
+      return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30';
+    case 'moderate':
+    case 'medium':
+      return 'bg-amber-500/10 text-amber-500 border-amber-500/30';
+    case 'high':
+      return 'bg-red-500/10 text-red-500 border-red-500/30';
+    default:
+      return 'bg-muted text-muted-foreground border-border';
+  }
+}
+
+function PredictionView({ prediction }: { prediction: any }) {
+  // Fallback for plain-string predictions
+  if (typeof prediction === 'string') {
+    return <p className="text-sm text-foreground whitespace-pre-wrap">{prediction}</p>;
+  }
+
+  const {
+    predictedTime,
+    confidence,
+    targetFeedback,
+    riskLevel,
+    injuryRisk,
+    recommendations,
+  } = prediction ?? {};
+
+  const recs: string[] = Array.isArray(recommendations)
+    ? recommendations
+    : typeof recommendations === 'string'
+      ? [recommendations]
+      : [];
+
+  return (
+    <div className="space-y-3">
+      {(predictedTime || confidence || riskLevel) && (
+        <div className="grid grid-cols-2 gap-2">
+          {predictedTime && (
+            <div className="bg-primary/5 rounded-lg p-3 border border-primary/10">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Predicted Time</p>
+              <p className="text-lg font-mono font-bold text-primary">{predictedTime}</p>
+            </div>
+          )}
+          {(confidence || riskLevel) && (
+            <div className="rounded-lg p-3 border border-border bg-muted/20 space-y-1.5">
+              {confidence && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Confidence</p>
+                  <p className="text-sm font-medium">{confidence}</p>
+                </div>
+              )}
+              {riskLevel && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Risk</p>
+                  <span className={`inline-block text-xs font-semibold uppercase px-2 py-0.5 rounded border ${riskStyles(riskLevel)}`}>
+                    {riskLevel}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {targetFeedback && (
+        <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-1">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Target Feedback</p>
+          <p className="text-sm leading-relaxed">{targetFeedback}</p>
+        </div>
+      )}
+
+      {injuryRisk && (
+        <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-1">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Injury Risk</p>
+          <p className="text-sm leading-relaxed">{injuryRisk}</p>
+        </div>
+      )}
+
+      {recs.length > 0 && (
+        <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Recommendations</p>
+          <ul className="space-y-1.5">
+            {recs.map((r, i) => (
+              <li key={i} className="text-sm leading-relaxed flex gap-2">
+                <span className="text-primary mt-1">•</span>
+                <span>{r}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
