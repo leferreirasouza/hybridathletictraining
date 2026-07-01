@@ -4,6 +4,7 @@ import { detectInterferenceConflicts, downgradeIntensity, tsbAdjustmentFactor } 
 import { decomposeHyroxTarget, estimateVDOT, paceZonesFromVDOT, formatPace } from "../_shared/paceZones.ts";
 import { buildPhaseSchedule, formatPhaseTable } from "../_shared/phaseModel.ts";
 import { assignWeeklySlots, formatSlotTable, validateSlotCompliance, type RunTypeWeights } from "../_shared/sessionSlots.ts";
+import { buildRunVolumePlan, formatRunVolumeTable } from "../_shared/runVolumeProgression.ts";
 
 const PLAN_GEN_PROMPT = `You are a HYROX and running race training plan generator. Given an athlete's profile, produce a structured multi-week training plan in JSON.
 
