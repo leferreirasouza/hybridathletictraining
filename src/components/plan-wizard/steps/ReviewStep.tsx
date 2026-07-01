@@ -55,6 +55,8 @@ export default function ReviewStep({ answers, update, onGenerated }: Props) {
     totalTarget:
       isHyrox && answers.raceTimeSeconds ? fmtTime(answers.raceTimeSeconds) : undefined,
     ageGroup,
+    currentRunDaysPerWeek: answers.currentRunDaysPerWeek ?? 0,
+    currentWeeklyKm: answers.currentWeeklyKm ?? 0,
     ...(forPrediction ? {} : { planWeeks: 8, planFocus: answers.strengthGoal }),
   });
 
