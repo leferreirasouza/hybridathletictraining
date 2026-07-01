@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAssigneeOptions } from '@/hooks/useAssigneeOptions';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,6 +13,11 @@ interface Props {
 export default function AthletePickerStep({ answers, update }: Props) {
   const { user } = useAuth();
   const { data: options = [], isLoading } = useAssigneeOptions(true);
+
+  // Default to the current user so the visible selection matches the stored answer.
+  useEffect(() => {
+    if (!answers.athleteId && user?.id) update({ athleteId: user.id });
+  }, [answers.athleteId, user?.id, update]);
 
   return (
     <StepShell
