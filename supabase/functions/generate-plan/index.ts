@@ -4,6 +4,7 @@ import { detectInterferenceConflicts, downgradeIntensity, tsbAdjustmentFactor } 
 import { decomposeHyroxTarget, estimateVDOT, paceZonesFromVDOT, formatPace } from "../_shared/paceZones.ts";
 import { buildPhaseSchedule, formatPhaseTable } from "../_shared/phaseModel.ts";
 import { assignWeeklySlots, formatSlotTable, validateSlotCompliance, type RunTypeWeights } from "../_shared/sessionSlots.ts";
+import { buildRunVolumePlan, formatRunVolumeTable } from "../_shared/runVolumeProgression.ts";
 
 const PLAN_GEN_PROMPT = `You are a HYROX and running race training plan generator. Given an athlete's profile, produce a structured multi-week training plan in JSON.
 
@@ -187,7 +188,7 @@ Goal Race Date: ${profile.raceDate || "no specific date"}
 Injuries/Limitations: ${profile.injuries || "none"}
 Additional Goals: ${profile.goals || "general preparation"}
 Plan Duration (weeks): ${profile.planWeeks || "8"}
-Current Running Volume: ${profile.currentWeeklyKm ?? 0} km/week across ${profile.currentRunDaysPerWeek ?? 0} days. Apply the 10%-rule — do NOT increase weekly running km by more than ~10% week-over-week from this baseline.
+Current Running Volume: ${profile.currentWeeklyKm ?? 0} km/week across ${profile.currentRunDaysPerWeek ?? 0} days. A COMPUTED WEEKLY RUN VOLUME TABLE (below) already applies the 10%-rule and phase multipliers to this baseline — use its per-week km totals and per-slot km values as the source of truth for distance_km on run sessions. Do not invent your own weekly km progression.
 `.trim();
 
     if (raceType === "running") {
@@ -457,8 +458,15 @@ Current Running Volume: ${profile.currentWeeklyKm ?? 0} km/week across ${profile
       phaseByWeek
     );
 
+    const runVolumePlan = buildRunVolumePlan(
+      Number(profile.currentWeeklyKm),
+      phaseSchedule,
+      slotPlan
+    );
+
     let deterministicSection = `\n\n📐 PHASE SCHEDULE (deterministic — follow exactly):\n${formatPhaseTable(phaseSchedule)}\n`;
     deterministicSection += `\n📋 WEEKLY SESSION SLOTS (deterministic — fill exactly these categories/counts per week):\n${formatSlotTable(slotPlan)}\n`;
+    deterministicSection += `\n🏃 WEEKLY RUN VOLUME TARGETS (deterministic — derived from athlete's ${runVolumePlan.baselineKm} km/week baseline via the 10%-rule and phase multipliers). Each run session's distance_km MUST match its assigned per-slot km within ±10%. Do NOT exceed the week total.\n${formatRunVolumeTable(runVolumePlan)}\n`;
 
     // Equipment constraint — reads defensively since live rows may still use
     // the old flat {gym_access,sled,rower,skierg} shape, pre-preset-migration.
