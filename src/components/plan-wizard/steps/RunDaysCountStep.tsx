@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { z } from 'zod';
+import { AlertTriangle, Info, ShieldCheck, TrendingUp } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import type { WizardAnswers } from '../wizardTypes';
 import { StepShell } from './_shared';
+
 
 const KM_MIN = 0;
 const KM_MAX = 300; // realistic elite ceiling; anything higher is almost certainly a typo
