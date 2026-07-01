@@ -13,7 +13,7 @@
 //   disconnect-> deletes the user's garmin_connections row
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
-import { hmac } from "https://deno.land/x/hmac@v2.0.1/mod.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,7 +34,20 @@ function nonce() {
   return crypto.randomUUID().replace(/-/g, "");
 }
 
-function signRequest(opts: {
+async function hmacSha1Base64(key: string, message: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(key),
+    { name: "HMAC", hash: "SHA-1" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", cryptoKey, encoder.encode(message));
+  return btoa(String.fromCharCode(...new Uint8Array(signature)));
+}
+
+async function signRequest(opts: {
   method: string;
   url: string;
   consumerKey: string;
@@ -63,7 +76,7 @@ function signRequest(opts: {
   ].join("&");
 
   const signingKey = `${percentEncode(opts.consumerSecret)}&${percentEncode(opts.tokenSecret ?? "")}`;
-  const sig = hmac("sha1", signingKey, baseString, "utf8", "base64") as string;
+  const sig = await hmacSha1Base64(signingKey, baseString);
 
   const authParams = { ...oauthParams, oauth_signature: sig };
   const authHeader =
@@ -124,7 +137,7 @@ serve(async (req) => {
     const action = body?.action as string | undefined;
 
     if (action === "start") {
-      const authHeaderOAuth = signRequest({
+      const authHeaderOAuth = await signRequest({
         method: "POST",
         url: REQUEST_TOKEN_URL,
         consumerKey,
@@ -177,7 +190,7 @@ serve(async (req) => {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const authHeaderOAuth = signRequest({
+      const authHeaderOAuth = await signRequest({
         method: "POST",
         url: ACCESS_TOKEN_URL,
         consumerKey,
