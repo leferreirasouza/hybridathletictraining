@@ -17,7 +17,8 @@ import TrainingLoadCard from '@/components/schedule/TrainingLoadCard';
 import TrainingLoadBanner from '@/components/schedule/TrainingLoadBanner';
 import { dayLabels } from '@/components/schedule/config';
 import { exportWeekToCalendar, exportFullPlanToCalendar, CalendarProvider } from '@/lib/calendarExport';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { CalendarProviderMenuItems } from '@/components/schedule/CalendarProviderMenuItems';
 import { useTranslation } from 'react-i18next';
 
 function getDefaultCalendarProvider(): CalendarProvider | null {
@@ -226,15 +227,23 @@ export default function Schedule() {
     return sessions;
   }, [sessions, isAllPlans, hiddenPlanIds, activePlanId]);
 
+  // week_number/day_of_week-based sessions need a real plan start date to
+  // resolve to actual calendar dates — without it, exports silently fall
+  // back to "relative to today" and can mis-date sessions.
+  const planStartDate = useMemo(() => {
+    const weekOne = weeklySummaries.find((ws: any) => ws.week_number === 1);
+    return weekOne?.week_start ? new Date(weekOne.week_start + 'T00:00:00') : undefined;
+  }, [weeklySummaries]);
+
   const handleCalendarExport = (provider: CalendarProvider) => {
-    exportWeekToCalendar(provider, sessions, displayWeek);
+    exportWeekToCalendar(provider, sessions, displayWeek, planStartDate);
     const count = sessions.filter(s => s.week_number === displayWeek).length;
     toast.success(`${count} sessions → ${provider === 'apple' ? '.ics downloaded' : provider.charAt(0).toUpperCase() + provider.slice(1) + ' Calendar'}`);
   };
 
   const handleFullPlanExport = (provider: CalendarProvider) => {
     const planName = plans?.find(p => p.id === activePlanId)?.name;
-    exportFullPlanToCalendar(provider, sessions, planName);
+    exportFullPlanToCalendar(provider, sessions, planName, planStartDate);
     const label = provider === 'apple' ? '.ics downloaded' : `${provider.charAt(0).toUpperCase() + provider.slice(1)} Calendar`;
     toast.success(t('schedule.fullPlanExported', { count: sessions.length }) + ` → ${label}`);
   };
@@ -402,13 +411,7 @@ export default function Schedule() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="center" className="w-48">
-                            {(['google', 'outlook', 'apple'] as CalendarProvider[]).map(provider => (
-                              <DropdownMenuItem key={provider} onClick={() => handleCalendarExport(provider)}>
-                                {provider === 'google' && 'Google Calendar'}
-                                {provider === 'outlook' && 'Outlook Calendar'}
-                                {provider === 'apple' && 'Apple Calendar (.ics)'}
-                              </DropdownMenuItem>
-                            ))}
+                            <CalendarProviderMenuItems onSelect={handleCalendarExport} />
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
@@ -471,13 +474,7 @@ export default function Schedule() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="center" className="w-48">
-                          {(['google', 'outlook', 'apple'] as CalendarProvider[]).map(provider => (
-                            <DropdownMenuItem key={provider} onClick={() => handleFullPlanExport(provider)}>
-                              {provider === 'google' && 'Google Calendar'}
-                              {provider === 'outlook' && 'Outlook Calendar'}
-                              {provider === 'apple' && 'Apple Calendar (.ics)'}
-                            </DropdownMenuItem>
-                          ))}
+                          <CalendarProviderMenuItems onSelect={handleFullPlanExport} />
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
