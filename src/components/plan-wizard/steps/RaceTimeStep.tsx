@@ -19,6 +19,7 @@ function parseHMS(value: string): number | null {
 export default function RaceTimeStep({ answers, update }: { answers: WizardAnswers; update: (p: Partial<WizardAnswers>) => void }) {
   const distance = answers.raceDistance ?? '10k';
   const [raw, setRaw] = useState<string>(answers.raceTimeSeconds ? fmtTime(answers.raceTimeSeconds) : '');
+  const invalid = raw.trim() !== '' && parseHMS(raw) === null;
 
   // Keep local input in sync if answers change externally (e.g. navigation back)
   useEffect(() => {
@@ -53,15 +54,22 @@ export default function RaceTimeStep({ answers, update }: { answers: WizardAnswe
               update({ raceTimeSeconds: secs ?? undefined, raceDistance: distance });
             }}
             placeholder="e.g. 50:00 or 1:45:00"
+            aria-invalid={invalid}
+            className={invalid ? 'border-destructive focus-visible:ring-destructive' : undefined}
           />
+          {invalid && (
+            <p className="text-[11px] text-destructive">
+              Couldn't read that as a time — use <code>mm:ss</code> or <code>h:mm:ss</code>.
+            </p>
+          )}
         </div>
         {answers.raceTimeSeconds ? (
           <p className="text-sm text-muted-foreground">
             You ran <span className="font-mono font-bold text-primary">{fmtTime(answers.raceTimeSeconds)}</span> over {DISTANCE_LABELS[distance]}.
           </p>
-        ) : (
+        ) : !invalid ? (
           <p className="text-xs text-muted-foreground">Format examples: <code>50:00</code>, <code>1:45:00</code>.</p>
-        )}
+        ) : null}
       </div>
     </StepShell>
   );

@@ -39,15 +39,10 @@ export function buildWizardSteps(answers: WizardAnswers, opts: BuildOpts): StepI
   steps.push('runDaysCount', 'runDaysSelect');
   if (hasRace) steps.push('raceDetails');
 
-  // Strength module
-  steps.push(
-    'strengthAbility',
-    'strengthGoal',
-    'sessionLength',
-    'strengthCount',
-    'strengthDays',
-    'equipment',
-  );
+  // Strength module — day picker only when the athlete opts in (>0 sessions).
+  steps.push('strengthAbility', 'strengthGoal', 'sessionLength', 'strengthCount');
+  if ((answers.strengthSessionsPerWeek ?? 0) > 0) steps.push('strengthDays');
+  steps.push('equipment');
 
   // Mobility module — focus step only when the athlete opts in (>0 sessions).
   steps.push('mobilityCount');
@@ -76,7 +71,7 @@ export function isStepComplete(stepId: StepId, a: WizardAnswers): boolean {
     case 'sessionLength': return !!a.sessionLengthMin;
     case 'strengthCount': return a.strengthSessionsPerWeek !== undefined && a.strengthSessionsPerWeek >= 0;
     case 'strengthDays':
-      return !!a.strengthDays && a.strengthDays.length === (a.strengthSessionsPerWeek ?? 0);
+      return (a.strengthDays ?? []).length === (a.strengthSessionsPerWeek ?? 0);
     case 'equipment': return !!a.equipment?.preset;
     case 'mobilityCount':
       return a.mobilitySessionsPerWeek !== undefined && a.mobilitySessionsPerWeek >= 0;
