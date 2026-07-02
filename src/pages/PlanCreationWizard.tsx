@@ -66,7 +66,12 @@ export default function PlanCreationWizard({ onExit, successPath = '/schedule' }
   const canContinue = isStepComplete(currentStepId, answers);
   const isLastStep = stepIndex === stepIds.length - 1;
 
-  const stepNode = renderStep(currentStepId, answers, update, () => navigate(successPath));
+  const goToStep = (id: StepId) => {
+    const idx = stepIds.indexOf(id);
+    if (idx >= 0) setStepIndex(idx);
+  };
+
+  const stepNode = renderStep(currentStepId, answers, update, () => navigate(successPath), goToStep);
 
   return (
     <div className="fixed inset-0 bg-background z-50 flex flex-col">
@@ -120,6 +125,7 @@ function renderStep(
   answers: WizardAnswers,
   update: (p: Partial<WizardAnswers>) => void,
   onGenerated: () => void,
+  goToStep: (id: StepId) => void,
 ) {
   switch (id) {
     case 'athletePicker': return <AthletePickerStep answers={answers} update={update} />;
@@ -137,6 +143,6 @@ function renderStep(
     case 'equipment': return <EquipmentStep answers={answers} update={update} />;
     case 'mobilityCount': return <SessionCountStep answers={answers} update={update} variant="mobility" />;
     case 'mobilityFocus': return <MobilityFocusStep answers={answers} update={update} />;
-    case 'review': return <ReviewStep answers={answers} update={update} onGenerated={onGenerated} />;
+    case 'review': return <ReviewStep answers={answers} update={update} onGenerated={onGenerated} onEditStep={goToStep} />;
   }
 }
