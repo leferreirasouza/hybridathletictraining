@@ -58,7 +58,7 @@ export default function RaceTimeStep({ answers, update }: { answers: WizardAnswe
             className={invalid ? 'border-destructive focus-visible:ring-destructive' : undefined}
           />
           {invalid && (
-            <p className="text-[11px] text-destructive">
+            <p className="text-[11px] text-destructive" aria-live="polite">
               Couldn't read that as a time — use <code>mm:ss</code> or <code>h:mm:ss</code>.
             </p>
           )}

@@ -104,7 +104,7 @@ export default function RunDaysCountStep({ answers, update }: { answers: WizardA
               aria-invalid={!!kmError}
               className={kmError ? 'border-destructive focus-visible:ring-destructive' : undefined}
             />
-            {kmError && <p className="text-[11px] text-destructive">{kmError}</p>}
+            {kmError && <p className="text-[11px] text-destructive" aria-live="polite">{kmError}</p>}
           </div>
         </div>
         <p className="text-xs text-muted-foreground -mt-3">

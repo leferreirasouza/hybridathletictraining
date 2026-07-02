@@ -107,6 +107,20 @@ export default function ReviewStep({ answers, update, onGenerated, onEditStep }:
       .eq('id', targetAthleteId);
   };
 
+  // Distinguishes network/transport failures from backend-reported errors
+  // (data.error, thrown as Error(data.error) above) so the toast tells the
+  // athlete something actionable instead of a generic "failed" every time.
+  const describeError = (e: unknown, fallback: string): string => {
+    const err = e as { message?: string; name?: string } | null | undefined;
+    const msg = err?.message ?? '';
+    const looksLikeNetworkFailure =
+      err?.name === 'FunctionsFetchError' ||
+      err?.name === 'TypeError' ||
+      /fetch|network|failed to connect/i.test(msg);
+    if (looksLikeNetworkFailure) return "Couldn't reach the server — check your connection and try again.";
+    return msg || fallback;
+  };
+
   const handleRequestPrediction = async () => {
     if (!user || !currentOrg) return;
     setLoadingPrediction(true);
@@ -123,7 +137,7 @@ export default function ReviewStep({ answers, update, onGenerated, onEditStep }:
       if (data?.error) throw new Error(data.error);
       setPrediction(data.prediction);
     } catch (e: any) {
-      toast.error(e.message || 'Failed to get prediction');
+      toast.error(describeError(e, 'Failed to get prediction'));
     } finally {
       setLoadingPrediction(false);
     }
@@ -153,8 +167,11 @@ export default function ReviewStep({ answers, update, onGenerated, onEditStep }:
         totalWeeks: data.totalWeeks,
         sessionsCreated: data.sessionsCreated,
       });
+      if (user?.id) {
+        try { localStorage.removeItem(`ha-wizard-draft:${user.id}`); } catch { /* best effort */ }
+      }
     } catch (e: any) {
-      toast.error(e.message || 'Failed to generate plan');
+      toast.error(describeError(e, 'Failed to generate plan'));
     } finally {
       setGenerating(false);
     }
