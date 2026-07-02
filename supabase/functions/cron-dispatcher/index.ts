@@ -97,8 +97,7 @@ async function runRaceScrape() {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${SERVICE_KEY}`,
-      apikey: SERVICE_KEY,
+      "x-cron-secret": CRON_SECRET,
     },
     body: "{}",
   });
