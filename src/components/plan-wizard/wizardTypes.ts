@@ -65,3 +65,24 @@ export const DISTANCE_LABELS: Record<RaceDistance, string> = {
   hyrox: 'HYROX',
   other: 'Custom distance',
 };
+
+export const GOAL_TYPE_LABELS: Record<GoalType, string> = {
+  hyrox: 'HYROX race',
+  general_fitness: 'General fitness',
+  marathon: 'Marathon / road race',
+  custom: 'Custom goal',
+};
+
+export const ABILITY_LABELS: Record<AbilityLevel, string> = {
+  beginner: 'Beginner',
+  intermediate: 'Intermediate',
+  advanced: 'Advanced',
+  elite: 'Elite',
+};
+
+export const MOBILITY_FOCUS_LABELS: Record<string, string> = {
+  mobility_recovery: 'Mobility / recovery',
+  skill_drills: 'Skill drills',
+  rehab: 'Rehab / prehab',
+  run_mechanics: 'Run mechanics',
+};
