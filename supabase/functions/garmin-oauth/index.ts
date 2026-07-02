@@ -13,6 +13,7 @@
 //   disconnect-> deletes the user's garmin_connections row
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { encryptToken, decryptToken, hashToken } from "../_shared/tokenCrypto.ts";
 
 
 const corsHeaders = {
@@ -163,8 +164,8 @@ serve(async (req) => {
       // persist transient request token/secret for this user
       await service.from("garmin_connections").upsert({
         user_id: userId,
-        request_token: oauth_token,
-        request_token_secret: oauth_token_secret,
+        request_token: await encryptToken(oauth_token),
+        request_token_secret: await encryptToken(oauth_token_secret),
       }, { onConflict: "user_id" });
 
       const authorize_url = `${AUTHORIZE_URL}?oauth_token=${encodeURIComponent(oauth_token)}`;
@@ -185,7 +186,9 @@ serve(async (req) => {
         .select("request_token, request_token_secret")
         .eq("user_id", userId)
         .maybeSingle();
-      if (!conn?.request_token_secret || conn.request_token !== oauth_token) {
+      const storedRequestToken = await decryptToken(conn?.request_token);
+      const storedRequestTokenSecret = await decryptToken(conn?.request_token_secret);
+      if (!storedRequestTokenSecret || storedRequestToken !== oauth_token) {
         return new Response(JSON.stringify({ error: "Request token mismatch" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -195,7 +198,7 @@ serve(async (req) => {
         url: ACCESS_TOKEN_URL,
         consumerKey,
         consumerSecret,
-        tokenSecret: conn.request_token_secret,
+        tokenSecret: storedRequestTokenSecret,
         extraOAuth: { oauth_token, oauth_verifier },
       });
       const r = await fetch(ACCESS_TOKEN_URL, { method: "POST", headers: { Authorization: authHeaderOAuth } });
@@ -207,10 +210,12 @@ serve(async (req) => {
         });
       }
       const parsed = parseFormResponse(txt);
+      const newAccessToken = parsed["oauth_token"];
       await service.from("garmin_connections").update({
-        access_token: parsed["oauth_token"],
-        access_token_secret: parsed["oauth_token_secret"],
-        garmin_user_id: parsed["oauth_token"]?.slice(0, 40) ?? null, // overwritten by /user/id call later
+        access_token: await encryptToken(newAccessToken),
+        access_token_secret: await encryptToken(parsed["oauth_token_secret"]),
+        access_token_hash: await hashToken(newAccessToken),
+        garmin_user_id: newAccessToken?.slice(0, 40) ?? null, // overwritten by /user/id call later
         request_token: null,
         request_token_secret: null,
         last_sync_at: new Date().toISOString(),

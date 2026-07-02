@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.cron-dispatcher]
 verify_jwt = false
+
+[functions.garmin-webhook]
+verify_jwt = false
+
+[functions.strava-webhook]
+verify_jwt = false

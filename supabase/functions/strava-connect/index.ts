@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { encryptToken, decryptToken } from "../_shared/tokenCrypto.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -77,7 +78,7 @@ serve(async (req) => {
           body: JSON.stringify({
             client_id: STRAVA_CLIENT_ID,
             client_secret: STRAVA_CLIENT_SECRET,
-            refresh_token: conn.refresh_token,
+            refresh_token: await decryptToken(conn.refresh_token),
             grant_type: "refresh_token",
           }),
         });
@@ -88,9 +89,9 @@ serve(async (req) => {
         }
         const data = await resp.json();
         await svc.from("strava_connections").update({
-          access_token: data.access_token,
+          access_token: await encryptToken(data.access_token),
           expires_at: data.expires_at,
-          ...(data.refresh_token ? { refresh_token: data.refresh_token } : {}),
+          ...(data.refresh_token ? { refresh_token: await encryptToken(data.refresh_token) } : {}),
         }).eq("user_id", auth.userId);
         return jsonResp({ access_token: data.access_token, expires_at: data.expires_at });
       }
@@ -119,8 +120,8 @@ serve(async (req) => {
 
       const { error: upsertErr } = await svc.from("strava_connections").upsert({
         user_id: auth.userId,
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
+        access_token: await encryptToken(data.access_token),
+        refresh_token: await encryptToken(data.refresh_token),
         expires_at: data.expires_at,
         strava_athlete_id: athlete.id,
         athlete_name: [athlete.firstname, athlete.lastname].filter(Boolean).join(" ") || null,
