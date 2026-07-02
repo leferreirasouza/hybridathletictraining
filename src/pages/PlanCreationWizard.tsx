@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, X } from 'lucide-react';
@@ -29,6 +29,24 @@ interface Props {
   successPath?: string;
 }
 
+/** Per-user draft key. A refresh or accidental exit shouldn't lose 16 questions of progress. */
+function draftKey(uid: string) {
+  return `ha-wizard-draft:${uid}`;
+}
+
+function loadDraft(uid: string | undefined): { answers: WizardAnswers; stepIndex: number } | null {
+  if (!uid) return null;
+  try {
+    const raw = localStorage.getItem(draftKey(uid));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && parsed.answers) return parsed;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Full-screen multi-step plan-creation wizard. Mirrors the step-state pattern
  * from src/pages/Onboarding.tsx. Step ordering is computed from current
@@ -36,11 +54,25 @@ interface Props {
  */
 export default function PlanCreationWizard({ onExit, successPath = '/schedule' }: Props) {
   const navigate = useNavigate();
-  const { currentRole } = useAuth();
+  const { user, currentRole } = useAuth();
   const isCoach = currentRole === 'coach' || currentRole === 'admin' || currentRole === 'master_admin';
 
-  const [answers, setAnswers] = useState<WizardAnswers>({});
-  const [stepIndex, setStepIndex] = useState(0);
+  const [answers, setAnswers] = useState<WizardAnswers>(() => loadDraft(user?.id)?.answers ?? {});
+  const [stepIndex, setStepIndex] = useState(() => loadDraft(user?.id)?.stepIndex ?? 0);
+
+  // Autosave — restores on refresh/re-entry, cleared by ReviewStep once a plan is generated.
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      if (Object.keys(answers).length === 0) {
+        localStorage.removeItem(draftKey(user.id));
+      } else {
+        localStorage.setItem(draftKey(user.id), JSON.stringify({ answers, stepIndex }));
+      }
+    } catch {
+      // Storage unavailable/full — draft simply won't persist this session.
+    }
+  }, [answers, stepIndex, user?.id]);
 
   const stepIds = useMemo(() => buildWizardSteps(answers, { isCoach }), [answers, isCoach]);
   const currentStepId = stepIds[stepIndex] ?? stepIds[stepIds.length - 1];
@@ -91,7 +123,7 @@ export default function PlanCreationWizard({ onExit, successPath = '/schedule' }
 
       {/* Step body */}
       <div className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="max-w-md mx-auto">
+        <div className="max-w-md md:max-w-xl mx-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStepId}
@@ -109,7 +141,7 @@ export default function PlanCreationWizard({ onExit, successPath = '/schedule' }
       {/* Pinned CTA — review step renders its own Generate button */}
       {!isLastStep && (
         <div className="border-t border-border bg-background/95 backdrop-blur px-4 py-4">
-          <div className="max-w-md mx-auto">
+          <div className="max-w-md md:max-w-xl mx-auto">
             <Button className="w-full" size="lg" disabled={!canContinue} onClick={handleContinue}>
               Continue
             </Button>

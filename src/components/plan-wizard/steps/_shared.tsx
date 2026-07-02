@@ -39,6 +39,7 @@ export function ChoiceCard({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={selected}
       className={`w-full text-left rounded-xl border p-4 transition-colors ${
         selected
           ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
