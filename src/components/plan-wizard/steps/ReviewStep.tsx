@@ -83,7 +83,7 @@ export default function ReviewStep({ answers, update, onGenerated, onEditStep }:
           athlete_id: targetAthleteId,
           available_days: answers.runDays ?? [],
           strength_days: answers.strengthDays ?? [],
-          mobility_days: [],
+          mobility_days: answers.mobilityDays ?? [],
           run_type_weights: { easy: 0.6, tempo: 0.15, interval: 0.1, long: 0.15, fartlek: 0 },
           strength_sessions_per_week: answers.strengthSessionsPerWeek ?? 0,
           mobility_technique_sessions_per_week: answers.mobilitySessionsPerWeek ?? 0,
@@ -204,7 +204,11 @@ export default function ReviewStep({ answers, update, onGenerated, onEditStep }:
             />
             <SummaryRow
               label="Mobility"
-              value={(answers.mobilitySessionsPerWeek ?? 0) === 0 ? 'Skipped' : `${answers.mobilitySessionsPerWeek} / week`}
+              value={
+                (answers.mobilitySessionsPerWeek ?? 0) === 0
+                  ? 'Skipped'
+                  : `${answers.mobilitySessionsPerWeek} / week · ${(answers.mobilityDays ?? []).map((d) => DAY_LABELS[d]).join(', ') || '—'}`
+              }
               onEdit={onEditStep && (() => onEditStep('mobilityCount'))}
             />
             {(answers.mobilitySessionsPerWeek ?? 0) > 0 && Object.keys(answers.mobilityWeights ?? {}).length > 0 && (
