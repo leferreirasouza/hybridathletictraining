@@ -5,16 +5,37 @@ interface Props {
   answers: WizardAnswers;
   update: (p: Partial<WizardAnswers>) => void;
   /** Which set of days we are picking; controls validation message. */
-  variant: 'run' | 'strength';
+  variant: 'run' | 'strength' | 'mobility';
 }
 
-/** Shared day-of-week multiselect used for both run and strength days. */
-export default function DaysOfWeekStep({ answers, update, variant }: Props) {
-  const target = variant === 'run' ? answers.runDaysPerWeek ?? 0 : answers.strengthSessionsPerWeek ?? 0;
-  const selected = variant === 'run' ? answers.runDays ?? [] : answers.strengthDays ?? [];
-  const otherSet = variant === 'run' ? answers.strengthDays ?? [] : answers.runDays ?? [];
+const TITLES: Record<Props['variant'], string> = {
+  run: 'Which days will you run?',
+  strength: 'Which days will you do strength?',
+  mobility: 'Which days for mobility / technique?',
+};
 
-  const title = variant === 'run' ? 'Which days will you run?' : 'Which days will you do strength?';
+const OTHER_LABELS: Record<Props['variant'], string> = {
+  run: 'Strength/mobility',
+  strength: 'Run/mobility',
+  mobility: 'Run/strength',
+};
+
+/** Shared day-of-week multiselect used for run, strength, and mobility days. */
+export default function DaysOfWeekStep({ answers, update, variant }: Props) {
+  const target =
+    variant === 'run' ? answers.runDaysPerWeek ?? 0
+      : variant === 'strength' ? answers.strengthSessionsPerWeek ?? 0
+      : answers.mobilitySessionsPerWeek ?? 0;
+  const selected =
+    variant === 'run' ? answers.runDays ?? []
+      : variant === 'strength' ? answers.strengthDays ?? []
+      : answers.mobilityDays ?? [];
+  const otherSet =
+    variant === 'run' ? [...(answers.strengthDays ?? []), ...(answers.mobilityDays ?? [])]
+      : variant === 'strength' ? [...(answers.runDays ?? []), ...(answers.mobilityDays ?? [])]
+      : [...(answers.runDays ?? []), ...(answers.strengthDays ?? [])];
+
+  const title = TITLES[variant];
   const subtitle = `Pick exactly ${target} day${target === 1 ? '' : 's'}.`;
 
   const toggle = (d: number) => {
@@ -22,7 +43,8 @@ export default function DaysOfWeekStep({ answers, update, variant }: Props) {
     let next = has ? selected.filter((x) => x !== d) : [...selected, d];
     if (!has && next.length > target) next = next.slice(-target);
     if (variant === 'run') update({ runDays: next });
-    else update({ strengthDays: next });
+    else if (variant === 'strength') update({ strengthDays: next });
+    else update({ mobilityDays: next });
   };
 
   return (
@@ -51,7 +73,7 @@ export default function DaysOfWeekStep({ answers, update, variant }: Props) {
       </div>
       <p className="text-xs text-muted-foreground mt-3">
         Selected {selected.length} / {target}
-        {otherSet.length > 0 && ` · ${variant === 'run' ? 'Strength' : 'Run'} days shown in grey`}
+        {otherSet.length > 0 && ` · ${OTHER_LABELS[variant]} days shown in grey`}
       </p>
     </StepShell>
   );

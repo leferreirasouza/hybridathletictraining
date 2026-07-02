@@ -15,6 +15,7 @@ export type StepId =
   | 'strengthDays'
   | 'equipment'
   | 'mobilityCount'
+  | 'mobilityDays'
   | 'mobilityFocus'
   | 'review';
 
@@ -44,9 +45,9 @@ export function buildWizardSteps(answers: WizardAnswers, opts: BuildOpts): StepI
   if ((answers.strengthSessionsPerWeek ?? 0) > 0) steps.push('strengthDays');
   steps.push('equipment');
 
-  // Mobility module — focus step only when the athlete opts in (>0 sessions).
+  // Mobility module — day/focus steps only when the athlete opts in (>0 sessions).
   steps.push('mobilityCount');
-  if ((answers.mobilitySessionsPerWeek ?? 0) > 0) steps.push('mobilityFocus');
+  if ((answers.mobilitySessionsPerWeek ?? 0) > 0) steps.push('mobilityDays', 'mobilityFocus');
 
   steps.push('review');
   return steps;
@@ -75,6 +76,8 @@ export function isStepComplete(stepId: StepId, a: WizardAnswers): boolean {
     case 'equipment': return !!a.equipment?.preset;
     case 'mobilityCount':
       return a.mobilitySessionsPerWeek !== undefined && a.mobilitySessionsPerWeek >= 0;
+    case 'mobilityDays':
+      return (a.mobilityDays ?? []).length === (a.mobilitySessionsPerWeek ?? 0);
     case 'mobilityFocus': return true;
     case 'review': return true;
   }

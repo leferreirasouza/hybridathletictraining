@@ -31,6 +31,7 @@ export interface WizardAnswers {
   strengthDays?: number[];
   equipment?: { preset?: EquipmentPresetKey | 'custom'; items: Record<string, boolean> };
   mobilitySessionsPerWeek?: number;
+  mobilityDays?: number[];
   mobilityWeights?: Record<string, number>;
   ageGroup?: string;
 }

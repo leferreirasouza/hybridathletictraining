@@ -43,6 +43,7 @@ export default function SessionCountStep({ answers, update, variant }: Props) {
           onValueChange={([v]) => {
             const patch: Partial<WizardAnswers> = { [cfg.field]: v } as Partial<WizardAnswers>;
             if (variant === 'strength') patch.strengthDays = undefined;
+            else patch.mobilityDays = undefined;
             update(patch);
           }}
         />
