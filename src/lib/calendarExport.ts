@@ -34,6 +34,14 @@ function resolveEventDate(session: PlannedSession, planStartDate?: Date): Date {
 
 function pad(n: number) { return n.toString().padStart(2, '0'); }
 
+// RFC 5545 requires DTSTAMP on every VEVENT (when the event was generated,
+// not when it occurs) — stricter calendar parsers may reject/warn without
+// it. Computed once per export call, always in UTC per spec.
+function utcStamp(): string {
+  const d = new Date();
+  return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
+}
+
 function buildDescription(session: PlannedSession): string {
   const discLabel = disciplineConfig[session.discipline]?.label || session.discipline;
   const parts: string[] = [`📋 ${discLabel}`];
@@ -77,17 +85,20 @@ export function buildGoogleCalendarUrl(session: PlannedSession, planStartDate?: 
 
 // ─── Outlook Calendar ───
 export function buildOutlookCalendarUrl(session: PlannedSession, planStartDate?: Date): string {
-  const { eventDate, durationMin, startHour, startMin } = getEventTimes(session, planStartDate);
+  const { eventDate, startHour, startMin, endHour, endMin } = getEventTimes(session, planStartDate);
   const title = encodeURIComponent(session.session_name || `${disciplineConfig[session.discipline]?.label || session.discipline} Session`);
   const desc = encodeURIComponent(buildDescription(session));
 
-  // Outlook uses ISO format
-  const start = new Date(eventDate);
-  start.setHours(startHour, startMin, 0, 0);
-  const end = new Date(start.getTime() + durationMin * 60000);
+  // Local "floating" time (no UTC conversion) — matches Google/Apple's
+  // convention. The previous toISOString()-based approach silently shifted
+  // the event by the exporting browser's UTC offset, since Outlook's
+  // compose endpoint treats an unlabeled datetime as local, not UTC.
+  const y = eventDate.getFullYear();
+  const mo = pad(eventDate.getMonth() + 1);
+  const da = pad(eventDate.getDate());
+  const fmt = (h: number, m: number) => `${y}-${mo}-${da}T${pad(h)}:${pad(m)}:00`;
 
-  const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0];
-  return `https://outlook.live.com/calendar/0/action/compose?subject=${title}&body=${desc}&startdt=${fmt(start)}&enddt=${fmt(end)}`;
+  return `https://outlook.live.com/calendar/0/action/compose?subject=${title}&body=${desc}&startdt=${fmt(startHour, startMin)}&enddt=${fmt(endHour, endMin)}`;
 }
 
 // ─── Apple / iCal (.ics download) ───
@@ -101,6 +112,7 @@ export function downloadIcsFile(session: PlannedSession, planStartDate?: Date): 
     'VERSION:2.0',
     'PRODID:-//Hybrid Athletics//EN',
     'BEGIN:VEVENT',
+    `DTSTAMP:${utcStamp()}`,
     `DTSTART:${startTime}`,
     `DTEND:${endTime}`,
     `SUMMARY:${title}`,
@@ -132,6 +144,7 @@ export function downloadIcsWeek(sessions: PlannedSession[], weekNumber: number, 
     const desc = buildDescription(session).replace(/\n/g, '\\n');
     return [
       'BEGIN:VEVENT',
+      `DTSTAMP:${utcStamp()}`,
       `DTSTART:${startTime}`,
       `DTEND:${endTime}`,
       `SUMMARY:${title}`,
@@ -197,6 +210,7 @@ export function downloadIcsFullPlan(sessions: PlannedSession[], planName?: strin
     const desc = buildDescription(session).replace(/\n/g, '\\n');
     return [
       'BEGIN:VEVENT',
+      `DTSTAMP:${utcStamp()}`,
       `DTSTART:${startTime}`,
       `DTEND:${endTime}`,
       `SUMMARY:${title}`,

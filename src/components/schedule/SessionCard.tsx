@@ -11,7 +11,8 @@ import { getDiscipline, intensityConfig, dayLabelsFull } from './config';
 import { Clock, MapPin, ChevronRight, Flame, Check, CheckCircle2, CalendarPlus, ArrowLeftRight } from 'lucide-react';
 import { SwapSessionDialog } from './SwapSessionDialog';
 import { addToCalendar, CalendarProvider } from '@/lib/calendarExport';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { CalendarProviderMenuItems } from './CalendarProviderMenuItems';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -308,15 +309,7 @@ function SessionDetailSheet({ session, isCompleted, substitution }: { session: S
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="w-48">
-            <DropdownMenuItem onClick={() => addToCalendar('google', session)}>
-              Google Calendar
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addToCalendar('outlook', session)}>
-              Outlook Calendar
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addToCalendar('apple', session)}>
-              Apple Calendar (.ics)
-            </DropdownMenuItem>
+            <CalendarProviderMenuItems onSelect={(provider) => addToCalendar(provider, session)} />
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
