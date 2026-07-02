@@ -56,8 +56,14 @@ export default function RunDaysCountStep({ answers, update }: { answers: WizardA
   const dayOvershoot = currentDays > 0 && target > currentDays + 1;
 
   // Safe week-1 ceiling (10%-rule) and a realistic 4-week ramp using ~10% weekly growth.
-  const safeWeek1Km = currentKm > 0 ? currentKm * 1.1 : impliedTargetKm;
-  const safeWeek4Km = currentKm > 0 ? currentKm * Math.pow(1.1, 4) : impliedTargetKm;
+  // Must mirror supabase/functions/_shared/runVolumeProgression.ts exactly, or this
+  // preview promises numbers the generated plan doesn't actually deliver:
+  //   ruleCeiling(week) = baseline * 1.1^(week - 1)  — week 1 = baseline, unchanged.
+  //   STARTER_BASELINE_KM fallback (15) when no current volume is reported.
+  const STARTER_BASELINE_KM = 15;
+  const volumeBaseline = currentKm > 0 ? currentKm : STARTER_BASELINE_KM;
+  const safeWeek1Km = volumeBaseline;
+  const safeWeek4Km = volumeBaseline * Math.pow(1.1, 3);
 
 
   return (

@@ -102,7 +102,7 @@ export default function ReviewStep({ answers, update, onGenerated }: Props) {
       const { data, error } = await supabase.functions.invoke('generate-plan', {
         body: {
           organizationId: currentOrg.id,
-          athleteId: answers.athleteId,
+          athleteId: targetAthleteId,
           predictionOnly: true,
           profile: buildProfile(true),
         },
@@ -128,7 +128,7 @@ export default function ReviewStep({ answers, update, onGenerated }: Props) {
       const { data, error } = await supabase.functions.invoke('generate-plan', {
         body: {
           organizationId: currentOrg.id,
-          athleteId: answers.athleteId,
+          athleteId: targetAthleteId,
           profile: buildProfile(false),
         },
       });
