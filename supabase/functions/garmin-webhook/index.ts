@@ -12,6 +12,7 @@
 // owning row in `garmin_connections`.
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { hashToken } from "../_shared/tokenCrypto.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,7 +57,11 @@ serve(async (req) => {
     const payload = await req.json().catch(() => ({} as AnyItem));
     console.log("garmin-webhook keys:", Object.keys(payload ?? {}));
 
-    // Resolve userAccessToken -> user_id once
+    // Resolve userAccessToken -> user_id once. access_token is encrypted at
+    // rest, so we match Garmin's plaintext payload tokens against the
+    // non-secret access_token_hash lookup column rather than the token
+    // itself — this function never needs to decrypt access_token at all,
+    // since Garmin's push payload already carries full activity data.
     const tokenToUser = new Map<string, string>();
     const allItems: AnyItem[] = Object.values(payload ?? {}).flat() as AnyItem[];
     const tokens = Array.from(
@@ -64,16 +69,23 @@ serve(async (req) => {
     ) as string[];
 
     if (tokens.length) {
+      const hashToToken = new Map<string, string>();
+      for (const t of tokens) hashToToken.set(await hashToken(t), t);
+      const hashes = Array.from(hashToToken.keys());
+
       const { data: conns } = await service
         .from("garmin_connections")
-        .select("user_id, access_token")
-        .in("access_token", tokens);
-      for (const c of conns ?? []) tokenToUser.set(c.access_token!, c.user_id);
+        .select("user_id, access_token_hash")
+        .in("access_token_hash", hashes);
+      for (const c of conns ?? []) {
+        const plaintextToken = c.access_token_hash ? hashToToken.get(c.access_token_hash) : undefined;
+        if (plaintextToken) tokenToUser.set(plaintextToken, c.user_id);
+      }
 
       await service
         .from("garmin_connections")
         .update({ last_sync_at: new Date().toISOString() })
-        .in("access_token", tokens);
+        .in("access_token_hash", hashes);
     }
 
     const resolveUser = (item: AnyItem) =>
@@ -116,13 +128,17 @@ serve(async (req) => {
       const { data: inserted, error: actErr } = await service
         .from("garmin_activities")
         .upsert(row, { onConflict: "user_id,summary_id" })
-        .select("id")
+        .select("id, completed_session_id")
         .maybeSingle();
 
       if (actErr) {
         console.error("activity upsert error", actErr);
         continue;
       }
+
+      // Already matched from a previous delivery of this same activity —
+      // don't insert a second completed_sessions row on webhook retries.
+      if (inserted?.completed_session_id) continue;
 
       // Map to a completed_session: prefer matching a planned session on same date+discipline
       if (discipline && startLocal) {
@@ -136,11 +152,25 @@ serve(async (req) => {
           .limit(1)
           .maybeSingle();
 
+        // When matched to a plan, don't create a competing entry if that
+        // planned session already has a completed_sessions row from any
+        // source (manual log, an earlier Strava match, etc.).
+        if (planned?.id) {
+          const { data: existingCompletion } = await service
+            .from("completed_sessions")
+            .select("id")
+            .eq("planned_session_id", planned.id)
+            .limit(1)
+            .maybeSingle();
+          if (existingCompletion?.id) continue;
+        }
+
         const completedRow = {
           athlete_id: userId,
           planned_session_id: planned?.id ?? null,
           date,
           discipline,
+          source: "garmin",
           actual_duration_min: a.durationInSeconds ? Math.round(a.durationInSeconds / 60) : null,
           actual_distance_km: a.distanceInMeters ? Number((a.distanceInMeters / 1000).toFixed(2)) : null,
           avg_hr: a.averageHeartRateInBeatsPerMinute ?? null,

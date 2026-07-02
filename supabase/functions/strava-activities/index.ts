@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getValidStravaAccessToken } from "../_shared/stravaToken.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,41 +36,18 @@ serve(async (req) => {
     const svc = createClient(supabaseUrl, supabaseServiceKey);
     const { data: conn } = await svc
       .from("strava_connections")
-      .select("access_token, refresh_token, expires_at, athlete_name, athlete_username, athlete_avatar_url")
+      .select("athlete_name, athlete_username, athlete_avatar_url")
       .eq("user_id", userId)
       .single();
 
     if (!conn) return jsonResp({ connected: false });
 
-    let accessToken = conn.access_token;
-    if (conn.expires_at < Math.floor(Date.now() / 1000) + 300) {
-      const refreshResp = await fetch("https://www.strava.com/oauth/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          client_id: Deno.env.get("STRAVA_CLIENT_ID"),
-          client_secret: Deno.env.get("STRAVA_CLIENT_SECRET"),
-          refresh_token: conn.refresh_token,
-          grant_type: "refresh_token",
-        }),
-      });
-      if (!refreshResp.ok) {
-        const t = await refreshResp.text();
-        console.error("Strava refresh failed:", refreshResp.status, t);
-        return jsonResp({ error: "Strava token refresh failed" }, 500);
-      }
-      const refreshData = await refreshResp.json();
-      accessToken = refreshData.access_token;
-      await svc.from("strava_connections").update({
-        access_token: refreshData.access_token,
-        expires_at: refreshData.expires_at,
-        ...(refreshData.refresh_token ? { refresh_token: refreshData.refresh_token } : {}),
-      }).eq("user_id", userId);
-    }
+    const tokenResult = await getValidStravaAccessToken(svc, userId);
+    if (!tokenResult) return jsonResp({ error: "Strava token refresh failed" }, 500);
 
     const actsResp = await fetch(
       "https://www.strava.com/api/v3/athlete/activities?per_page=8",
-      { headers: { Authorization: `Bearer ${accessToken}` } }
+      { headers: { Authorization: `Bearer ${tokenResult.accessToken}` } }
     );
     if (!actsResp.ok) {
       const t = await actsResp.text();
