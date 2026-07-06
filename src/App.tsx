@@ -40,6 +40,7 @@ const EquipmentPresets = lazy(() => import("@/pages/EquipmentPresets"));
 const PlanCreationWizard = lazy(() => import("@/pages/PlanCreationWizard"));
 const StravaCallback = lazy(() => import("@/pages/StravaCallback"));
 const GarminCallback = lazy(() => import("@/pages/GarminCallback"));
+const OAuthConsent = lazy(() => import("@/pages/OAuthConsent"));
 
 const queryClient = new QueryClient();
 
@@ -85,6 +86,7 @@ const App = () => (
               <Route path="/about" element={<About />} />
               <Route path="/faq" element={<FAQ />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
               <Route path="/strava/callback" element={<StravaCallback />} />
               <Route path="/garmin/callback" element={<ProtectedRoute><GarminCallback /></ProtectedRoute>} />
               <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />

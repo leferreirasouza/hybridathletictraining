@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable/index';
@@ -21,11 +21,18 @@ export default function AuthPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
 
-  // If a session is already established (e.g., returning from OAuth redirect), bounce to dashboard.
+  // Preserve ?next=/some/path across sign-in, sign-up, and OAuth redirects.
+  // Only accept same-origin relative paths (must start with `/` and not `//`).
+  const rawNext = searchParams.get('next');
+  const nextPath = rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/dashboard';
+  const oauthRedirect = `${window.location.origin}${nextPath}`;
+
+  // If a session is already established (e.g., returning from OAuth redirect), bounce to next.
   useEffect(() => {
-    if (user) navigate('/dashboard', { replace: true });
-  }, [user, navigate]);
+    if (user) navigate(nextPath, { replace: true });
+  }, [user, navigate, nextPath]);
 
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
@@ -45,7 +52,7 @@ export default function AuthPage() {
         password: cred.password,
       });
       if (!error) {
-        navigate('/dashboard');
+        navigate(nextPath);
       } else {
         toast.error(error.message);
       }
@@ -61,7 +68,7 @@ export default function AuthPage() {
       toast.error(error.message);
     } else {
       await storeCredential(email, password);
-      navigate('/dashboard');
+      navigate(nextPath);
     }
     setLoading(false);
   };
@@ -74,7 +81,7 @@ export default function AuthPage() {
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: oauthRedirect,
       },
     });
     if (error) {
@@ -105,7 +112,7 @@ export default function AuthPage() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: oauthRedirect,
     });
     if (result.error) {
       toast.error('Google sign-in failed: ' + (result.error as Error).message);
@@ -113,13 +120,13 @@ export default function AuthPage() {
       return;
     }
     if (result.redirected) return; // browser is navigating away
-    navigate('/dashboard', { replace: true });
+    navigate(nextPath, { replace: true });
   };
 
   const handleAppleSignIn = async () => {
     setLoading(true);
     const result = await lovable.auth.signInWithOAuth("apple", {
-      redirect_uri: window.location.origin,
+      redirect_uri: oauthRedirect,
     });
     if (result.error) {
       toast.error('Apple sign-in failed: ' + (result.error as Error).message);
@@ -127,7 +134,7 @@ export default function AuthPage() {
       return;
     }
     if (result.redirected) return;
-    navigate('/dashboard', { replace: true });
+    navigate(nextPath, { replace: true });
   };
 
   const OAuthButtons = ({ action }: { action: 'in' | 'up' }) => (
