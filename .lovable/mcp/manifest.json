@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://cdrpypapdqbwwiuqvqti.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "hybrid-athletics-mcp",
+      "version": "0.1.0",
+      "title": "Hybrid Athletics"
+    },
+    "tools": [
+      {
+        "name": "get_todays_session",
+        "title": "Get today's training session",
+        "description": "Return the signed-in athlete's planned training session(s) for today, including discipline, name, duration, distance, intensity, and workout details.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_upcoming_sessions",
+        "title": "List upcoming training sessions",
+        "description": "List the signed-in athlete's planned sessions from today through the next N days (default 7, max 60).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 60,
+              "description": "How many days ahead to include. Defaults to 7."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_recent_completions",
+        "title": "List recent completed sessions",
+        "description": "List the signed-in athlete's most recently completed training sessions with actuals (duration, distance, HR, RPE).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "How many recent completions to return (default 10, max 50)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_training_load",
+        "title": "Get current training load (CTL/ATL/TSB)",
+        "description": "Return the athlete's most recent training-load snapshot: chronic training load (CTL), acute training load (ATL), training stress balance (TSB), and a fatigue band interpretation.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_goal_race",
+        "title": "Get goal race",
+        "description": "Return the signed-in athlete's current HYROX goal race: name, date, location, target finish time, and days until race day.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
