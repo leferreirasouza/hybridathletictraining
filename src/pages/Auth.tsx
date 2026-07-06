@@ -52,7 +52,7 @@ export default function AuthPage() {
         password: cred.password,
       });
       if (!error) {
-        navigate('/dashboard');
+        navigate(nextPath);
       } else {
         toast.error(error.message);
       }
@@ -68,7 +68,7 @@ export default function AuthPage() {
       toast.error(error.message);
     } else {
       await storeCredential(email, password);
-      navigate('/dashboard');
+      navigate(nextPath);
     }
     setLoading(false);
   };
@@ -81,7 +81,7 @@ export default function AuthPage() {
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: oauthRedirect,
       },
     });
     if (error) {
@@ -112,7 +112,7 @@ export default function AuthPage() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: oauthRedirect,
     });
     if (result.error) {
       toast.error('Google sign-in failed: ' + (result.error as Error).message);
@@ -120,13 +120,13 @@ export default function AuthPage() {
       return;
     }
     if (result.redirected) return; // browser is navigating away
-    navigate('/dashboard', { replace: true });
+    navigate(nextPath, { replace: true });
   };
 
   const handleAppleSignIn = async () => {
     setLoading(true);
     const result = await lovable.auth.signInWithOAuth("apple", {
-      redirect_uri: window.location.origin,
+      redirect_uri: oauthRedirect,
     });
     if (result.error) {
       toast.error('Apple sign-in failed: ' + (result.error as Error).message);
@@ -134,7 +134,7 @@ export default function AuthPage() {
       return;
     }
     if (result.redirected) return;
-    navigate('/dashboard', { replace: true });
+    navigate(nextPath, { replace: true });
   };
 
   const OAuthButtons = ({ action }: { action: 'in' | 'up' }) => (
