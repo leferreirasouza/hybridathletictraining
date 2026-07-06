@@ -12,7 +12,7 @@
 // owning row in `garmin_connections`.
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
-import { hashToken } from "../_shared/tokenCrypto.ts";
+import { decryptToken, hashToken } from "../_shared/tokenCrypto.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -82,10 +82,41 @@ serve(async (req) => {
         if (plaintextToken) tokenToUser.set(plaintextToken, c.user_id);
       }
 
+      // Fallback for legacy rows connected before access_token_hash existed:
+      // hash is NULL, so the .in() lookup above misses them. Decrypt each
+      // legacy row's access_token, compare against the incoming tokens, and
+      // backfill the hash so subsequent webhooks resolve via the fast path.
+      const unresolvedTokens = tokens.filter((t) => !tokenToUser.has(t));
+      if (unresolvedTokens.length) {
+        const { data: legacyConns } = await service
+          .from("garmin_connections")
+          .select("user_id, access_token")
+          .is("access_token_hash", null);
+        for (const c of legacyConns ?? []) {
+          if (!c.access_token) continue;
+          let plaintext: string | null = null;
+          try {
+            plaintext = await decryptToken(c.access_token);
+          } catch (e) {
+            console.error("legacy garmin token decrypt failed", e);
+            continue;
+          }
+          if (!plaintext || !unresolvedTokens.includes(plaintext)) continue;
+          tokenToUser.set(plaintext, c.user_id);
+          const h = await hashToken(plaintext);
+          hashToToken.set(h, plaintext);
+          await service
+            .from("garmin_connections")
+            .update({ access_token_hash: h })
+            .eq("user_id", c.user_id);
+        }
+      }
+
+      const allHashes = Array.from(hashToToken.keys());
       await service
         .from("garmin_connections")
         .update({ last_sync_at: new Date().toISOString() })
-        .in("access_token_hash", hashes);
+        .in("access_token_hash", allHashes);
     }
 
     const resolveUser = (item: AnyItem) =>
