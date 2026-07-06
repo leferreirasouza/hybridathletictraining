@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable/index';
@@ -21,11 +21,18 @@ export default function AuthPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
 
-  // If a session is already established (e.g., returning from OAuth redirect), bounce to dashboard.
+  // Preserve ?next=/some/path across sign-in, sign-up, and OAuth redirects.
+  // Only accept same-origin relative paths (must start with `/` and not `//`).
+  const rawNext = searchParams.get('next');
+  const nextPath = rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/dashboard';
+  const oauthRedirect = `${window.location.origin}${nextPath}`;
+
+  // If a session is already established (e.g., returning from OAuth redirect), bounce to next.
   useEffect(() => {
-    if (user) navigate('/dashboard', { replace: true });
-  }, [user, navigate]);
+    if (user) navigate(nextPath, { replace: true });
+  }, [user, navigate, nextPath]);
 
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
