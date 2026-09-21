@@ -14,6 +14,13 @@ const MAX_WEEKLY_GROWTH = 1.10; // classic 10%-rule ceiling
 const STARTER_BASELINE_KM = 15; // used when athlete reports 0 km/week
 const ABSOLUTE_CEILING_MULTIPLE = 2.75; // never let plan peak > 2.75x baseline
 
+// Return-from-layoff guardrails (applied when no run has been logged for the
+// layoff threshold defined in recentTraining.ts).
+const LAYOFF_EASED_WEEKS = 2;
+const LAYOFF_PACE_OFFSET_SEC_MIN = 10;
+const LAYOFF_PACE_OFFSET_SEC_MAX = 15;
+const LAYOFF_LONG_RUN_CAP_MIN = 45;
+
 // Km share by run subtype at "full budget" — long/easy dominate (aerobic
 // volume), quality sessions are km-cheap by design (short intervals, short
 // tempo). These are per-subtype pool weights, redistributed across however
@@ -33,20 +40,40 @@ export interface RunVolumeWeek {
   perSlotKm: { subtype: RunSubtype; km: number }[];
 }
 
+export interface RunVolumeOptions {
+  /**
+   * Hard ceiling for week 1, derived from actually logged training rather than
+   * anything self-reported. When present, the whole progression is indexed off
+   * min(reported baseline, this cap).
+   */
+  week1CapKm?: number | null;
+  /** No run logged within the layoff threshold — ease the first weeks back. */
+  returnFromLayoff?: boolean;
+}
+
 export interface RunVolumePlan {
   baselineKm: number;
+  reportedBaselineKm: number;
+  appliedWeek1CapKm: number | null;
   usedStarterBaseline: boolean;
   peakKm: number;
+  returnFromLayoff: boolean;
   weeks: RunVolumeWeek[];
 }
 
 export function buildRunVolumePlan(
   currentWeeklyKm: number | null | undefined,
   phaseSchedule: WeekPhase[],
-  slotPlan: SlotPlanWeek[]
+  slotPlan: SlotPlanWeek[],
+  options?: RunVolumeOptions
 ): RunVolumePlan {
   const usedStarterBaseline = !currentWeeklyKm || currentWeeklyKm <= 0;
-  const baseline = usedStarterBaseline ? STARTER_BASELINE_KM : Number(currentWeeklyKm);
+  const reportedBaseline = usedStarterBaseline ? STARTER_BASELINE_KM : Number(currentWeeklyKm);
+
+  // Verified-volume cap: whatever the athlete claims, week 1 never exceeds
+  // 1.10x their trailing 4-week actual average (supplied by the caller).
+  const cap = options?.week1CapKm && options.week1CapKm > 0 ? options.week1CapKm : null;
+  const baseline = cap ? Math.min(reportedBaseline, cap) : reportedBaseline;
 
   // Peak km: the largest week the 10%-rule would allow before the taper
   // begins. We index growth from week 1 = baseline (unchanged), so peak
@@ -82,7 +109,15 @@ export function buildRunVolumePlan(
     };
   });
 
-  return { baselineKm: baseline, usedStarterBaseline, peakKm, weeks };
+  return {
+    baselineKm: baseline,
+    reportedBaselineKm: reportedBaseline,
+    appliedWeek1CapKm: cap,
+    usedStarterBaseline,
+    peakKm,
+    returnFromLayoff: Boolean(options?.returnFromLayoff),
+    weeks,
+  };
 }
 
 function distributeKmAcrossRunSlots(
@@ -114,16 +149,30 @@ function distributeKmAcrossRunSlots(
 
 export function formatRunVolumeTable(plan: RunVolumePlan): string {
   const header = plan.usedStarterBaseline
-    ? `  (Athlete reported no baseline volume — using conservative ${plan.baselineKm} km/week starter floor.)`
+    ? `  (No baseline volume reported — using conservative ${plan.baselineKm} km/week starter floor.)`
     : `  (Baseline: ${plan.baselineKm} km/week. Peak target: ${plan.peakKm.toFixed(1)} km/week.)`;
 
-  const rows = plan.weeks.map((w) => {
+  const lines = [header];
+
+  if (plan.appliedWeek1CapKm !== null && plan.baselineKm < plan.reportedBaselineKm) {
+    lines.push(
+      `  (Self-reported baseline was ${plan.reportedBaselineKm} km/week; capped to ${plan.baselineKm} km/week — 1.10x the trailing 4-week logged average.)`
+    );
+  }
+
+  if (plan.returnFromLayoff) {
+    lines.push(
+      `  RETURN-FROM-LAYOFF RULE (mandatory): no run has been logged recently. For the first ${LAYOFF_EASED_WEEKS} weeks, prescribe every run ${LAYOFF_PACE_OFFSET_SEC_MIN}-${LAYOFF_PACE_OFFSET_SEC_MAX} s/km SLOWER than the computed pace zones, and cap the long run at ${LAYOFF_LONG_RUN_CAP_MIN} minutes regardless of its km target.`
+    );
+  }
+
+  for (const w of plan.weeks) {
     const breakdown = w.perSlotKm.length > 0
       ? w.perSlotKm.map((s) => `${s.km}km ${s.subtype}`).join(", ")
       : "no run slots";
     const capNote = w.cappedByTenPercentRule ? " [10%-rule capped]" : "";
-    return `  Week ${w.weekNumber}: ${w.targetKm} km total${capNote} → ${breakdown}`;
-  });
+    lines.push(`  Week ${w.weekNumber}: ${w.targetKm} km total${capNote} → ${breakdown}`);
+  }
 
-  return [header, ...rows].join("\n");
+  return lines.join("\n");
 }
