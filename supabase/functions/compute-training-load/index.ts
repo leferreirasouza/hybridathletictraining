@@ -56,8 +56,20 @@ serve(async (req) => {
       }
     }
 
+    // Adherence watch: two consecutive completed weeks below 70% of planned
+    // sessions raises a PROPOSAL for the athlete to approve. Plans are never
+    // modified automatically here.
+    let proposalsCreated = 0;
+    for (const athleteId of athleteIds) {
+      try {
+        if (await proposeIfLowAdherence(supabase, athleteId)) proposalsCreated++;
+      } catch (adhErr) {
+        console.error("adherence check failed for", athleteId, adhErr);
+      }
+    }
+
     return new Response(
-      JSON.stringify({ success: true, athletes: athleteIds.length, succeeded, failed }),
+      JSON.stringify({ success: true, athletes: athleteIds.length, succeeded, failed, proposalsCreated }),
       { headers: { "Content-Type": "application/json" } }
     );
   } catch (e) {
