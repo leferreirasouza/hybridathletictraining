@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Activity, Dumbbell, Calendar, Shield, Trophy, ArrowRightLeft, LogIn, UserPlus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
+import StravaInbox from '@/components/strava/StravaInbox';
 
 const ACTION_META: Record<string, { label: string; icon: typeof Activity; color: string }> = {
   'session.completed': { label: 'Session Logged', icon: Dumbbell, color: 'text-success' },
@@ -90,6 +91,11 @@ export default function ActivityLog() {
             {isCoachOrAdmin ? 'All team activity' : 'Your recent activity'}
           </p>
         </motion.div>
+
+        <motion.div variants={item}>
+          <StravaInbox />
+        </motion.div>
+
 
         {logs && logs.length === 0 && (
           <motion.div variants={item}>
