@@ -24,6 +24,8 @@ const BACKFILL_DAYS = 180;
 const PER_PAGE = 100;
 const MAX_PAGES = 30;
 const DETAIL_FETCH_COUNT = 30;
+/** Stop before the function's wall clock runs out and resume next run. */
+const SOFT_DEADLINE_MS = 90_000;
 /** Leave headroom so a sync never consumes the account's whole quota. */
 const RATE_LIMIT_HEADROOM = 10;
 
