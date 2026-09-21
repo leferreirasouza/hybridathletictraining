@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
 
 function supabaseForUser(ctx: ToolContext) {
@@ -21,19 +22,14 @@ export default defineTool({
   description:
     "Return the signed-in athlete's Strava activities synced into the app over a recent window, optionally filtered to one discipline (run, bike, rowing, strength, mobility, hyrox_station, custom).",
   inputSchema: {
-    type: "object",
-    properties: {
-      days: {
-        type: "number",
-        description: "Size of the look-back window in days (1-180). Defaults to 14.",
-      },
-      discipline: {
-        type: ["string", "null"],
-        description: "Optional discipline filter, e.g. run or bike. Null returns every discipline.",
-      },
-    },
-    required: ["days", "discipline"],
-    additionalProperties: false,
+    days: z
+      .number()
+      .nullable()
+      .describe("Size of the look-back window in days (1-180). Defaults to 14."),
+    discipline: z
+      .string()
+      .nullable()
+      .describe("Optional discipline filter, e.g. run or bike. Null returns every discipline."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async (input: { days?: number; discipline?: string | null }, ctx) => {

@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
 
 function supabaseForUser(ctx: ToolContext) {
@@ -22,15 +23,10 @@ export default defineTool({
   description:
     "Summarise the signed-in athlete's logged training over a trailing number of weeks: sessions, hours, kilometres and average heart rate per discipline, plus hours per week.",
   inputSchema: {
-    type: "object",
-    properties: {
-      weeks: {
-        type: "number",
-        description: "Number of trailing weeks to summarise (1-26). Defaults to 4.",
-      },
-    },
-    required: ["weeks"],
-    additionalProperties: false,
+    weeks: z
+      .number()
+      .nullable()
+      .describe("Number of trailing weeks to summarise (1-26). Defaults to 4."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async (input: { weeks?: number }, ctx) => {
