@@ -234,7 +234,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const event = await req.json().catch(() => null) as StravaWebhookEvent | null;
+    const parsed = await req.json().catch(() => null) as Record<string, unknown> | null;
 
     // Ack immediately — Strava requires a fast 200, and the real work
     // (an outbound Strava API call + DB writes) can take longer.
@@ -243,12 +243,32 @@ serve(async (req) => {
       status: 200,
     });
 
-    if (event) {
-      if (event.object_type === "athlete" && event.updates?.authorized === "false") {
-        runInBackground(processDeauth(service, event));
-      } else if (event.object_type === "activity") {
-        runInBackground(processActivityEvent(service, event));
-      }
+    // Ignore malformed bodies outright.
+    const isWellFormed = !!parsed
+      && typeof parsed.object_type === "string"
+      && typeof parsed.object_id === "number"
+      && typeof parsed.owner_id === "number"
+      && typeof parsed.aspect_type === "string";
+
+    if (!isWellFormed) {
+      console.log("strava-webhook: ignoring malformed body");
+      return response;
+    }
+
+    const event = parsed as unknown as StravaWebhookEvent;
+
+    // Unsigned webhook: when the expected subscription id is configured,
+    // only accept deliveries that carry it.
+    const expectedSub = Deno.env.get("STRAVA_WEBHOOK_SUBSCRIPTION_ID");
+    if (expectedSub && String(event.subscription_id ?? "") !== expectedSub) {
+      console.log("strava-webhook: subscription_id mismatch, ignoring");
+      return response;
+    }
+
+    if (event.object_type === "athlete" && event.updates?.authorized === "false") {
+      runInBackground(processDeauth(service, event));
+    } else if (event.object_type === "activity") {
+      runInBackground(processActivityEvent(service, event));
     }
 
     return response;
