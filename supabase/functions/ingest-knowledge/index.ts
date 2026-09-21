@@ -71,14 +71,22 @@ serve(async (req) => {
       });
     }
 
-    // Authorization: caller must be coach/admin/master_admin. The knowledge
-    // base is org-scoped, so match the document's organization when known.
+    // Authorization: caller must be coach/admin/master_admin in the
+    // document's own organization. An unknown document is a 404 — never
+    // fall back to any-org roles.
     const { data: docRow } = await serviceClient
       .from("knowledge_documents")
-      .select("organization_id")
+      .select("organization_id, file_path")
       .eq("id", document_id)
       .maybeSingle();
-    const docOrgId = docRow?.organization_id ?? null;
+
+    if (!docRow?.organization_id) {
+      return new Response(JSON.stringify({ error: "Document not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const docOrgId = docRow.organization_id as string;
 
     const { data: callerRoles, error: callerRolesErr } = await serviceClient
       .from("user_roles")
@@ -91,11 +99,9 @@ serve(async (req) => {
       });
     }
     const isGlobalMaster = (callerRoles || []).some((r) => r.role === "master_admin");
-    const hasOrgRole = docOrgId
-      ? (callerRoles || []).some(
-          (r) => r.organization_id === docOrgId && ["coach", "admin", "master_admin"].includes(r.role)
-        )
-      : (callerRoles || []).some((r) => ["coach", "admin", "master_admin"].includes(r.role));
+    const hasOrgRole = (callerRoles || []).some(
+      (r) => r.organization_id === docOrgId && ["coach", "admin", "master_admin"].includes(r.role)
+    );
     if (!isGlobalMaster && !hasOrgRole) {
       return new Response(JSON.stringify({ error: "Forbidden: coach or admin role required" }), {
         status: 403,
@@ -137,9 +143,25 @@ serve(async (req) => {
 
 
       try {
-        const fetchRes = await fetch(source_url, {
-          headers: { "User-Agent": "HybridAthleticTraining-KnowledgeBot/1.0" },
-        });
+        // Follow redirects manually so every hop is re-validated (max 3).
+        let currentUrl: string = source_url;
+        let fetchRes: Response | null = null;
+        for (let hop = 0; hop <= 3; hop++) {
+          if (!isSafePublicHttpUrl(currentUrl)) throw new Error("Blocked redirect target");
+          fetchRes = await fetch(currentUrl, {
+            redirect: "manual",
+            headers: { "User-Agent": "HybridAthleticTraining-KnowledgeBot/1.0" },
+          });
+          if (fetchRes.status >= 300 && fetchRes.status < 400) {
+            const loc = fetchRes.headers.get("location");
+            if (!loc) throw new Error("Redirect without a location header");
+            currentUrl = new URL(loc, currentUrl).toString();
+            fetchRes = null;
+            continue;
+          }
+          break;
+        }
+        if (!fetchRes) throw new Error("Too many redirects");
         if (!fetchRes.ok) throw new Error(`HTTP ${fetchRes.status}`);
         const html = await fetchRes.text();
 
@@ -200,13 +222,22 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-    } else if (source_type === "pdf" && file_path) {
-      // Download file from storage and extract text using AI vision
-      console.log("Processing PDF:", file_path);
+    } else if (source_type === "pdf" && (docRow.file_path || file_path)) {
+      // Never trust the client's file_path: prefer the path stored on the
+      // document row, and require it to live under the document's org folder.
+      const storedPath = (docRow.file_path as string | null) ?? null;
+      const effectivePath = storedPath ?? (file_path as string);
+      if (!effectivePath.startsWith(`${docOrgId}/`)) {
+        return new Response(JSON.stringify({ error: "Invalid file path for this document" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      console.log("Processing PDF for document", document_id);
 
       const { data: fileData, error: downloadErr } = await serviceClient.storage
         .from("knowledge-files")
-        .download(file_path);
+        .download(effectivePath);
 
       if (downloadErr || !fileData) {
         console.error("File download error:", downloadErr);
@@ -248,7 +279,7 @@ serve(async (req) => {
                 {
                   type: "file",
                   file: {
-                    filename: file_path.split("/").pop() || "document.pdf",
+                    filename: effectivePath.split("/").pop() || "document.pdf",
                     file_data: `data:application/pdf;base64,${base64}`,
                   },
                 },

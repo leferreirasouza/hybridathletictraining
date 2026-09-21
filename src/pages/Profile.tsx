@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Settings as SettingsIcon, Calendar, Upload, Pencil, Check, X, Activity, Flag, Heart, User, TrendingUp, Flame, Route, Camera } from 'lucide-react';
+import { LogOut, Settings as SettingsIcon, Calendar, Upload, Pencil, Check, X, Activity, Flag, Heart, User, TrendingUp, Flame, Route, Camera, Bot } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
@@ -193,6 +194,42 @@ export default function Profile() {
     toast.success(t('profile.avatarUpdated'));
     queryClient.invalidateQueries({ queryKey: ['profile-full'] });
     queryClient.invalidateQueries({ queryKey: ['profile-completion'] });
+  };
+
+  // --- AI coach context (owner-only) ---
+  const { data: coachContext } = useQuery({
+    queryKey: ['coach-context', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await (supabase as any)
+        .from('coach_context')
+        .select('context_text')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      return data as { context_text: string } | null;
+    },
+    enabled: !!user,
+  });
+
+  const [editingContext, setEditingContext] = useState(false);
+  const [contextDraft, setContextDraft] = useState('');
+
+  const startEditContext = () => {
+    setContextDraft(coachContext?.context_text || '');
+    setEditingContext(true);
+  };
+
+  const saveContext = async () => {
+    if (!user) return;
+    setSaving(true);
+    const { error } = await (supabase as any)
+      .from('coach_context')
+      .upsert({ user_id: user.id, context_text: contextDraft }, { onConflict: 'user_id' });
+    setSaving(false);
+    if (error) { toast.error('Failed to save'); return; }
+    toast.success(t('profile.profileUpdated'));
+    setEditingContext(false);
+    queryClient.invalidateQueries({ queryKey: ['coach-context'] });
   };
 
   return (
@@ -388,6 +425,50 @@ export default function Profile() {
                 <p className="text-xs text-muted-foreground">{t('profile.dayStreak')}</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* AI coach context */}
+        <Card className="glass">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <Bot className="h-4 w-4 text-primary" /> AI coach context
+            </CardTitle>
+            {!editingContext && (
+              <Button variant="ghost" size="sm" onClick={startEditContext}>
+                <Pencil className="h-3 w-3 mr-1" /> {t('profile.edit')}
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Notes you add here are private to you and are sent to the AI model with every AI coach
+              conversation, so it can tailor its answers. Leave it empty for generic coaching.
+            </p>
+            {editingContext ? (
+              <div className="space-y-3">
+                <Textarea
+                  value={contextDraft}
+                  onChange={e => setContextDraft(e.target.value)}
+                  rows={8}
+                  maxLength={20000}
+                  className="text-sm"
+                  placeholder="Goals, training constraints, equipment, preferences…"
+                />
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setEditingContext(false)}>{t('profile.cancel')}</Button>
+                  <Button size="sm" className="gradient-hyrox" onClick={saveContext} disabled={saving}>
+                    {saving ? t('profile.saving') : t('profile.save')}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm whitespace-pre-wrap">
+                {coachContext?.context_text?.trim()
+                  ? coachContext.context_text
+                  : <span className="text-muted-foreground">No context added yet.</span>}
+              </p>
+            )}
           </CardContent>
         </Card>
 

@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -132,6 +132,24 @@ export type Database = {
           },
         ]
       }
+      coach_context: {
+        Row: {
+          context_text: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          context_text?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          context_text?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       completed_sessions: {
         Row: {
           actual_distance_km: number | null
@@ -150,6 +168,7 @@ export type Database = {
           planned_session_id: string | null
           rpe: number | null
           soreness: number | null
+          source: string
         }
         Insert: {
           actual_distance_km?: number | null
@@ -168,6 +187,7 @@ export type Database = {
           planned_session_id?: string | null
           rpe?: number | null
           soreness?: number | null
+          source?: string
         }
         Update: {
           actual_distance_km?: number | null
@@ -186,6 +206,7 @@ export type Database = {
           planned_session_id?: string | null
           rpe?: number | null
           soreness?: number | null
+          source?: string
         }
         Relationships: [
           {
@@ -512,6 +533,7 @@ export type Database = {
       garmin_connections: {
         Row: {
           access_token: string | null
+          access_token_hash: string | null
           access_token_secret: string | null
           created_at: string
           garmin_user_id: string | null
@@ -525,6 +547,7 @@ export type Database = {
         }
         Insert: {
           access_token?: string | null
+          access_token_hash?: string | null
           access_token_secret?: string | null
           created_at?: string
           garmin_user_id?: string | null
@@ -538,6 +561,7 @@ export type Database = {
         }
         Update: {
           access_token?: string | null
+          access_token_hash?: string | null
           access_token_secret?: string | null
           created_at?: string
           garmin_user_id?: string | null
@@ -1477,6 +1501,83 @@ export type Database = {
           },
         ]
       }
+      strava_activities: {
+        Row: {
+          activity_type: string | null
+          avg_hr: number | null
+          avg_pace_min_per_km: number | null
+          avg_speed_mps: number | null
+          completed_session_id: string | null
+          created_at: string
+          discipline: Database["public"]["Enums"]["discipline"] | null
+          distance_m: number | null
+          duration_sec: number | null
+          elevation_gain_m: number | null
+          id: string
+          max_hr: number | null
+          name: string | null
+          raw: Json
+          sport_type: string | null
+          start_date_local: string | null
+          start_date_utc: string | null
+          strava_activity_id: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_type?: string | null
+          avg_hr?: number | null
+          avg_pace_min_per_km?: number | null
+          avg_speed_mps?: number | null
+          completed_session_id?: string | null
+          created_at?: string
+          discipline?: Database["public"]["Enums"]["discipline"] | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          elevation_gain_m?: number | null
+          id?: string
+          max_hr?: number | null
+          name?: string | null
+          raw: Json
+          sport_type?: string | null
+          start_date_local?: string | null
+          start_date_utc?: string | null
+          strava_activity_id: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_type?: string | null
+          avg_hr?: number | null
+          avg_pace_min_per_km?: number | null
+          avg_speed_mps?: number | null
+          completed_session_id?: string | null
+          created_at?: string
+          discipline?: Database["public"]["Enums"]["discipline"] | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          elevation_gain_m?: number | null
+          id?: string
+          max_hr?: number | null
+          name?: string | null
+          raw?: Json
+          sport_type?: string | null
+          start_date_local?: string | null
+          start_date_utc?: string | null
+          strava_activity_id?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "strava_activities_completed_session_id_fkey"
+            columns: ["completed_session_id"]
+            isOneToOne: false
+            referencedRelation: "completed_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       strava_connections: {
         Row: {
           access_token: string
@@ -1882,12 +1983,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1911,11 +2012,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1936,11 +2037,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1961,11 +2062,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1978,11 +2079,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
