@@ -174,7 +174,9 @@
     "activityLog": "Activity Log",
     "profileUpdated": "Profile updated",
     "avatarUpdated": "Avatar updated!",
-    "goalRaceUpdated": "Goal race updated"
+    "goalRaceUpdated": "Goal race updated",
+    "restingHr": "Resting HR",
+    "restingHrHint": "Add your resting heart rate for more accurate training load"
   },
   "settings": {
     "title": "Settings",

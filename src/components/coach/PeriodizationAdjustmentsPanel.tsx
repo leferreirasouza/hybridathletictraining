@@ -12,6 +12,8 @@ const adjustmentTypeLabels: Record<string, string> = {
   interference_spacing: 'Concurrent-training conflict',
   tsb_intensity_reduction: 'Fatigue-driven reduction',
   tsb_volume_reduction: 'Fatigue-driven reduction',
+  adherence_volume_reduction: 'Low adherence — easier week proposed',
+  slot_mismatch: 'Session mix mismatch',
 };
 
 export default function PeriodizationAdjustmentsPanel() {
