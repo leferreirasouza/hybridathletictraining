@@ -62,9 +62,11 @@ interface SyncCounts {
   skipped: number;
   rate_limited: boolean;
   backfill: boolean;
+  partial: boolean;
 }
 
 async function syncUser(svc: SupabaseClient, userId: string): Promise<SyncCounts> {
+  const startedAt = Date.now();
   const counts: SyncCounts = {
     fetched: 0,
     stored: 0,
@@ -74,6 +76,7 @@ async function syncUser(svc: SupabaseClient, userId: string): Promise<SyncCounts
     skipped: 0,
     rate_limited: false,
     backfill: false,
+    partial: false,
   };
 
   const { data: conn } = await svc
