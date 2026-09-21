@@ -4,6 +4,8 @@ import listUpcomingSessions from "./tools/list-upcoming-sessions";
 import listRecentCompletions from "./tools/list-recent-completions";
 import getTrainingLoad from "./tools/get-training-load";
 import getGoalRace from "./tools/get-goal-race";
+import listStravaActivities from "./tools/list-strava-activities";
+import getWeeklyRollup from "./tools/get-weekly-rollup";
 
 // The OAuth issuer MUST be the direct Supabase host, built from the project
 // ref that Vite inlines at build time. SUPABASE_URL may be proxied.
