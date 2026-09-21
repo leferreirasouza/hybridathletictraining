@@ -145,11 +145,40 @@ async function syncUser(svc: SupabaseClient, userId: string): Promise<SyncCounts
     }
   }
 
-  const touchedDates: string[] = [];
+  // Activities already stored and resolved don't need re-processing — this
+  // keeps a resumed backfill from redoing work it finished last run.
+  const { data: existingRows } = await svc
+    .from("strava_activities")
+    .select("strava_activity_id, completed_session_id, ignored")
+    .eq("user_id", userId);
+  const settled = new Set(
+    (existingRows ?? [])
+      .filter((r: any) => r.completed_session_id !== null || r.ignored === true)
+      .map((r: any) => Number(r.strava_activity_id)),
+  );
+
+  let matchedAny = false;
+  let lastProcessedStart: string | null = null;
+  let partial = false;
+
   for (const activity of collected) {
+    // A long history can exceed the function's wall clock. Stop on the soft
+    // deadline and leave the cursor at the last activity processed, so the
+    // next run continues instead of starting over.
+    if (Date.now() - startedAt > SOFT_DEADLINE_MS) {
+      partial = true;
+      break;
+    }
+    if (settled.has(Number(activity.id))) {
+      lastProcessedStart = activity.start_date ?? lastProcessedStart;
+      continue;
+    }
+
     const enriched = details.get(Number(activity.id)) ?? activity;
     const result = await ingestStravaActivity(svc, userId, enriched);
     counts.stored++;
+    lastProcessedStart = activity.start_date ?? lastProcessedStart;
+
     switch (result.outcome) {
       case "created":
       case "linked_existing":
@@ -168,27 +197,34 @@ async function syncUser(svc: SupabaseClient, userId: string): Promise<SyncCounts
       default:
         break;
     }
-    if (result.completedSessionId && activity.start_date_local) {
-      touchedDates.push(activity.start_date_local.slice(0, 10));
-    }
+    if (result.completedSessionId) matchedAny = true;
   }
 
   // Recompute training load over the imported range.
-  if (touchedDates.length > 0) {
+  if (matchedAny) {
     const { error: rpcErr } = await svc.rpc("recompute_training_load", { _athlete_id: userId });
     if (rpcErr) console.error("recompute_training_load failed for", userId, rpcErr);
   }
 
-  const status = counts.rate_limited ? "rate_limited" : "ok";
+  counts.partial = partial;
+  const status = counts.rate_limited ? "rate_limited" : partial ? "partial" : "ok";
+  // A rate-limited run keeps its old cursor; a partial run advances only as
+  // far as it actually got; a clean run moves the cursor to now.
+  const cursor = counts.rate_limited
+    ? null
+    : partial
+      ? lastProcessedStart
+      : new Date().toISOString();
+
   await svc
     .from("strava_connections")
     .update({
-      // Don't advance the cursor on a partial run — resume next time.
-      ...(counts.rate_limited ? {} : { last_sync_at: new Date().toISOString() }),
+      ...(cursor ? { last_sync_at: cursor } : {}),
       last_sync_status: status,
       last_sync_count: counts.stored,
     })
     .eq("user_id", userId);
+
 
   return counts;
 }
