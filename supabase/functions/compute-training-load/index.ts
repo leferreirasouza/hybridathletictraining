@@ -80,3 +80,114 @@ serve(async (req) => {
     });
   }
 });
+
+const ADHERENCE_THRESHOLD = 0.7;
+const ADHERENCE_ADJUSTMENT_TYPE = "adherence_volume_reduction";
+const PROPOSAL_COOLDOWN_DAYS = 14;
+
+function isoDay(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+/** Monday-start week boundaries for the week `weeksAgo` before the current one. */
+function weekWindow(weeksAgo: number): { start: Date; end: Date } {
+  const today = new Date();
+  const dowMon = (today.getUTCDay() + 6) % 7;
+  const thisMonday = new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()) - dowMon * 86400000,
+  );
+  const start = new Date(thisMonday.getTime() - weeksAgo * 7 * 86400000);
+  return { start, end: new Date(start.getTime() + 6 * 86400000) };
+}
+
+// deno-lint-ignore no-explicit-any
+async function weekAdherence(supabase: any, athleteId: string, weeksAgo: number) {
+  const { start, end } = weekWindow(weeksAgo);
+  const { data: planned } = await supabase
+    .from("planned_sessions")
+    .select("id, duration_min")
+    .eq("athlete_id", athleteId)
+    .gte("date", isoDay(start))
+    .lte("date", isoDay(end));
+  if (!planned || planned.length === 0) return null;
+
+  const { data: done } = await supabase
+    .from("completed_sessions")
+    .select("planned_session_id")
+    .eq("athlete_id", athleteId)
+    .gte("date", isoDay(start))
+    .lte("date", isoDay(end));
+
+  const plannedIds = new Set(planned.map((p: { id: string }) => p.id));
+  const completed = new Set(
+    (done ?? [])
+      .map((c: { planned_session_id: string | null }) => c.planned_session_id)
+      .filter((id: string | null): id is string => Boolean(id) && plannedIds.has(id as string)),
+  );
+  return { planned: planned.length, done: completed.size, ratio: completed.size / planned.length };
+}
+
+/**
+ * Raises one pending proposal when the two most recent completed weeks both
+ * fall below the adherence threshold. Returns true when a proposal was created.
+ */
+// deno-lint-ignore no-explicit-any
+async function proposeIfLowAdherence(supabase: any, athleteId: string): Promise<boolean> {
+  const lastWeek = await weekAdherence(supabase, athleteId, 1);
+  const weekBefore = await weekAdherence(supabase, athleteId, 2);
+  if (!lastWeek || !weekBefore) return false;
+  if (lastWeek.ratio >= ADHERENCE_THRESHOLD || weekBefore.ratio >= ADHERENCE_THRESHOLD) return false;
+
+  const cooldownSince = new Date(Date.now() - PROPOSAL_COOLDOWN_DAYS * 86400000).toISOString();
+  const { data: existing } = await supabase
+    .from("periodization_adjustments")
+    .select("id")
+    .eq("athlete_id", athleteId)
+    .eq("adjustment_type", ADHERENCE_ADJUSTMENT_TYPE)
+    .gte("created_at", cooldownSince)
+    .limit(1);
+  if (existing && existing.length > 0) return false;
+
+  // Attach the proposal to the next upcoming planned session.
+  const { data: upcoming } = await supabase
+    .from("planned_sessions")
+    .select("id, intensity, duration_min, distance_km")
+    .eq("athlete_id", athleteId)
+    .gte("date", isoDay(new Date()))
+    .order("date", { ascending: true })
+    .limit(1);
+  const target = upcoming?.[0];
+  if (!target) return false;
+
+  const { data: load } = await supabase
+    .from("training_load_daily")
+    .select("tsb")
+    .eq("athlete_id", athleteId)
+    .order("date", { ascending: false })
+    .limit(1);
+
+  const pct = (r: number) => Math.round(r * 100);
+  const { error } = await supabase.from("periodization_adjustments").insert({
+    athlete_id: athleteId,
+    target_session_id: target.id,
+    adjustment_type: ADHERENCE_ADJUSTMENT_TYPE,
+    reason_details:
+      `Completed ${weekBefore.done}/${weekBefore.planned} planned sessions two weeks ago and ` +
+      `${lastWeek.done}/${lastWeek.planned} last week (${pct(weekBefore.ratio)}% then ${pct(lastWeek.ratio)}%). ` +
+      `Proposal: ease the coming week's volume so the plan matches what fits the schedule. Nothing changes unless this is approved.`,
+    source: "adherence_check",
+    status: "pending_coach",
+    original_intensity: target.intensity ?? null,
+    original_duration_min: target.duration_min ?? null,
+    original_distance_km: target.distance_km ?? null,
+    suggested_intensity: target.intensity ?? null,
+    suggested_duration_min: target.duration_min != null ? Math.round(Number(target.duration_min) * 0.8) : null,
+    suggested_distance_km: target.distance_km != null ? Math.round(Number(target.distance_km) * 0.8 * 10) / 10 : null,
+    tsb_at_suggestion: load?.[0]?.tsb ?? null,
+  });
+  if (error) {
+    console.error("adherence proposal insert failed", error);
+    return false;
+  }
+  return true;
+}
