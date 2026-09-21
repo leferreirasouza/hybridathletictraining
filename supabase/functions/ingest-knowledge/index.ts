@@ -279,7 +279,7 @@ serve(async (req) => {
                 {
                   type: "file",
                   file: {
-                    filename: file_path.split("/").pop() || "document.pdf",
+                    filename: effectivePath.split("/").pop() || "document.pdf",
                     file_data: `data:application/pdf;base64,${base64}`,
                   },
                 },

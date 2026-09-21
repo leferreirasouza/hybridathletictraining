@@ -190,6 +190,19 @@ async function processActivityEvent(
 async function processDeauth(service: ReturnType<typeof createClient>, event: StravaWebhookEvent) {
   const userId = await findUserIdByStravaAthleteId(service, event.owner_id);
   if (!userId) return;
+
+  // Webhook bodies are unsigned, so confirm revocation against Strava itself
+  // before dropping the connection. Only a 401 proves the token is dead.
+  const tokenResult = await getValidStravaAccessToken(service, userId);
+  if (!tokenResult) return;
+
+  const probe = await fetch("https://www.strava.com/api/v3/athlete", {
+    headers: { Authorization: `Bearer ${tokenResult.accessToken}` },
+  });
+  if (probe.status !== 401) {
+    console.log("strava-webhook: deauth event ignored, token still valid", probe.status);
+    return;
+  }
   await service.from("strava_connections").delete().eq("user_id", userId);
 }
 
