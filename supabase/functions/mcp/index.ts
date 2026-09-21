@@ -203,18 +203,154 @@ var get_goal_race_default = defineTool5({
   }
 });
 
+// src/lib/mcp/tools/list-strava-activities.ts
+import { createClient as createClient6 } from "npm:@supabase/supabase-js@^2.98.0";
+import { z as z3 } from "npm:zod@^3.25.76";
+import { defineTool as defineTool6 } from "npm:@lovable.dev/mcp-js@0.20.0";
+function supabaseForUser6(ctx) {
+  return createClient6(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
+    global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+}
+function paceLabel(secPerKm) {
+  if (!secPerKm || secPerKm <= 0) return "";
+  const m = Math.floor(secPerKm / 60);
+  const s = Math.round(secPerKm % 60);
+  return ` | ${m}:${String(s).padStart(2, "0")}/km`;
+}
+var list_strava_activities_default = defineTool6({
+  name: "list_strava_activities",
+  title: "List synced Strava activities",
+  description: "Return the signed-in athlete's Strava activities synced into the app over a recent window, optionally filtered to one discipline (run, bike, rowing, strength, mobility, hyrox_station, custom).",
+  inputSchema: {
+    days: z3.number().nullable().describe("Size of the look-back window in days (1-180). Defaults to 14."),
+    discipline: z3.string().nullable().describe("Optional discipline filter, e.g. run or bike. Null returns every discipline.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async (input, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    const days = Math.min(180, Math.max(1, Math.round(Number(input?.days) || 14)));
+    const since = new Date(Date.now() - days * 864e5).toISOString();
+    let query = supabaseForUser6(ctx).from("strava_activities").select(
+      "start_date_local, sport_type, name, discipline, distance_m, duration_sec, avg_hr, max_hr, avg_pace_min_per_km, completed_session_id"
+    ).eq("user_id", ctx.getUserId()).gte("start_date_local", since).order("start_date_local", { ascending: false }).limit(100);
+    if (input?.discipline) query = query.eq("discipline", input.discipline);
+    const { data, error } = await query;
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    if (!data || data.length === 0) {
+      return {
+        content: [{ type: "text", text: `No synced Strava activities in the last ${days} days.` }]
+      };
+    }
+    const lines = data.map((a) => {
+      const date = String(a.start_date_local ?? "").slice(0, 10);
+      const km = a.distance_m ? `${(Number(a.distance_m) / 1e3).toFixed(1)}km` : "\u2014";
+      const min = a.duration_sec ? `${Math.round(Number(a.duration_sec) / 60)}min` : "\u2014";
+      const hr = a.avg_hr ? ` | avg HR ${a.avg_hr}${a.max_hr ? `/max ${a.max_hr}` : ""}` : "";
+      const pace = paceLabel(a.avg_pace_min_per_km ? Number(a.avg_pace_min_per_km) * 60 : null);
+      const matched = a.completed_session_id ? " | logged" : " | not logged";
+      return `- ${date}: ${a.discipline ?? a.sport_type} "${a.name ?? ""}" | ${km} | ${min}${hr}${pace}${matched}`;
+    });
+    return {
+      content: [{ type: "text", text: `Strava activities (last ${days} days):
+${lines.join("\n")}` }],
+      structuredContent: { days, count: data.length, activities: data }
+    };
+  }
+});
+
+// src/lib/mcp/tools/get-weekly-rollup.ts
+import { createClient as createClient7 } from "npm:@supabase/supabase-js@^2.98.0";
+import { z as z4 } from "npm:zod@^3.25.76";
+import { defineTool as defineTool7 } from "npm:@lovable.dev/mcp-js@0.20.0";
+function supabaseForUser7(ctx) {
+  return createClient7(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
+    global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+}
+var get_weekly_rollup_default = defineTool7({
+  name: "get_weekly_rollup",
+  title: "Get weekly training rollup per discipline",
+  description: "Summarise the signed-in athlete's logged training over a trailing number of weeks: sessions, hours, kilometres and average heart rate per discipline, plus hours per week.",
+  inputSchema: {
+    weeks: z4.number().nullable().describe("Number of trailing weeks to summarise (1-26). Defaults to 4.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async (input, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    const weeks = Math.min(26, Math.max(1, Math.round(Number(input?.weeks) || 4)));
+    const since = new Date(Date.now() - weeks * 7 * 864e5).toISOString().slice(0, 10);
+    const { data, error } = await supabaseForUser7(ctx).from("completed_sessions").select("date, discipline, actual_duration_min, actual_distance_km, avg_hr, source").eq("athlete_id", ctx.getUserId()).gte("date", since).order("date", { ascending: false });
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    if (!data || data.length === 0) {
+      return { content: [{ type: "text", text: `No logged sessions in the last ${weeks} weeks.` }] };
+    }
+    const byDiscipline = /* @__PURE__ */ new Map();
+    let totalHours = 0;
+    for (const s of data) {
+      const key = String(s.discipline ?? "custom");
+      const b = byDiscipline.get(key) ?? { sessions: 0, hours: 0, km: 0, hrSum: 0, hrCount: 0 };
+      const minutes = Number(s.actual_duration_min ?? 0) || 0;
+      b.sessions++;
+      b.hours += minutes / 60;
+      b.km += Number(s.actual_distance_km ?? 0) || 0;
+      if (s.avg_hr) {
+        b.hrSum += Number(s.avg_hr);
+        b.hrCount++;
+      }
+      byDiscipline.set(key, b);
+      totalHours += minutes / 60;
+    }
+    const rows = [...byDiscipline.entries()].sort((a, b) => b[1].hours - a[1].hours).map(([discipline, b]) => ({
+      discipline,
+      sessions: b.sessions,
+      hours: Math.round(b.hours * 10) / 10,
+      km: Math.round(b.km * 10) / 10,
+      avgHr: b.hrCount > 0 ? Math.round(b.hrSum / b.hrCount) : null
+    }));
+    const text = `Trailing ${weeks}-week rollup (${data.length} sessions, ${Math.round(totalHours * 10) / 10} h total, ${Math.round(totalHours / weeks * 10) / 10} h/week):
+` + rows.map(
+      (r) => `- ${r.discipline}: ${r.sessions} sessions | ${r.hours} h | ${r.km} km${r.avgHr ? ` | avg HR ${r.avgHr}` : ""}`
+    ).join("\n");
+    return {
+      content: [{ type: "text", text }],
+      structuredContent: {
+        weeks,
+        totalSessions: data.length,
+        totalHours: Math.round(totalHours * 10) / 10,
+        hoursPerWeek: Math.round(totalHours / weeks * 10) / 10,
+        disciplines: rows
+      }
+    };
+  }
+});
+
 // src/lib/mcp/index.ts
 var projectRef = "cdrpypapdqbwwiuqvqti";
 var mcp_default = defineMcp({
   name: "hybrid-athletics-mcp",
   title: "Hybrid Athletics",
   version: "0.1.0",
-  instructions: "Read-only access to the signed-in HYROX athlete's training data on Hybrid Athletics. Use `get_todays_session` for today's workout, `list_upcoming_sessions` to look ahead, `list_recent_completions` for recent training history, `get_training_load` for the current CTL/ATL/TSB fitness/fatigue snapshot, and `get_goal_race` for the athlete's next HYROX race. All tools return data for the signed-in user only.",
+  instructions: "Read-only access to the signed-in HYROX athlete's training data on Hybrid Athletics. Use `get_todays_session` for today's workout, `list_upcoming_sessions` to look ahead, `list_recent_completions` for recent training history, `get_training_load` for the current CTL/ATL/TSB fitness/fatigue snapshot, `get_goal_race` for the athlete's next HYROX race, `list_strava_activities` for activities synced from Strava, and `get_weekly_rollup` for a trailing per-discipline volume summary. All tools return data for the signed-in user only.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated"
   }),
-  tools: [get_todays_session_default, list_upcoming_sessions_default, list_recent_completions_default, get_training_load_default, get_goal_race_default]
+  tools: [
+    get_todays_session_default,
+    list_upcoming_sessions_default,
+    list_recent_completions_default,
+    get_training_load_default,
+    get_goal_race_default,
+    list_strava_activities_default,
+    get_weekly_rollup_default
+  ]
 });
 
 // lovable-mcp-supabase-entry.ts
