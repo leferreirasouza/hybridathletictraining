@@ -436,14 +436,38 @@
     "backToLogin": "← Back to Login",
     "contactUs": "Contact Us",
     "items": [
-      { "q": "What is Hybrid Athletics?", "a": "Hybrid Athletics is a training platform purpose-built for HYROX athletes. It lets you plan sessions, log workouts, analyse race results, and get AI coaching — all in one place." },
-      { "q": "Is it free to use?", "a": "We offer a free tier that includes core scheduling and logging features. Premium features like AI coaching and advanced analytics are available on paid plans." },
-      { "q": "Can my coach see my training data?", "a": "Yes — when you join an organisation your assigned coach can view your schedule, completed sessions, and race results to give you personalised feedback." },
-      { "q": "How does the AI coach work?", "a": "Our AI analyses your race splits, training history, and targets to suggest session adjustments, pacing strategies, and areas for improvement." },
-      { "q": "Can I import my own training plan?", "a": "Absolutely. You can import plans via CSV/Excel through the Plan Builder, or have our AI generate one based on your goals and available training days." },
-      { "q": "Does it work offline?", "a": "Hybrid Athletics is a Progressive Web App (PWA). Once installed, key features like viewing your schedule are available offline." },
-      { "q": "How do I delete my account?", "a": "Go to Settings → Profile and select \"Delete Account\". All your data will be permanently removed. You can also contact us for assistance." },
-      { "q": "How do I contact support?", "a": "Visit our Contact page or email us directly. We aim to respond within 24 hours." }
+      {
+        "q": "What is Hybrid Athletics?",
+        "a": "Hybrid Athletics is a training platform purpose-built for HYROX athletes. It lets you plan sessions, log workouts, analyse race results, and get AI coaching — all in one place."
+      },
+      {
+        "q": "Is it free to use?",
+        "a": "We offer a free tier that includes core scheduling and logging features. Premium features like AI coaching and advanced analytics are available on paid plans."
+      },
+      {
+        "q": "Can my coach see my training data?",
+        "a": "Yes — when you join an organisation your assigned coach can view your schedule, completed sessions, and race results to give you personalised feedback."
+      },
+      {
+        "q": "How does the AI coach work?",
+        "a": "Our AI analyses your race splits, training history, and targets to suggest session adjustments, pacing strategies, and areas for improvement."
+      },
+      {
+        "q": "Can I import my own training plan?",
+        "a": "Absolutely. You can import plans via CSV/Excel through the Plan Builder, or have our AI generate one based on your goals and available training days."
+      },
+      {
+        "q": "Does it work offline?",
+        "a": "Hybrid Athletics is a Progressive Web App (PWA). Once installed, key features like viewing your schedule are available offline."
+      },
+      {
+        "q": "How do I delete my account?",
+        "a": "Go to Settings → Profile and select \"Delete Account\". All your data will be permanently removed. You can also contact us for assistance."
+      },
+      {
+        "q": "How do I contact support?",
+        "a": "Visit our Contact page or email us directly. We aim to respond within 24 hours."
+      }
     ]
   },
   "privacy": {
@@ -452,13 +476,23 @@
     "s1title": "1. Information We Collect",
     "s1body": "We collect information you provide directly: name, email address, training data (workout logs, race results, session notes), and preferences. We also collect usage data such as app interactions and device information.",
     "s2title": "2. How We Use Your Information",
-    "s2items": ["Provide, maintain, and improve the training platform", "Generate personalized training insights and AI coaching", "Enable coach-athlete collaboration within your organization", "Send training reminders and notifications (with your consent)"],
+    "s2items": [
+      "Provide, maintain, and improve the training platform",
+      "Generate personalized training insights and AI coaching",
+      "Enable coach-athlete collaboration within your organization",
+      "Send training reminders and notifications (with your consent)"
+    ],
     "s3title": "3. Data Sharing",
     "s3body": "Your training data is shared only with coaches within your organization. We do not sell personal information to third parties. We may share anonymized, aggregated data for research purposes.",
     "s4title": "4. Data Storage & Security",
     "s4body": "Your data is stored securely using industry-standard encryption. We use row-level security to ensure you can only access your own data (or data you've been granted access to as a coach).",
     "s5title": "5. Your Rights",
-    "s5items": ["Access and export your personal data", "Request correction of inaccurate data", "Request deletion of your account and associated data", "Withdraw consent for notifications at any time"],
+    "s5items": [
+      "Access and export your personal data",
+      "Request correction of inaccurate data",
+      "Request deletion of your account and associated data",
+      "Withdraw consent for notifications at any time"
+    ],
     "s6title": "6. Cookies & Local Storage",
     "s6body": "We use local storage to save your preferences (theme, units, notification settings). We use essential cookies for authentication. We do not use advertising or tracking cookies.",
     "s7title": "7. Third-Party Services",
@@ -497,5 +531,40 @@
     "fillRequired": "Please fill in race name and date",
     "cantFindRace": "Can't find your race? Add it manually",
     "orSelectFromCalendar": "Or select from the race calendar"
+  },
+  "strava": {
+    "connect": "Connect Strava",
+    "connecting": "Connecting…",
+    "connectDesc": "Connect Strava to import your activities automatically and match them to your plan.",
+    "connectFailed": "Failed to start Strava connection",
+    "disconnect": "Disconnect",
+    "disconnectConfirm": "Disconnect Strava?",
+    "disconnectFailed": "Failed to disconnect",
+    "disconnected": "Strava disconnected",
+    "athlete": "Strava athlete",
+    "noRecent": "No recent activities.",
+    "lastSync": "Last sync",
+    "never": "Never",
+    "syncNow": "Sync now",
+    "syncing": "Syncing…",
+    "syncFailed": "Sync failed",
+    "syncResult": "{{synced}} imported · {{matched}} matched · {{unmatched}} to review",
+    "statusOk": "Up to date",
+    "statusRateLimited": "Paused by Strava limits",
+    "statusError": "Last sync failed",
+    "fromStrava": "Strava",
+    "inboxTitle": "Strava inbox",
+    "inboxDesc": "Imported activities from the last 60 days that aren't linked to a session yet.",
+    "inboxEmpty": "Nothing to review — everything is linked.",
+    "link": "Link",
+    "linkTitle": "Link to a planned session",
+    "linkDesc": "Pick a session from the same week.",
+    "logUnplanned": "Log as unplanned",
+    "ignore": "Ignore",
+    "noPlannedSessions": "No planned sessions that week.",
+    "linked": "Activity linked to your session",
+    "logged": "Activity logged",
+    "ignored": "Activity ignored",
+    "actionFailed": "That didn't work. Please try again."
   }
 }

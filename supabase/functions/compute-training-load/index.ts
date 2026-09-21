@@ -26,7 +26,21 @@ serve(async (req) => {
       .eq("role", "athlete");
     if (error) throw error;
 
-    const athleteIds = [...new Set((athleteRoles ?? []).map((r) => r.user_id))];
+    // Anyone with logged sessions needs a load series, whatever their role
+    // and whichever source (manual, Garmin, Strava) produced the rows. The
+    // recompute function aggregates completed_sessions per date, so a
+    // session enriched by a second source is still counted exactly once.
+    const { data: loggers, error: logErr } = await supabase
+      .from("completed_sessions")
+      .select("athlete_id");
+    if (logErr) throw logErr;
+
+    const athleteIds = [
+      ...new Set([
+        ...(athleteRoles ?? []).map((r) => r.user_id),
+        ...(loggers ?? []).map((r) => r.athlete_id),
+      ]),
+    ];
     let succeeded = 0;
     let failed = 0;
 

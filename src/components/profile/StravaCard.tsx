@@ -2,10 +2,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Activity } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Activity, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 function sportEmoji(sport?: string): string {
   if (!sport) return '🏋️';
@@ -31,7 +33,7 @@ function formatDuration(s: number): string {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 async function callEdge(path: string, init: RequestInit = {}) {
@@ -53,14 +55,30 @@ async function callEdge(path: string, init: RequestInit = {}) {
 }
 
 export default function StravaCard() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const qc = useQueryClient();
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['strava-status', user?.id],
     queryFn: () => callEdge('strava-activities'),
+    enabled: !!user,
+  });
+
+  const { data: syncInfo } = useQuery({
+    queryKey: ['strava-sync-status', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data: row } = await supabase
+        .from('strava_connections' as any)
+        .select('last_sync_at, last_sync_status, last_sync_count')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      return (row as any) ?? null;
+    },
     enabled: !!user,
   });
 
@@ -70,26 +88,55 @@ export default function StravaCard() {
       const { url } = await callEdge('strava-connect', { method: 'GET' });
       window.location.href = url;
     } catch (e: any) {
-      toast.error(e.message || 'Failed to start Strava connection');
+      toast.error(e.message || t('strava.connectFailed'));
       setConnecting(false);
+    }
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const result = await callEdge('strava-sync', { method: 'POST', body: '{}' });
+      toast.success(
+        t('strava.syncResult', {
+          synced: result.stored ?? 0,
+          matched: (result.matched ?? 0) + (result.enriched ?? 0),
+          unmatched: result.unmatched ?? 0,
+        }),
+      );
+      qc.invalidateQueries({ queryKey: ['strava-sync-status'] });
+      qc.invalidateQueries({ queryKey: ['strava-inbox'] });
+      qc.invalidateQueries({ queryKey: ['session-history'] });
+    } catch (e: any) {
+      toast.error(e.message || t('strava.syncFailed'));
+    } finally {
+      setSyncing(false);
     }
   };
 
   const handleDisconnect = async () => {
     if (!user) return;
-    if (!confirm('Disconnect Strava?')) return;
+    if (!confirm(t('strava.disconnectConfirm'))) return;
     setDisconnecting(true);
     const { error } = await supabase.from('strava_connections' as any).delete().eq('user_id', user.id);
     setDisconnecting(false);
     if (error) {
-      toast.error('Failed to disconnect');
+      toast.error(t('strava.disconnectFailed'));
       return;
     }
-    toast.success('Strava disconnected');
+    toast.success(t('strava.disconnected'));
     qc.invalidateQueries({ queryKey: ['strava-status', user.id] });
   };
 
   const connected = data?.connected;
+  const status = syncInfo?.last_sync_status as string | undefined;
+  const statusLabel = !status
+    ? null
+    : status === 'ok'
+      ? t('strava.statusOk')
+      : status === 'rate_limited'
+        ? t('strava.statusRateLimited')
+        : t('strava.statusError');
 
   return (
     <Card className="glass">
@@ -99,7 +146,7 @@ export default function StravaCard() {
         </CardTitle>
         {connected && (
           <Button variant="ghost" size="sm" onClick={handleDisconnect} disabled={disconnecting}>
-            {disconnecting ? '…' : 'Disconnect'}
+            {disconnecting ? '…' : t('strava.disconnect')}
           </Button>
         )}
       </CardHeader>
@@ -112,23 +159,51 @@ export default function StravaCard() {
           </div>
         ) : !connected ? (
           <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">
-              Connect to sync your activities to your AI coach context.
-            </p>
+            <p className="text-xs text-muted-foreground">{t('strava.connectDesc')}</p>
             <Button className="w-full gradient-hyrox" onClick={handleConnect} disabled={connecting}>
-              {connecting ? 'Connecting…' : 'Connect Strava'}
+              {connecting ? t('strava.connecting') : t('strava.connect')}
             </Button>
           </div>
         ) : (
           <div className="space-y-3">
             {data.athlete && (
               <div className="text-sm">
-                <p className="font-medium">{data.athlete.name || 'Strava athlete'}</p>
+                <p className="font-medium">{data.athlete.name || t('strava.athlete')}</p>
                 {data.athlete.username && (
                   <p className="text-xs text-muted-foreground">@{data.athlete.username}</p>
                 )}
               </div>
             )}
+
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground">
+                  {t('strava.lastSync')}:{' '}
+                  {syncInfo?.last_sync_at
+                    ? new Date(syncInfo.last_sync_at).toLocaleString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : t('strava.never')}
+                </p>
+                {statusLabel && (
+                  <Badge
+                    variant="outline"
+                    className={`mt-1 text-[9px] px-1 py-0 ${status === 'ok' ? 'border-success/30 text-success' : 'border-amber-500/30 text-amber-500'}`}
+                  >
+                    {statusLabel}
+                    {typeof syncInfo?.last_sync_count === 'number' ? ` · ${syncInfo.last_sync_count}` : ''}
+                  </Badge>
+                )}
+              </div>
+              <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}>
+                <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? t('strava.syncing') : t('strava.syncNow')}
+              </Button>
+            </div>
+
             <div className="space-y-2">
               {(data.activities || []).slice(0, 3).map((a: any) => (
                 <div key={a.id} className="flex items-center gap-2 text-xs py-1 border-t border-border/40 first:border-t-0 pt-2 first:pt-0">
@@ -143,7 +218,7 @@ export default function StravaCard() {
                 </div>
               ))}
               {(!data.activities || data.activities.length === 0) && (
-                <p className="text-xs text-muted-foreground">No recent activities.</p>
+                <p className="text-xs text-muted-foreground">{t('strava.noRecent')}</p>
               )}
             </div>
           </div>

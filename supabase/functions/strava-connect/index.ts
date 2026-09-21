@@ -135,6 +135,24 @@ serve(async (req) => {
         return jsonResp({ error: "Failed to save connection" }, 500);
       }
 
+      // Kick off the history backfill immediately, without blocking the
+      // OAuth response (the sync can take a while on a large history).
+      const backfill = fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/strava-sync`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: req.headers.get("Authorization") ?? "",
+        },
+        body: "{}",
+      })
+        .then((r) => console.log("strava-connect: backfill triggered, status", r.status))
+        .catch((e) => console.error("strava-connect: backfill trigger failed", e));
+
+      const rt = (globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime;
+      if (rt?.waitUntil) rt.waitUntil(backfill);
+
+
+
       return jsonResp({
         ok: true,
         athlete: {

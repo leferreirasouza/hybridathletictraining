@@ -30,5 +30,8 @@ verify_jwt = false
 [functions.strava-webhook]
 verify_jwt = false
 
+[functions.strava-sync]
+verify_jwt = false
+
 [functions.mcp]
 verify_jwt = false

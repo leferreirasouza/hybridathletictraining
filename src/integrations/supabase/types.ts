@@ -1514,6 +1514,7 @@ export type Database = {
           duration_sec: number | null
           elevation_gain_m: number | null
           id: string
+          ignored: boolean
           max_hr: number | null
           name: string | null
           raw: Json
@@ -1536,6 +1537,7 @@ export type Database = {
           duration_sec?: number | null
           elevation_gain_m?: number | null
           id?: string
+          ignored?: boolean
           max_hr?: number | null
           name?: string | null
           raw: Json
@@ -1558,6 +1560,7 @@ export type Database = {
           duration_sec?: number | null
           elevation_gain_m?: number | null
           id?: string
+          ignored?: boolean
           max_hr?: number | null
           name?: string | null
           raw?: Json
@@ -1587,6 +1590,9 @@ export type Database = {
           created_at: string | null
           expires_at: number
           id: string
+          last_sync_at: string | null
+          last_sync_count: number | null
+          last_sync_status: string | null
           refresh_token: string
           scope: string | null
           strava_athlete_id: number
@@ -1601,6 +1607,9 @@ export type Database = {
           created_at?: string | null
           expires_at: number
           id?: string
+          last_sync_at?: string | null
+          last_sync_count?: number | null
+          last_sync_status?: string | null
           refresh_token: string
           scope?: string | null
           strava_athlete_id: number
@@ -1615,6 +1624,9 @@ export type Database = {
           created_at?: string | null
           expires_at?: number
           id?: string
+          last_sync_at?: string | null
+          last_sync_count?: number | null
+          last_sync_status?: string | null
           refresh_token?: string
           scope?: string | null
           strava_athlete_id?: number

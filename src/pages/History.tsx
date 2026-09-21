@@ -186,6 +186,11 @@ export default function History() {
                               <Flame className="h-3 w-3" />{s.avg_hr} {t('common.bpm')}
                             </span>
                           )}
+                          {(s as any).source === 'strava' && (
+                            <Badge variant="outline" className="text-[9px] px-1 py-0 border-primary/30 text-primary">
+                              {t('strava.fromStrava')}
+                            </Badge>
+                          )}
                         </div>
                         {s.notes && (
                           <p className="text-[11px] text-muted-foreground mt-1.5 line-clamp-1">{s.notes}</p>

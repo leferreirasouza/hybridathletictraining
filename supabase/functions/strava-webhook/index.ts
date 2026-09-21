@@ -24,6 +24,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { getValidStravaAccessToken, findUserIdByStravaAthleteId } from "../_shared/stravaToken.ts";
+import { ingestStravaActivity } from "../_shared/stravaMap.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,24 +41,8 @@ interface StravaWebhookEvent {
   updates?: Record<string, string>;
 }
 
-// Strava's `type` field -> our discipline enum. Mirrors garmin-webhook's
-// mapDiscipline for consistency across sources.
-function mapStravaDiscipline(type?: string): string | null {
-  if (!type) return null;
-  const t = type.toUpperCase();
-  if (t.includes("RUN")) return "run";
-  if (t.includes("RIDE") || t.includes("VELOMOBILE") || t.includes("HANDCYCLE")) return "bike";
-  if (t.includes("ROW")) return "rowing";
-  if (t.includes("STAIR")) return "stairs";
-  if (t.includes("WEIGHTTRAINING") || t.includes("CROSSFIT") || t.includes("WORKOUT")) return "strength";
-  if (t.includes("YOGA")) return "mobility";
-  return "custom";
-}
-
-function speedToPaceMinPerKm(mps?: number): number | null {
-  if (!mps || mps <= 0) return null;
-  return 1000 / mps / 60;
-}
+// Discipline mapping, row mapping and the matching engine all live in
+// _shared/stravaMap.ts so webhook and pull sync behave identically.
 
 function runInBackground(promise: Promise<unknown>) {
   const rt = (globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime;
@@ -97,93 +82,14 @@ async function processActivityEvent(
   }
   const a = await actResp.json();
 
-  const discipline = mapStravaDiscipline(a.type);
-  const startLocal: string | null = a.start_date_local ?? null;
-  const avgSpeed = a.average_speed as number | undefined;
+  // Shared ingest: stores the activity, then enriches / links / creates the
+  // matching completion. Idempotent, so webhook retries are harmless.
+  const result = await ingestStravaActivity(service, userId, a);
+  console.log("strava-webhook: ingest outcome", result.outcome, "activity", event.object_id);
 
-  const row = {
-    user_id: userId,
-    strava_activity_id: event.object_id,
-    activity_type: a.type ?? null,
-    sport_type: a.sport_type ?? null,
-    name: a.name ?? null,
-    start_date_utc: a.start_date ?? null,
-    start_date_local: startLocal,
-    duration_sec: a.moving_time ?? null,
-    distance_m: a.distance ?? null,
-    avg_hr: a.average_heartrate ?? null,
-    max_hr: a.max_heartrate ?? null,
-    avg_speed_mps: avgSpeed ?? null,
-    avg_pace_min_per_km: speedToPaceMinPerKm(avgSpeed),
-    elevation_gain_m: a.total_elevation_gain ?? null,
-    discipline,
-    raw: a,
-  };
-
-  const { data: inserted, error: actErr } = await service
-    .from("strava_activities")
-    .upsert(row, { onConflict: "user_id,strava_activity_id" })
-    .select("id, completed_session_id")
-    .maybeSingle();
-
-  if (actErr) {
-    console.error("strava-webhook: strava_activities upsert error", actErr);
-    return;
-  }
-
-  // Already matched from a previous delivery of this same event — don't
-  // insert a second completed_sessions row on webhook retries.
-  if (inserted?.completed_session_id) return;
-  if (!discipline || !startLocal) return;
-
-  const date = startLocal.slice(0, 10);
-  const { data: planned } = await service
-    .from("planned_sessions")
-    .select("id")
-    .eq("athlete_id", userId)
-    .eq("date", date)
-    .eq("discipline", discipline)
-    .limit(1)
-    .maybeSingle();
-
-  if (!planned?.id) return;
-
-  // Don't create a competing entry if that planned session already has a
-  // completed_sessions row from any source (manual log, Garmin, or an
-  // earlier Strava match).
-  const { data: existingCompletion } = await service
-    .from("completed_sessions")
-    .select("id")
-    .eq("planned_session_id", planned.id)
-    .limit(1)
-    .maybeSingle();
-  if (existingCompletion?.id) return;
-
-  const { data: cs, error: csErr } = await service
-    .from("completed_sessions")
-    .insert({
-      athlete_id: userId,
-      planned_session_id: planned.id,
-      date,
-      discipline,
-      source: "strava",
-      actual_duration_min: a.moving_time ? Math.round(a.moving_time / 60) : null,
-      actual_distance_km: a.distance ? Number((a.distance / 1000).toFixed(2)) : null,
-      avg_hr: a.average_heartrate ?? null,
-      max_hr: a.max_heartrate ?? null,
-      avg_pace: speedToPaceMinPerKm(avgSpeed)?.toFixed(2) ?? null,
-      notes: `Auto-imported from Strava (${a.type ?? "activity"})`,
-      completed_at: a.start_date ?? new Date().toISOString(),
-    })
-    .select("id")
-    .maybeSingle();
-
-  if (csErr) {
-    console.error("strava-webhook: completed_sessions insert error", csErr);
-    return;
-  }
-  if (cs?.id && inserted?.id) {
-    await service.from("strava_activities").update({ completed_session_id: cs.id }).eq("id", inserted.id);
+  if (result.completedSessionId) {
+    const { error: rpcErr } = await service.rpc("recompute_training_load", { _athlete_id: userId });
+    if (rpcErr) console.error("strava-webhook: recompute_training_load failed", rpcErr);
   }
 }
 

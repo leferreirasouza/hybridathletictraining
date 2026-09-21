@@ -123,6 +123,22 @@ async function runComputeTrainingLoad() {
   return { ok: true, status: res.status };
 }
 
+async function runStravaSync() {
+  const url = `${SUPABASE_URL}/functions/v1/strava-sync`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-cron-secret": CRON_SECRET,
+    },
+    body: "{}",
+  });
+  const body = await res.text();
+  await logRun("cron.strava_sync", { status: res.status, body: body.slice(0, 500) });
+  if (!res.ok) throw new Error(`strava-sync failed: ${res.status} ${body.slice(0, 200)}`);
+  return { ok: true, status: res.status };
+}
+
 // ---- Handler -------------------------------------------------------------
 
 Deno.serve(async (req) => {
@@ -151,8 +167,11 @@ Deno.serve(async (req) => {
       case "compute-training-load":
         result = await runComputeTrainingLoad();
         break;
+      case "strava-sync":
+        result = await runStravaSync();
+        break;
       default:
-        return json({ error: "Unknown job", allowed: ["session-reminders", "weekly-reports", "race-scrape", "compute-training-load"] }, 400);
+        return json({ error: "Unknown job", allowed: ["session-reminders", "weekly-reports", "race-scrape", "compute-training-load", "strava-sync"] }, 400);
     }
     return json({ ok: true, job, result });
   } catch (e) {
