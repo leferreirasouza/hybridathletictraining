@@ -154,61 +154,170 @@ ${contextText.slice(0, 20000)}
       console.error("Athlete context fetch (non-fatal):", ctxErr);
     }
 
-    // --- Strava recent activities context ---
+    // --- Synced activity context, read from the database only ---
+    // No Strava tokens are read, refreshed or sent here: everything comes from
+    // the rows the sync/webhook functions already persisted. The whole block is
+    // capped so it cannot crowd out the rest of the prompt.
+    const SYNCED_CONTEXT_CHAR_BUDGET = 3000;
     let stravaContext = "";
     try {
-      const { data: stravaConn } = await serviceClient
-        .from("strava_connections")
-        .select("access_token, expires_at, refresh_token")
+      const dayMs = 86400000;
+      const isoDay = (d: Date) => d.toISOString().slice(0, 10);
+      const today = new Date();
+      const since14 = new Date(today.getTime() - 14 * dayMs);
+      const since28 = new Date(today.getTime() - 28 * dayMs);
+      // Monday-start current week
+      const dowMon = (today.getUTCDay() + 6) % 7;
+      const weekStart = new Date(today.getTime() - dowMon * dayMs);
+      const weekEnd = new Date(weekStart.getTime() + 6 * dayMs);
+
+      const fmtPace = (minPerKm: number | null | undefined) => {
+        const v = Number(minPerKm ?? 0);
+        if (!v || v <= 0) return "";
+        const secs = Math.round(v * 60);
+        return ` | ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}/km`;
+      };
+
+      const { data: acts } = await serviceClient
+        .from("strava_activities")
+        .select(
+          "id, start_date_local, sport_type, name, discipline, distance_m, duration_sec, avg_hr, max_hr, avg_pace_min_per_km, completed_session_id, raw",
+        )
         .eq("user_id", userId)
-        .single();
+        .gte("start_date_local", since14.toISOString())
+        .order("start_date_local", { ascending: false })
+        .limit(40);
 
-      if (stravaConn) {
-        let stravaToken = stravaConn.access_token;
-        if (stravaConn.expires_at < Math.floor(Date.now() / 1000) + 300) {
-          const refreshResp = await fetch("https://www.strava.com/oauth/token", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              client_id: Deno.env.get("STRAVA_CLIENT_ID"),
-              client_secret: Deno.env.get("STRAVA_CLIENT_SECRET"),
-              refresh_token: stravaConn.refresh_token,
-              grant_type: "refresh_token",
-            }),
-          });
-          if (refreshResp.ok) {
-            const refreshData = await refreshResp.json();
-            stravaToken = refreshData.access_token;
-            await serviceClient.from("strava_connections").update({
-              access_token: refreshData.access_token,
-              expires_at: refreshData.expires_at,
-              ...(refreshData.refresh_token ? { refresh_token: refreshData.refresh_token } : {}),
-            }).eq("user_id", userId);
-          }
-        }
-
-        const activitiesResp = await fetch(
-          "https://www.strava.com/api/v3/athlete/activities?per_page=5",
-          { headers: { Authorization: `Bearer ${stravaToken}` } }
-        );
-        if (activitiesResp.ok) {
-          const acts = await activitiesResp.json();
-          if (acts.length > 0) {
-            stravaContext = "\n\nRECENT STRAVA ACTIVITIES:\n" + acts.map((a: any) => {
-              const date = new Date(a.start_date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-              const dist = a.distance >= 1000 ? `${(a.distance / 1000).toFixed(1)}km` : `${a.distance}m`;
-              const dur = Math.floor(a.moving_time / 60) + "min";
-              const hr = a.average_heartrate ? ` | Avg HR ${Math.round(a.average_heartrate)}` : "";
-              const pace = a.sport_type?.includes("Run") && a.average_speed > 0
-                ? ` | ${Math.floor(1000 / a.average_speed / 60)}:${String(Math.floor((1000 / a.average_speed) % 60)).padStart(2, "0")}/km`
-                : "";
-              return `- ${date}: ${a.sport_type} "${a.name}" | ${dist} | ${dur}${hr}${pace}`;
-            }).join("\n");
-          }
+      const linkedIds = (acts ?? [])
+        .map((a: any) => a.completed_session_id)
+        .filter((v: any): v is string => Boolean(v));
+      const plannedByCompletion = new Map<string, string | null>();
+      if (linkedIds.length > 0) {
+        const { data: linkedCompletions } = await serviceClient
+          .from("completed_sessions")
+          .select("id, planned_session_id")
+          .in("id", linkedIds);
+        for (const c of linkedCompletions ?? []) {
+          plannedByCompletion.set(c.id, (c as any).planned_session_id ?? null);
         }
       }
+
+      const sections: string[] = [];
+
+      if (acts && acts.length > 0) {
+        const lines = acts.map((a: any) => {
+          const km = a.distance_m ? `${(Number(a.distance_m) / 1000).toFixed(1)}km` : "—";
+          const min = a.duration_sec ? `${Math.round(Number(a.duration_sec) / 60)}min` : "—";
+          const hr = a.avg_hr ? ` | HR ${a.avg_hr}${a.max_hr ? `/${a.max_hr}` : ""}` : "";
+          let link = "not logged";
+          if (a.completed_session_id) {
+            link = plannedByCompletion.get(a.completed_session_id)
+              ? "matched a planned session"
+              : "logged as unplanned";
+          }
+          return `- ${String(a.start_date_local ?? "").slice(0, 10)}: ${a.discipline ?? a.sport_type} | ${km} | ${min}${hr}${fmtPace(a.avg_pace_min_per_km)} | ${link}`;
+        });
+        sections.push(`SYNCED ACTIVITIES (last 14 days):\n${lines.join("\n")}`);
+      }
+
+      // Trailing 4-week rollup per discipline, from logged completions.
+      const { data: comps } = await serviceClient
+        .from("completed_sessions")
+        .select("date, discipline, actual_duration_min, actual_distance_km, avg_hr")
+        .eq("athlete_id", userId)
+        .gte("date", isoDay(since28));
+
+      if (comps && comps.length > 0) {
+        const buckets = new Map<string, { n: number; h: number; km: number; hrSum: number; hrN: number }>();
+        let totalHours = 0;
+        for (const c of comps as any[]) {
+          const key = c.discipline ?? "custom";
+          const b = buckets.get(key) ?? { n: 0, h: 0, km: 0, hrSum: 0, hrN: 0 };
+          const minutes = Number(c.actual_duration_min ?? 0) || 0;
+          b.n++;
+          b.h += minutes / 60;
+          b.km += Number(c.actual_distance_km ?? 0) || 0;
+          if (c.avg_hr) {
+            b.hrSum += Number(c.avg_hr);
+            b.hrN++;
+          }
+          buckets.set(key, b);
+          totalHours += minutes / 60;
+        }
+        const rows = [...buckets.entries()]
+          .sort((a, b) => b[1].h - a[1].h)
+          .map(
+            ([d, b]) =>
+              `- ${d}: ${b.n} sessions | ${(Math.round(b.h * 10) / 10)} h | ${(Math.round(b.km * 10) / 10)} km${b.hrN > 0 ? ` | avg HR ${Math.round(b.hrSum / b.hrN)}` : ""}`,
+          );
+        sections.push(
+          `TRAILING 4-WEEK ROLLUP (${(Math.round((totalHours / 4) * 10) / 10)} h/week):\n${rows.join("\n")}`,
+        );
+      }
+
+      // Planned vs actual for the current week.
+      const { data: weekPlanned } = await serviceClient
+        .from("planned_sessions")
+        .select("id, date, session_name, discipline, duration_min")
+        .eq("athlete_id", userId)
+        .gte("date", isoDay(weekStart))
+        .lte("date", isoDay(weekEnd));
+
+      if (weekPlanned && weekPlanned.length > 0) {
+        const { data: weekDone } = await serviceClient
+          .from("completed_sessions")
+          .select("planned_session_id, discipline, date")
+          .eq("athlete_id", userId)
+          .gte("date", isoDay(weekStart))
+          .lte("date", isoDay(weekEnd));
+        const donePlanned = new Set(
+          (weekDone ?? []).map((c: any) => c.planned_session_id).filter(Boolean),
+        );
+        const lines = (weekPlanned as any[]).map((p) => {
+          const status = donePlanned.has(p.id) ? "done" : "missed";
+          return `- ${p.date}: ${p.session_name || p.discipline} (${p.discipline}${p.duration_min ? `, ${p.duration_min} min` : ""}) — ${status}`;
+        });
+        sections.push(
+          `THIS WEEK PLANNED VS ACTUAL (${donePlanned.size}/${weekPlanned.length} planned sessions done, ${(weekDone ?? []).length} sessions logged in total):\n${lines.join("\n")}`,
+        );
+      }
+
+      // Compact lap summary for the 3 most recent activities that carry laps.
+      const lapLines: string[] = [];
+      for (const a of (acts ?? []).slice(0, 3) as any[]) {
+        const laps = Array.isArray(a?.raw?.laps) ? a.raw.laps : null;
+        if (!laps || laps.length === 0) continue;
+        const paces: number[] = [];
+        const hrs: number[] = [];
+        for (const l of laps) {
+          const speed = Number(l?.average_speed ?? 0);
+          if (speed > 0) paces.push(1000 / speed / 60);
+          if (l?.average_heartrate) hrs.push(Number(l.average_heartrate));
+        }
+        const paceRange = paces.length
+          ? `pace ${fmtPace(Math.min(...paces)).replace(" | ", "")}–${fmtPace(Math.max(...paces)).replace(" | ", "")}`
+          : "pace n/a";
+        const hrRange = hrs.length
+          ? `HR ${Math.round(Math.min(...hrs))}–${Math.round(Math.max(...hrs))}`
+          : "HR n/a";
+        lapLines.push(
+          `- ${String(a.start_date_local ?? "").slice(0, 10)} ${a.discipline ?? a.sport_type}: ${laps.length} laps | ${paceRange} | ${hrRange}`,
+        );
+      }
+      if (lapLines.length > 0) {
+        sections.push(`LAP DETAIL (3 most recent):\n${lapLines.join("\n")}`);
+      }
+
+      if (sections.length > 0) {
+        let assembled = "";
+        for (const section of sections) {
+          if (assembled.length + section.length + 2 > SYNCED_CONTEXT_CHAR_BUDGET) break;
+          assembled += (assembled ? "\n\n" : "") + section;
+        }
+        stravaContext = `\n\n---\n${assembled}`;
+      }
     } catch (stravaErr) {
-      console.error("Strava context fetch (non-fatal):", stravaErr);
+      console.error("Synced activity context (non-fatal):", stravaErr);
     }
 
     // --- RAG: Retrieve relevant knowledge chunks ---
