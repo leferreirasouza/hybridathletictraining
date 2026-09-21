@@ -4,6 +4,8 @@ import listUpcomingSessions from "./tools/list-upcoming-sessions";
 import listRecentCompletions from "./tools/list-recent-completions";
 import getTrainingLoad from "./tools/get-training-load";
 import getGoalRace from "./tools/get-goal-race";
+import listStravaActivities from "./tools/list-strava-activities";
+import getWeeklyRollup from "./tools/get-weekly-rollup";
 
 // The OAuth issuer MUST be the direct Supabase host, built from the project
 // ref that Vite inlines at build time. SUPABASE_URL may be proxied.
@@ -17,11 +19,20 @@ export default defineMcp({
     "Read-only access to the signed-in HYROX athlete's training data on Hybrid Athletics. " +
     "Use `get_todays_session` for today's workout, `list_upcoming_sessions` to look ahead, " +
     "`list_recent_completions` for recent training history, `get_training_load` for the current " +
-    "CTL/ATL/TSB fitness/fatigue snapshot, and `get_goal_race` for the athlete's next HYROX race. " +
-    "All tools return data for the signed-in user only.",
+    "CTL/ATL/TSB fitness/fatigue snapshot, `get_goal_race` for the athlete's next HYROX race, " +
+    "`list_strava_activities` for activities synced from Strava, and `get_weekly_rollup` for a " +
+    "trailing per-discipline volume summary. All tools return data for the signed-in user only.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",
   }),
-  tools: [getTodaysSession, listUpcomingSessions, listRecentCompletions, getTrainingLoad, getGoalRace],
+  tools: [
+    getTodaysSession,
+    listUpcomingSessions,
+    listRecentCompletions,
+    getTrainingLoad,
+    getGoalRace,
+    listStravaActivities,
+    getWeeklyRollup,
+  ],
 });

@@ -22,6 +22,24 @@ export default function WeeklyView({ sessions, weekNumber, weeklySummary, comple
     [completedSessions]
   );
 
+  // Planned vs actual for the displayed week: session counts and hours.
+  const adherence = useMemo(() => {
+    const weekIds = new Set(weekSessions.map(s => s.id));
+    const plannedCount = weekSessions.length;
+    const plannedHours = weekSessions.reduce((sum, s) => sum + (Number(s.duration_min) || 0), 0) / 60;
+    const doneForWeek = completedSessions.filter(c => c.planned_session_id && weekIds.has(c.planned_session_id));
+    const doneIds = new Set(doneForWeek.map(c => c.planned_session_id));
+    const doneHours = doneForWeek.reduce((sum, c) => sum + (Number(c.actual_duration_min) || 0), 0) / 60;
+    const pct = plannedCount > 0 ? Math.round((doneIds.size / plannedCount) * 100) : null;
+    return {
+      plannedCount,
+      doneCount: doneIds.size,
+      plannedHours: Math.round(plannedHours * 10) / 10,
+      doneHours: Math.round(doneHours * 10) / 10,
+      pct,
+    };
+  }, [weekSessions, completedSessions]);
+
   return (
     <motion.div
       key={weekNumber}
@@ -29,6 +47,40 @@ export default function WeeklyView({ sessions, weekNumber, weeklySummary, comple
       animate={{ opacity: 1, x: 0 }}
       className="space-y-3"
     >
+      {/* Planned vs actual strip */}
+      {adherence.plannedCount > 0 && (
+        <Card className="glass">
+          <CardContent className="p-3 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold flex items-center gap-1.5">
+                <TrendingUp className="h-3.5 w-3.5 text-primary" /> Planned vs done
+              </span>
+              {adherence.pct !== null && (
+                <Badge variant={adherence.pct >= 70 ? 'outline' : 'destructive'} className="text-[10px]">
+                  {adherence.pct}%
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-4 text-xs">
+              <span>
+                <span className="font-medium">{adherence.doneCount}</span>
+                <span className="text-muted-foreground">/{adherence.plannedCount} sessions</span>
+              </span>
+              <span>
+                <span className="font-medium">{adherence.doneHours}h</span>
+                <span className="text-muted-foreground">/{adherence.plannedHours}h</span>
+              </span>
+            </div>
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${Math.min(100, adherence.pct ?? 0)}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Weekly summary bar */}
       {weeklySummary && (
         <Card className="glass border-primary/20">

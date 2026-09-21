@@ -174,7 +174,9 @@
     "activityLog": "Registro de Atividades",
     "profileUpdated": "Perfil atualizado",
     "avatarUpdated": "Avatar atualizado!",
-    "goalRaceUpdated": "Corrida alvo atualizada"
+    "goalRaceUpdated": "Corrida alvo atualizada",
+    "restingHr": "FC de repouso",
+    "restingHrHint": "Adicione sua frequência cardíaca de repouso para uma carga de treino mais precisa"
   },
   "settings": {
     "title": "Configurações",

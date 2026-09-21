@@ -111,6 +111,70 @@
           "properties": {}
         },
         "outputSchema": null
+      },
+      {
+        "name": "list_strava_activities",
+        "title": "List synced Strava activities",
+        "description": "Return the signed-in athlete's Strava activities synced into the app over a recent window, optionally filtered to one discipline (run, bike, rowing, strength, mobility, hyrox_station, custom).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "days": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "description": "Size of the look-back window in days (1-180). Defaults to 14."
+            },
+            "discipline": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Optional discipline filter, e.g. run or bike. Null returns every discipline."
+            }
+          },
+          "required": [
+            "days",
+            "discipline"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_weekly_rollup",
+        "title": "Get weekly training rollup per discipline",
+        "description": "Summarise the signed-in athlete's logged training over a trailing number of weeks: sessions, hours, kilometres and average heart rate per discipline, plus hours per week.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "weeks": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "description": "Number of trailing weeks to summarise (1-26). Defaults to 4."
+            }
+          },
+          "required": [
+            "weeks"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
       }
     ]
   }

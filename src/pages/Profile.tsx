@@ -94,13 +94,14 @@ export default function Profile() {
   }, [completedSessions]);
 
   const [editingBio, setEditingBio] = useState(false);
-  const [bioForm, setBioForm] = useState({ age: '', weight_kg: '', max_hr: '', fitness_level: 'intermediate' });
+  const [bioForm, setBioForm] = useState({ age: '', weight_kg: '', max_hr: '', resting_hr: '', fitness_level: 'intermediate' });
 
   const startEditBio = () => {
     setBioForm({
       age: profile?.age?.toString() || '',
       weight_kg: profile?.weight_kg?.toString() || '',
       max_hr: profile?.max_hr?.toString() || '',
+      resting_hr: (profile as any)?.resting_hr?.toString() || '',
       fitness_level: profile?.fitness_level || 'intermediate',
     });
     setEditingBio(true);
@@ -112,6 +113,7 @@ export default function Profile() {
       age: bioForm.age ? parseInt(bioForm.age) : null,
       weight_kg: bioForm.weight_kg ? parseFloat(bioForm.weight_kg) : null,
       max_hr: bioForm.max_hr ? parseInt(bioForm.max_hr) : null,
+      resting_hr: bioForm.resting_hr ? parseInt(bioForm.resting_hr) : null,
       fitness_level: bioForm.fitness_level,
     } as any).eq('id', user!.id);
     setSaving(false);
@@ -312,6 +314,10 @@ export default function Profile() {
                     <Label className="text-xs">{t('onboarding.maxHr')}</Label>
                     <Input type="number" value={bioForm.max_hr} onChange={e => setBioForm(f => ({ ...f, max_hr: e.target.value }))} className="h-8" />
                   </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">{t('profile.restingHr')}</Label>
+                    <Input type="number" value={bioForm.resting_hr} onChange={e => setBioForm(f => ({ ...f, resting_hr: e.target.value }))} className="h-8" />
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">{t('onboarding.fitnessLevel')}</Label>
@@ -328,11 +334,19 @@ export default function Profile() {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
-                <div><span className="text-muted-foreground text-xs">{t('onboarding.age')}</span><p className="font-medium">{profile?.age || '—'}</p></div>
-                <div><span className="text-muted-foreground text-xs">{t('onboarding.weightKg').replace(' (kg)', '')}</span><p className="font-medium">{profile?.weight_kg ? `${profile.weight_kg} kg` : '—'}</p></div>
-                <div><span className="text-muted-foreground text-xs">{t('onboarding.maxHr').replace(' HR', ' HR')}</span><p className="font-medium">{profile?.max_hr ? `${profile.max_hr} ${t('common.bpm')}` : '—'}</p></div>
-                <div><span className="text-muted-foreground text-xs">{t('onboarding.fitnessLevel')}</span><p className="font-medium capitalize">{profile?.fitness_level || '—'}</p></div>
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
+                  <div><span className="text-muted-foreground text-xs">{t('onboarding.age')}</span><p className="font-medium">{profile?.age || '—'}</p></div>
+                  <div><span className="text-muted-foreground text-xs">{t('onboarding.weightKg').replace(' (kg)', '')}</span><p className="font-medium">{profile?.weight_kg ? `${profile.weight_kg} kg` : '—'}</p></div>
+                  <div><span className="text-muted-foreground text-xs">{t('onboarding.maxHr').replace(' HR', ' HR')}</span><p className="font-medium">{profile?.max_hr ? `${profile.max_hr} ${t('common.bpm')}` : '—'}</p></div>
+                  <div><span className="text-muted-foreground text-xs">{t('profile.restingHr')}</span><p className="font-medium">{(profile as any)?.resting_hr ? `${(profile as any).resting_hr} ${t('common.bpm')}` : '—'}</p></div>
+                  <div><span className="text-muted-foreground text-xs">{t('onboarding.fitnessLevel')}</span><p className="font-medium capitalize">{profile?.fitness_level || '—'}</p></div>
+                </div>
+                {!(profile as any)?.resting_hr && (
+                  <p className="text-xs text-muted-foreground border-l-2 border-primary/40 pl-2">
+                    {t('profile.restingHrHint')}
+                  </p>
+                )}
               </div>
             )}
           </CardContent>

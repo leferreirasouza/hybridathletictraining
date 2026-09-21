@@ -5,6 +5,11 @@ import { decomposeHyroxTarget, estimateVDOT, paceZonesFromVDOT, formatPace } fro
 import { buildPhaseSchedule, formatPhaseTable } from "../_shared/phaseModel.ts";
 import { assignWeeklySlots, formatSlotTable, validateSlotCompliance, type RunTypeWeights } from "../_shared/sessionSlots.ts";
 import { buildRunVolumePlan, formatRunVolumeTable } from "../_shared/runVolumeProgression.ts";
+import {
+  fetchRecentTraining,
+  formatRecentTrainingTable,
+  isReturnFromLayoff,
+} from "../_shared/recentTraining.ts";
 
 const PLAN_GEN_PROMPT = `You are a HYROX and running race training plan generator. Given an athlete's profile, produce a structured multi-week training plan in JSON.
 
@@ -485,14 +490,27 @@ Current Running Volume: ${profile.currentWeeklyKm ?? 0} km/week across ${profile
       phaseByWeek
     );
 
+    // Verified recent training: computed here from logged completions (any
+    // source) so the plan is indexed off what actually happened rather than a
+    // self-reported number. Week 1 is capped at 1.10x the trailing 4-week
+    // average run km, and a long gap since the last run triggers the
+    // return-from-layoff rule inside runVolumeProgression.
+    const recentTraining = await fetchRecentTraining(supabase, effectiveAthleteId);
+    const returnFromLayoff = recentTraining.hasData && isReturnFromLayoff(recentTraining);
+    const week1CapKm = recentTraining.hasData && recentTraining.avgRunKm4w > 0
+      ? Math.round(recentTraining.avgRunKm4w * 1.10 * 10) / 10
+      : null;
+
     const runVolumePlan = buildRunVolumePlan(
       Number(profile.currentWeeklyKm),
       phaseSchedule,
-      slotPlan
+      slotPlan,
+      { week1CapKm, returnFromLayoff }
     );
 
     let deterministicSection = `\n\n📐 PHASE SCHEDULE (deterministic — follow exactly):\n${formatPhaseTable(phaseSchedule)}\n`;
     deterministicSection += `\n📋 WEEKLY SESSION SLOTS (deterministic — fill exactly these categories/counts per week):\n${formatSlotTable(slotPlan)}\n`;
+    deterministicSection += `\n📊 VERIFIED RECENT TRAINING (from logged sessions — trust this over any self-reported figure):\n${formatRecentTrainingTable(recentTraining)}\n`;
     deterministicSection += `\n🏃 WEEKLY RUN VOLUME TARGETS (deterministic — derived from athlete's ${runVolumePlan.baselineKm} km/week baseline via the 10%-rule and phase multipliers). Each run session's distance_km MUST match its assigned per-slot km within ±10%. Do NOT exceed the week total.\n${formatRunVolumeTable(runVolumePlan)}\n`;
 
     // Equipment constraint — reads defensively since live rows may still use
