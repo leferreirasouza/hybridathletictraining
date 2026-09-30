@@ -113,8 +113,10 @@ export default function OAuthConsent() {
         </div>
         <CardTitle className="text-lg font-display">Connect {clientName}?</CardTitle>
         <CardDescription>
-          {clientName} is requesting access to your Hybrid Athletics account. It will be able to read your
-          training data (planned sessions, completions, training load, goal race) as you.
+          {clientName} is requesting read-only access to your Hybrid Athletics training data as you. This
+          includes: today's and upcoming planned sessions, completed session history — including any RPE,
+          soreness and pain-flag notes you've logged — your training load (CTL/ATL/TSB), your goal race, your
+          Strava-synced activities, and weekly training rollups. It cannot make changes to your account or data.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
