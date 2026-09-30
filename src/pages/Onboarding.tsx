@@ -122,8 +122,11 @@ export default function Onboarding() {
       if (error) throw error;
 
       if (role === 'athlete') {
-        // Save profile
-        await supabase.from('profiles').update({
+        // Save profile fields first, but hold off on onboarding_completed until
+        // the PAR-Q/fitness-assessment screening below actually succeeds — this
+        // is a safety screening form, it shouldn't be possible to land on the
+        // dashboard "onboarded" with no record of it ever having been saved.
+        const { error: profileError } = await supabase.from('profiles').update({
           age: age ? parseInt(age) : null,
           weight_kg: weightKg ? parseFloat(weightKg) : null,
           max_hr: maxHr ? parseInt(maxHr) : null,
@@ -131,15 +134,15 @@ export default function Onboarding() {
           goal_race_name: goalRaceName.trim() || null,
           goal_race_date: goalRaceDate || null,
           goal_race_location: goalRaceLocation.trim() || null,
-          onboarding_completed: true,
         } as any).eq('id', user.id);
+        if (profileError) throw new Error(`Profile save failed: ${profileError.message}`);
 
         // Save PAR-Q responses
         const hasRisks = parqAnswers.q1_heart_condition || parqAnswers.q2_chest_pain_activity ||
           parqAnswers.q3_chest_pain_rest || parqAnswers.q4_dizziness || parqAnswers.q5_bone_joint ||
           parqAnswers.q6_blood_pressure_meds || parqAnswers.q7_other_reason;
 
-        await supabase.from('parq_responses' as any).insert({
+        const { error: parqError } = await supabase.from('parq_responses' as any).insert({
           athlete_id: user.id,
           q1_heart_condition: parqAnswers.q1_heart_condition,
           q2_chest_pain_activity: parqAnswers.q2_chest_pain_activity,
@@ -152,9 +155,10 @@ export default function Onboarding() {
           risk_acknowledged: hasRisks ? parqAnswers.risk_acknowledged : false,
           risk_acknowledged_at: hasRisks && parqAnswers.risk_acknowledged ? new Date().toISOString() : null,
         } as any);
+        if (parqError) throw new Error(`PAR-Q save failed: ${parqError.message}`);
 
         // Save fitness assessment
-        await supabase.from('fitness_assessments' as any).insert({
+        const { error: fitnessError } = await supabase.from('fitness_assessments' as any).insert({
           athlete_id: user.id,
           training_years: fitnessAssessment.training_years ? parseInt(fitnessAssessment.training_years) : null,
           weekly_training_hours: fitnessAssessment.weekly_training_hours ? parseFloat(fitnessAssessment.weekly_training_hours) : null,
@@ -167,10 +171,17 @@ export default function Onboarding() {
           stress_level: fitnessAssessment.stress_level,
           nutrition_quality: fitnessAssessment.nutrition_quality,
         } as any);
-      } else {
-        await supabase.from('profiles').update({
+        if (fitnessError) throw new Error(`Fitness assessment save failed: ${fitnessError.message}`);
+
+        const { error: completeError } = await supabase.from('profiles').update({
           onboarding_completed: true,
         } as any).eq('id', user.id);
+        if (completeError) throw new Error(`Onboarding completion save failed: ${completeError.message}`);
+      } else {
+        const { error: completeError } = await supabase.from('profiles').update({
+          onboarding_completed: true,
+        } as any).eq('id', user.id);
+        if (completeError) throw new Error(`Onboarding completion save failed: ${completeError.message}`);
       }
 
       await refreshMemberships();
