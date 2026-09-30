@@ -91,3 +91,22 @@ export async function hashToken(plaintext: string): Promise<string> {
   const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(plaintext)));
   return bytesToBase64(sig);
 }
+
+/**
+ * Constant-time string equality, for comparing plaintext tokens without
+ * leaking timing information about where (or whether) they differ. Both
+ * inputs are first SHA-256 digested to a fixed 32-byte length so the
+ * comparison itself carries no information about the inputs' own lengths,
+ * then compared with a branch-free XOR accumulator (no early exit).
+ */
+export async function timingSafeEqual(a: string, b: string): Promise<boolean> {
+  const [da, db] = await Promise.all([
+    crypto.subtle.digest("SHA-256", new TextEncoder().encode(a)),
+    crypto.subtle.digest("SHA-256", new TextEncoder().encode(b)),
+  ]);
+  const ba = new Uint8Array(da);
+  const bb = new Uint8Array(db);
+  let diff = 0;
+  for (let i = 0; i < ba.length; i++) diff |= ba[i] ^ bb[i];
+  return diff === 0;
+}
