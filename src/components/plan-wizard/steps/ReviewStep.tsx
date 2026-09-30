@@ -7,6 +7,8 @@ import { Loader2, Target, Sparkles, CheckCircle2, Calendar, Pencil } from 'lucid
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
 import { getDiscipline, dayLabels, formatIntensity } from '@/components/schedule/config';
 import type { StepId } from '../wizardSteps.config';
 import {
@@ -36,6 +38,8 @@ interface Props {
  */
 export default function ReviewStep({ answers, update, onGenerated, onEditStep }: Props) {
   const { user, currentOrg } = useAuth();
+  const navigate = useNavigate();
+  const { isPaid, loading: tierLoading } = useSubscriptionTier();
   const [prediction, setPrediction] = useState<any>(null);
   const [loadingPrediction, setLoadingPrediction] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -301,9 +305,23 @@ export default function ReviewStep({ answers, update, onGenerated, onEditStep }:
           </CardContent>
         </Card>
 
-        <Button onClick={handleGenerate} disabled={generating} className="w-full" size="lg">
-          {generating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating…</> : 'Generate plan'}
-        </Button>
+        {/* Tier gate only applies to the self-service case — when a coach
+            generates on behalf of an athlete (targetAthleteId !== user.id),
+            RLS means we can't read that athlete's subscription row from the
+            client, so we rely on the server's 403 + error toast instead. */}
+        {targetAthleteId === user?.id && !tierLoading && !isPaid ? (
+          <div className="rounded-lg border border-dashed p-4 text-center space-y-2">
+            <p className="text-sm font-medium">AI plan generation is a paid feature</p>
+            <p className="text-xs text-muted-foreground">Upgrade to generate a personalized training plan.</p>
+            <Button className="gradient-hyrox" onClick={() => navigate('/pricing')}>
+              Upgrade to unlock
+            </Button>
+          </div>
+        ) : (
+          <Button onClick={handleGenerate} disabled={generating} className="w-full" size="lg">
+            {generating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating…</> : 'Generate plan'}
+          </Button>
+        )}
       </div>
     </StepShell>
   );

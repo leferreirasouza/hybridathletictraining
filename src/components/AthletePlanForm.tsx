@@ -23,6 +23,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import RacePicker from '@/components/races/RacePicker';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
 
 const hyroxStations = [
   'SkiErg', 'Sled Push', 'Sled Pull', 'Burpee Broad Jumps',
@@ -81,6 +82,7 @@ function parseTimeToSeconds(time: string): number | null {
 export default function AthletePlanForm() {
   const { user, currentOrg } = useAuth();
   const navigate = useNavigate();
+  const { isPaid, loading: tierLoading } = useSubscriptionTier();
   const [generating, setGenerating] = useState(false);
   const [prediction, setPrediction] = useState<any>(null);
   const [loadingPrediction, setLoadingPrediction] = useState(false);
@@ -893,24 +895,34 @@ export default function AthletePlanForm() {
         </CardContent>
       </Card>
 
-      <Button
-        className="w-full gradient-hyrox"
-        size="lg"
-        onClick={() => {
-          if (existingPlans && existingPlans.length > 0) {
-            setShowConfirmDialog(true);
-          } else {
-            handleGenerate();
-          }
-        }}
-        disabled={generating}
-      >
-        {generating ? (
-          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating your plan…</>
-        ) : (
-          <><Sparkles className="h-4 w-4 mr-2" /> Generate My {raceType === 'hyrox' ? 'HYROX' : 'Running'} Plan</>
-        )}
-      </Button>
+      {!tierLoading && !isPaid ? (
+        <div className="rounded-lg border border-dashed p-4 text-center space-y-2">
+          <p className="text-sm font-medium">AI plan generation is a paid feature</p>
+          <p className="text-xs text-muted-foreground">Upgrade to generate a personalized training plan.</p>
+          <Button className="gradient-hyrox" onClick={() => navigate('/pricing')}>
+            Upgrade to unlock
+          </Button>
+        </div>
+      ) : (
+        <Button
+          className="w-full gradient-hyrox"
+          size="lg"
+          onClick={() => {
+            if (existingPlans && existingPlans.length > 0) {
+              setShowConfirmDialog(true);
+            } else {
+              handleGenerate();
+            }
+          }}
+          disabled={generating}
+        >
+          {generating ? (
+            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating your plan…</>
+          ) : (
+            <><Sparkles className="h-4 w-4 mr-2" /> Generate My {raceType === 'hyrox' ? 'HYROX' : 'Running'} Plan</>
+          )}
+        </Button>
+      )}
 
       {generating && (
         <p className="text-xs text-center text-muted-foreground animate-pulse">

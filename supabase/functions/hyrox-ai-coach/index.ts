@@ -4,6 +4,7 @@
 //   STRAVA_CLIENT_SECRET — from strava.com/settings/api
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getAthleteTier, tierAtLeast } from "../_shared/subscription.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -72,6 +73,16 @@ serve(async (req) => {
       .map((m: any) => ({ role: m.role, content: m.content.slice(0, 4000) }));
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Paid-tier gate: the AI coach is one of the two LLM-cost-bearing
+    // features (see _shared/subscription.ts).
+    const tier = await getAthleteTier(serviceClient, userId);
+    if (!tierAtLeast(tier, "paid")) {
+      return new Response(JSON.stringify({ error: "This feature requires a paid subscription." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Per-user abuse limit: 30 requests per rolling hour.
     try {

@@ -10,6 +10,7 @@ import {
   formatRecentTrainingTable,
   isReturnFromLayoff,
 } from "../_shared/recentTraining.ts";
+import { getAthleteTier, tierAtLeast } from "../_shared/subscription.ts";
 
 const PLAN_GEN_PROMPT = `You are a HYROX and running race training plan generator. Given an athlete's profile, produce a structured multi-week training plan in JSON.
 
@@ -201,6 +202,18 @@ serve(async (req) => {
           });
         }
       }
+    }
+
+    // Paid-tier gate: plan generation is one of the two LLM-cost-bearing
+    // features (see _shared/subscription.ts). Gated on the athlete being
+    // generated for, not the caller — consistent with effectiveAthleteId
+    // being the identity used throughout the rest of this function.
+    const tier = await getAthleteTier(supabase, effectiveAthleteId);
+    if (!tierAtLeast(tier, "paid")) {
+      return new Response(JSON.stringify({ error: "This feature requires a paid subscription." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

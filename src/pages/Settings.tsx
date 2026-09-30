@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Moon, Sun, Ruler, Bell, ShieldCheck, Trash2, BellRing, BellOff, Globe, CalendarPlus, Watch, Link2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Moon, Sun, Ruler, Bell, ShieldCheck, Trash2, BellRing, BellOff, Globe, CalendarPlus, Watch, Link2, Loader2, CreditCard } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +17,7 @@ import {
   requestNotificationPermission, getNotificationPermission,
   DAY_LABELS, type DayTrainingTimes,
 } from '@/hooks/useSessionReminders';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
 
 type Units = 'metric' | 'imperial';
 type ThemeMode = 'light' | 'dark' | 'system';
@@ -58,6 +59,8 @@ export default function Settings() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [garminConnected, setGarminConnected] = useState<boolean>(() => localStorage.getItem('ha-garmin-connected') === '1');
   const [garminLoading, setGarminLoading] = useState(false);
+  const { isPaid, loading: tierLoading } = useSubscriptionTier();
+  const [billingLoading, setBillingLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,6 +106,40 @@ export default function Settings() {
     localStorage.removeItem('ha-garmin-connected');
     setGarminConnected(false);
     toast.success('Garmin disconnected.');
+  };
+
+  const handleUpgrade = async () => {
+    setBillingLoading(true);
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data, error } = await supabase.functions.invoke('stripe-checkout', { body: {} });
+      if (error || !data?.url) {
+        toast.error(data?.error ?? 'Failed to start checkout');
+        return;
+      }
+      window.location.href = data.url;
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Failed to start checkout');
+    } finally {
+      setBillingLoading(false);
+    }
+  };
+
+  const handleManageBilling = async () => {
+    setBillingLoading(true);
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data, error } = await supabase.functions.invoke('stripe-portal', { body: {} });
+      if (error || !data?.url) {
+        toast.error(data?.error ?? 'Failed to open billing portal');
+        return;
+      }
+      window.location.href = data.url;
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Failed to open billing portal');
+    } finally {
+      setBillingLoading(false);
+    }
   };
 
   const [notifPrefs, setNotifPrefs] = useState(getNotifPrefs);
@@ -404,6 +441,47 @@ export default function Settings() {
                 Garmin Health API access is pending approval. The connect button will activate once credentials are issued.
               </p>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Billing */}
+        <Card className="glass">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-primary" />
+              Billing
+            </CardTitle>
+            <CardDescription>
+              {tierLoading ? 'Loading…' : isPaid
+                ? 'You have access to AI plan generation and the AI coach.'
+                : 'Upgrade for AI plan generation and the AI coach. Strava sync and everything else stays free.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
+                  <CreditCard className="h-4 w-4 text-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{isPaid ? 'Paid plan' : 'Free plan'}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {isPaid ? 'Manage or cancel your subscription' : 'Unlock AI plan generation and coach chat'}
+                  </p>
+                </div>
+              </div>
+              {isPaid ? (
+                <Button variant="outline" size="sm" onClick={handleManageBilling} disabled={billingLoading}>
+                  {billingLoading && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+                  Manage billing
+                </Button>
+              ) : (
+                <Button size="sm" onClick={handleUpgrade} disabled={billingLoading} className="gradient-hyrox">
+                  {billingLoading && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+                  Upgrade
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
 
