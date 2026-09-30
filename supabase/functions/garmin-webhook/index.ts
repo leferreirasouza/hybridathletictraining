@@ -12,7 +12,7 @@
 // owning row in `garmin_connections`.
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
-import { decryptToken, hashToken } from "../_shared/tokenCrypto.ts";
+import { decryptToken, hashToken, timingSafeEqual } from "../_shared/tokenCrypto.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -101,7 +101,15 @@ serve(async (req) => {
             console.error("legacy garmin token decrypt failed", e);
             continue;
           }
-          if (!plaintext || !unresolvedTokens.includes(plaintext)) continue;
+          if (!plaintext) continue;
+          let matched = false;
+          for (const t of unresolvedTokens) {
+            if (await timingSafeEqual(plaintext, t)) {
+              matched = true;
+              break;
+            }
+          }
+          if (!matched) continue;
           tokenToUser.set(plaintext, c.user_id);
           const h = await hashToken(plaintext);
           hashToToken.set(h, plaintext);
