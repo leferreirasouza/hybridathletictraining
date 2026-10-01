@@ -22,7 +22,7 @@
 //   - STRAVA_CLIENT_SECRET
 //   - STRAVA_WEBHOOK_VERIFY_TOKEN
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { getValidStravaAccessToken, findUserIdByStravaAthleteId } from "../_shared/stravaToken.ts";
 import { ingestStravaActivity } from "../_shared/stravaMap.ts";
 
@@ -51,7 +51,7 @@ function runInBackground(promise: Promise<unknown>) {
 }
 
 async function processActivityEvent(
-  service: ReturnType<typeof createClient>,
+  service: SupabaseClient,
   event: StravaWebhookEvent,
 ) {
   const userId = await findUserIdByStravaAthleteId(service, event.owner_id);
@@ -93,7 +93,7 @@ async function processActivityEvent(
   }
 }
 
-async function processDeauth(service: ReturnType<typeof createClient>, event: StravaWebhookEvent) {
+async function processDeauth(service: SupabaseClient, event: StravaWebhookEvent) {
   const userId = await findUserIdByStravaAthleteId(service, event.owner_id);
   if (!userId) return;
 
