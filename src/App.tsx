@@ -16,6 +16,7 @@ const Privacy = lazy(() => import("@/pages/Privacy"));
 const About = lazy(() => import("@/pages/About"));
 const FAQ = lazy(() => import("@/pages/FAQ"));
 const Contact = lazy(() => import("@/pages/Contact"));
+const Pricing = lazy(() => import("@/pages/Pricing"));
 const Onboarding = lazy(() => import("@/pages/Onboarding"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const Schedule = lazy(() => import("@/pages/Schedule"));
@@ -86,6 +87,7 @@ const App = () => (
               <Route path="/about" element={<About />} />
               <Route path="/faq" element={<FAQ />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/pricing" element={<Pricing />} />
               <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
               <Route path="/strava/callback" element={<StravaCallback />} />
               <Route path="/garmin/callback" element={<ProtectedRoute><GarminCallback /></ProtectedRoute>} />

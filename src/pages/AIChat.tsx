@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import { supabase } from '@/integrations/supabase/client';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -18,6 +20,8 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/hyrox-ai-coa
 
 export default function AIChat() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { isPaid, loading: tierLoading } = useSubscriptionTier();
 
   const suggestions = [
     t('aiChat.suggestion1'),
@@ -207,18 +211,27 @@ export default function AIChat() {
       </div>
 
       <div className="px-4 py-3 border-t border-border">
-        <form onSubmit={(e) => { e.preventDefault(); sendMessage(input); }} className="flex gap-2">
-          <Input
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            placeholder={t('aiChat.askPlaceholder')}
-            className="rounded-full"
-            disabled={isLoading}
-          />
-          <Button type="submit" size="icon" className="rounded-full gradient-hyrox flex-shrink-0" disabled={!input.trim() || isLoading}>
-            <Send className="h-4 w-4" />
-          </Button>
-        </form>
+        {!tierLoading && !isPaid ? (
+          <div className="rounded-lg border border-dashed p-3 text-center space-y-2">
+            <p className="text-sm font-medium">The AI coach is a paid feature</p>
+            <Button size="sm" className="gradient-hyrox" onClick={() => navigate('/pricing')}>
+              Upgrade to unlock
+            </Button>
+          </div>
+        ) : (
+          <form onSubmit={(e) => { e.preventDefault(); sendMessage(input); }} className="flex gap-2">
+            <Input
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              placeholder={t('aiChat.askPlaceholder')}
+              className="rounded-full"
+              disabled={isLoading}
+            />
+            <Button type="submit" size="icon" className="rounded-full gradient-hyrox flex-shrink-0" disabled={!input.trim() || isLoading}>
+              <Send className="h-4 w-4" />
+            </Button>
+          </form>
+        )}
       </div>
     </div>
   );
