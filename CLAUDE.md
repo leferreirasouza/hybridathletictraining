@@ -1,4 +1,4 @@
-# HYROX Coach OS — Claude Code Reference
+# Hybrid Athletics — Claude Code Reference
 
 ## Project overview
 
