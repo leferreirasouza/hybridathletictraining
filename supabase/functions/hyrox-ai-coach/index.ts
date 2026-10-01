@@ -4,6 +4,7 @@
 //   STRAVA_CLIENT_SECRET — from strava.com/settings/api
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { tsbAdjustmentFactor } from "../_shared/interferenceRules.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -320,6 +321,65 @@ ${contextText.slice(0, 20000)}
       console.error("Synced activity context (non-fatal):", stravaErr);
     }
 
+    // --- Training load trend + race PBs ---
+    // The 4-week rollup above is an activity summary, not a fitness/fatigue
+    // trend or a race-history record — neither reached this prompt before.
+    let loadContext = "";
+    try {
+      const { data: loadRows } = await serviceClient
+        .from("training_load_daily")
+        .select("date, ctl, atl, tsb")
+        .eq("athlete_id", userId)
+        .order("date", { ascending: false })
+        .limit(14);
+
+      if (loadRows && loadRows.length > 0) {
+        // Mirrors the band thresholds in _shared/interferenceRules.ts's
+        // tsbAdjustmentFactor and src/hooks/useTrainingLoad.ts's
+        // fatigueRiskFromTsb, so the band name matches what the dashboard shows.
+        const bandOf = (tsb: number): string => {
+          if (tsb >= 5) return "fresh";
+          if (tsb >= -10) return "neutral";
+          if (tsb >= -20) return "fatigued";
+          return "high_risk";
+        };
+        const latest = loadRows[0];
+        const latestBand = bandOf(Number(latest.tsb));
+        let daysInBand = 0;
+        for (const row of loadRows) {
+          if (bandOf(Number(row.tsb)) !== latestBand) break;
+          daysInBand++;
+        }
+        const adj = tsbAdjustmentFactor(Number(latest.tsb));
+        loadContext = `\n\n---\nTRAINING LOAD (as of ${latest.date}):\nCTL (fitness) ${Number(latest.ctl).toFixed(1)} | ATL (fatigue) ${Number(latest.atl).toFixed(1)} | TSB (form) ${Number(latest.tsb).toFixed(1)}\nForm band: ${latestBand}, for ${daysInBand} of the last ${loadRows.length} day(s) with data\n${adj.directive}`;
+      }
+
+      const { data: races } = await serviceClient
+        .from("race_results")
+        .select("race_name, race_date, total_time_seconds")
+        .eq("athlete_id", userId)
+        .not("total_time_seconds", "is", null)
+        .order("race_date", { ascending: false });
+
+      if (races && races.length > 0) {
+        const fmtRaceTime = (s: number) => {
+          const h = Math.floor(s / 3600);
+          const m = Math.floor((s % 3600) / 60);
+          const sec = s % 60;
+          return `${h > 0 ? `${h}:${String(m).padStart(2, "0")}` : m}:${String(sec).padStart(2, "0")}`;
+        };
+        const best = races.reduce((b: any, r: any) => (r.total_time_seconds < b.total_time_seconds ? r : b), races[0]);
+        const mostRecent = races[0] as any;
+        let pbLine = `\n\n---\nRACE HISTORY (${races.length} logged):\nBest: ${fmtRaceTime(best.total_time_seconds)} at "${best.race_name ?? "unnamed race"}" on ${best.race_date}`;
+        if (mostRecent.race_date !== best.race_date) {
+          pbLine += `\nMost recent: ${fmtRaceTime(mostRecent.total_time_seconds)} at "${mostRecent.race_name ?? "unnamed race"}" on ${mostRecent.race_date}`;
+        }
+        loadContext += pbLine;
+      }
+    } catch (loadErr) {
+      console.error("Training load / race history context (non-fatal):", loadErr);
+    }
+
     // --- RAG: Retrieve relevant knowledge chunks ---
     let knowledgeContext = "";
     try {
@@ -374,7 +434,7 @@ ${contextText.slice(0, 20000)}
       console.error("RAG retrieval error (non-fatal):", ragErr);
     }
 
-    const systemPrompt = basePrompt + APPEND_RULES + athleteContext + stravaContext + knowledgeContext;
+    const systemPrompt = basePrompt + APPEND_RULES + athleteContext + stravaContext + loadContext + knowledgeContext;
 
     // Build messages array with system prompt as first message (OpenAI-compatible format)
     const apiMessages = [
