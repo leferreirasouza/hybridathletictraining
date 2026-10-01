@@ -7,6 +7,16 @@ import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  // Public client config (not secret). Fallbacks guarantee the published build never ships undefined.
+  define: {
+    "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(
+      process.env.VITE_SUPABASE_URL || "https://cdrpypapdqbwwiuqvqti.supabase.co",
+    ),
+    "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
+      process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkcnB5cGFwZHFid3dpdXF2cXRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0ODQ0NDMsImV4cCI6MjA4ODA2MDQ0M30.OsAq8V-HfhE2rF75uoppGcqUYkP-PDO5y5Gy04TAwfs",
+    ),
+  },
   server: {
     host: "::",
     port: 8080,
