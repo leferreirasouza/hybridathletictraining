@@ -11,7 +11,6 @@ import { computeRecentTraining as clientCompute, isReturnFromLayoff as clientIsL
 import {
   computeRecentTraining as edgeCompute,
   isReturnFromLayoff as edgeIsLayoff,
-  // @ts-expect-error -- Deno edge-function source, not part of the app's tsconfig "include"
 } from '../../supabase/functions/_shared/recentTraining.ts';
 
 const today = new Date('2026-09-30T00:00:00Z');
