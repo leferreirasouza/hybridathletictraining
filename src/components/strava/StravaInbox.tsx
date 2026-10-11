@@ -98,7 +98,16 @@ export default function StravaInbox() {
         .gte('date', start)
         .lte('date', end)
         .order('date', { ascending: true });
-      return error ? [] : ((data as unknown as PlannedOption[]) || []);
+      if (error) return [];
+      const planned = (data as unknown as PlannedOption[]) || [];
+      if (!planned.length) return planned;
+      const { data: done } = await supabase
+        .from('completed_sessions')
+        .select('planned_session_id')
+        .eq('athlete_id', user.id)
+        .in('planned_session_id', planned.map((p) => p.id));
+      const taken = new Set((done || []).map((d: any) => d.planned_session_id));
+      return planned.filter((p) => !taken.has(p.id));
     },
     enabled: !!user && !!picker,
   });
