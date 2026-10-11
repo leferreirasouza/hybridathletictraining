@@ -134,6 +134,21 @@ export default function StravaInbox() {
 
   const createCompletion = async (a: StravaActivity, plannedSessionId: string | null) => {
     setBusyId(a.id);
+    if (plannedSessionId) {
+      const { data: existing } = await supabase
+        .from('completed_sessions')
+        .select('id')
+        .eq('athlete_id', user!.id)
+        .eq('planned_session_id', plannedSessionId)
+        .limit(1);
+      if (existing?.length) {
+        setBusyId(null);
+        setPicker(null);
+        toast.error(t('strava.actionFailed'));
+        refresh();
+        return;
+      }
+    }
     const { data, error } = await supabase
       .from('completed_sessions')
       .insert(completionPayload(a, plannedSessionId))
