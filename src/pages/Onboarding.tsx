@@ -119,7 +119,8 @@ export default function Onboarding() {
         _org_id: selectedOrgId,
         _role: role,
       });
-      if (error) throw error;
+      // Retry-safe: a previous attempt may already have assigned the role.
+      if (error && !/already assigned/i.test(error.message || '')) throw error;
 
       if (role === 'athlete') {
         // Save profile fields first, but hold off on onboarding_completed until
