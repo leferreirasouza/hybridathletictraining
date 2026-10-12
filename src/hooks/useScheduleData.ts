@@ -210,7 +210,7 @@ export function useScheduleData() {
       if (!user) return [];
       const { data, error } = await supabase
         .from('completed_sessions')
-        .select('id, planned_session_id, date, discipline')
+        .select('id, planned_session_id, date, discipline, actual_distance_km, actual_duration_min, source')
         .eq('athlete_id', user.id);
       return error ? [] : data || [];
     },

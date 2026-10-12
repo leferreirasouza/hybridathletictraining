@@ -208,6 +208,8 @@ export default function History() {
                           avgHr: s.avg_hr,
                           avgPace: s.avg_pace,
                           rpe: s.rpe,
+                          sessionName: s.notes || null,
+                          completedSessionId: s.id,
                         })}>
                           <Share2 className="h-3 w-3 text-muted-foreground" />
                         </Button>

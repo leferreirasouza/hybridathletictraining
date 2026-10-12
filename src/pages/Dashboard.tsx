@@ -16,6 +16,7 @@ import ProfileCompletionCard from '@/components/dashboard/ProfileCompletionCard'
 import CoachInfoCard from '@/components/dashboard/CoachInfoCard';
 import TrainingLoadCard from '@/components/dashboard/TrainingLoadCard';
 import RecentHistoryCard from '@/components/dashboard/RecentHistoryCard';
+import PlanProgressCard from '@/components/dashboard/PlanProgressCard';
 import FirstPlanCTA from '@/components/dashboard/FirstPlanCTA';
 import { useTranslation } from 'react-i18next';
 
@@ -37,7 +38,7 @@ export default function Dashboard() {
   const canManagePlans = !!currentRole && ['master_admin', 'admin', 'coach'].includes(currentRole);
   const [showAthletePlans, setShowAthletePlans] = useState(true);
 
-  const { sessions: plannedSessions, completedSessions: completedPlanned, targets, maxWeek, noPlan } = useScheduleData();
+  const { plans, activePlanId, sessions: plannedSessions, completedSessions: completedPlanned, targets, maxWeek, noPlan } = useScheduleData();
 
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
@@ -138,25 +139,14 @@ export default function Dashboard() {
           </motion.div>
         </div>
 
-        {/* Plan Completion */}
+        {/* Plan progress, week by week */}
         {showAthletePlans && !noPlan && planStats.totalPlanned > 0 && (
           <motion.div variants={item}>
-            <Card className="glass">
-              <CardContent className="p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium flex items-center gap-1.5">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                    {t('dashboard.planCompletion')}
-                  </p>
-                  <span className="text-xs font-mono font-bold text-primary">{planStats.completionPct}%</span>
-                </div>
-                <Progress value={planStats.completionPct} className="h-2" />
-                <div className="flex justify-between text-[10px] text-muted-foreground">
-                  <span>{t('dashboard.sessionsDone', { done: planStats.totalCompleted, total: planStats.totalPlanned })}</span>
-                  <span>{t('dashboard.thisWeekProgress', { done: planStats.currentWeekCompleted, total: planStats.currentWeekTotal })}</span>
-                </div>
-              </CardContent>
-            </Card>
+            <PlanProgressCard
+              planName={plans?.find((p: any) => p.id === activePlanId)?.name ?? null}
+              sessions={plannedSessions}
+              completions={completedPlanned}
+            />
           </motion.div>
         )}
 

@@ -568,5 +568,33 @@
     "logged": "Atividade registrada",
     "ignored": "Atividade ignorada",
     "actionFailed": "Não funcionou. Tente novamente."
+  },
+  "planProgress": {
+    "title": "Seu plano",
+    "week": "Semana {{n}}",
+    "thisWeek": "Esta semana",
+    "workouts": "Treinos",
+    "distance": "Distância",
+    "weeksCompleted": "Semanas concluídas",
+    "showAll": "Ver as {{n}} semanas",
+    "showLess": "Ver menos",
+    "state": {
+      "completed": "Feito",
+      "in_progress": "Hoje",
+      "planned": "Planejado",
+      "missed": "Perdido"
+    }
+  },
+  "stravaCal": {
+    "linkedTo": "Vinculado a {{name}}",
+    "logged": "Registrado",
+    "unlink": "Desvincular",
+    "unlinked": "Treino desvinculado",
+    "suggest": "Parece seu {{name}} — vincular?",
+    "notThis": "Não é este",
+    "unplanned": "Treino não planejado",
+    "linkActivity": "Vincular atividade do Strava",
+    "linkActivityDesc": "Escolha um treino do Strava perto deste dia.",
+    "noActivities": "Nenhum treino do Strava sem vínculo perto deste dia."
   }
 }
