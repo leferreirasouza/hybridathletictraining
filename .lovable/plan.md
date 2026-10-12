@@ -1,46 +1,52 @@
-# Share upgrades + Strava-to-plan linking (Runna-style)
+# Runna-style plan progress, Strava linking and better sharing
 
-Part 2's layout will be adjusted once the Runna screenshots arrive. This draft uses common Runna patterns.
+Built from your Runna screenshots: week strip with colored dots, week-by-week plan cards, a calendar with synced workouts beside planned ones, and a "Link activity" button on each session.
 
-## Part 1 — Better workout sharing
+## Part 1 — Plan progress card on the dashboard (new request)
 
-**Choose what to show**
-- Toggle each metric on or off: distance, duration, pace, avg HR, RPE, elevation, calories, session name, date.
-- Up to 4 metrics on the card at once. A live preview updates as you toggle.
+```text
+HYROX São Paulo Plan            Race: NOV 21
+[====][====][----][----][----][----][----][----]
+Weeks completed 1/8          Run distance 40 / 369 km
+```
 
-**More visual options**
-- **Route map:** if the workout came from Strava and has a GPS route, draw it on the card (a plain line, no map tiles, so it always works and costs nothing).
-- **Your own photo:** upload a photo from the phone as the card background, with a dark overlay so the numbers stay readable. The photo stays on the device and is not uploaded.
-- **Sizes:** Story (9:16), Square (1:1) and Feed (4:5).
-- Keeps the Bold, Minimal and Neon styles, and adds a "Photo" style.
-
-**Where it's available**
-- Same places as today, plus on Strava-synced workouts in History.
+- **Top card:** plan name, race date, one bar segment per week (filled = week done, half-lit = current week), weeks completed, and run km done vs planned. Matches Runna's "Your Plan" card.
+- **Week cards below** (current week open, others collapsed, tap to expand):
+  - Date range and "Week 2", a bar with one segment per session.
+  - "Workouts 1/7 · Distance 11.5 / 53 km".
+  - Each day: colored square by session type, with a check when completed.
+- **Three states per session:**
+  - **Completed:** logged by hand or linked from Strava. Filled square with a check.
+  - **In progress:** today's session, not logged yet. Outlined and highlighted.
+  - **Planned:** future sessions. Plain square. Past sessions not done show as **Missed** (dimmed).
+- Tapping a session opens it in the schedule.
 
 ## Part 2 — Strava workouts in the calendar
 
-```text
-Mon  [Easy run 8km]  -> matched: Strava "Morning Run" 8.3km  (green check)
-Tue  [Intervals]     -> Suggested: Strava "Lunch Run" 6km?  [Link] [Not this]
-Wed  (rest)          -> Unplanned: Strava "Ride" 45min       [Log] [Swap into plan]
-```
+- **Week strip at the top of the schedule** (Runna's "Week 2/8" header): 7 days, colored dots for each planned session and a gray dot for each Strava workout.
+- **Calendar day rows:** planned sessions and Strava workouts sit side by side. Linked ones merge into one card showing the real numbers ("25.0 km · 2h 2m") with a check.
+- **Suggested match, you confirm:** when a Strava workout lands on a day with an open session of the same type, the card shows "Looks like your Easy Run — Link?" with Link / Not this.
+- **"Link activity" button on each session** (like Runna): opens your Strava workouts from that week and lets you pick one. Also **Unlink**.
+- **Unplanned Strava workouts** (e.g. "Treadmill Running") show as gray cards on that day and count toward the week's km.
+- **Adapt the plan (suggest only):** if a key session was missed or a workout ran far longer or harder than planned, suggest a change (move it, make tomorrow easy). It goes through the existing swap approval and never changes the plan by itself.
+- The Strava inbox stays as a catch-all list.
 
-- **In the calendar day:** each planned session shows its linked Strava workout underneath (name, distance, time, pace) with a planned vs done comparison.
-- **Suggestions, you confirm:** when a Strava workout lands on a day with an unmatched planned session, the day shows "Suggested match" with Link / Not this. Nothing links without a tap.
-- **Unplanned workouts:** Strava workouts with no plan that day show on that day as an extra card with Log as extra, or Link to a session from another day in the same week.
-- **Unlink / relink:** tap a linked workout to unlink or move it to another session.
-- **Adapt the plan (suggest only):** if a workout was much harder or longer than planned, or a key session was missed, offer a suggestion (e.g. "make tomorrow easy" or "move intervals to Thursday") that goes to the existing coach/athlete swap approval. Never auto-changes the plan.
-- **Today card on the dashboard:** shows "Synced from Strava" when today's session gets matched.
-- The separate Strava inbox stays as a catch-all list, but the calendar becomes the main place.
+## Part 3 — Better workout sharing
+
+- **Pick your metrics:** toggle distance, duration, pace, avg HR, RPE, elevation, calories, session name, date. Up to 4 on the card, with a live preview.
+- **Route map:** Strava workouts with GPS get their route drawn on the card as a plain line.
+- **Your own photo:** use a phone photo as the background with a dark overlay. The photo stays on the device.
+- **Sizes:** Story 9:16, Square 1:1, Feed 4:5. Keeps Bold, Minimal and Neon and adds Photo.
+- A share button on Strava-synced workouts in History too.
+
+## Order
+1. Plan progress card. 2. Strava linking in the calendar. 3. Sharing.
 
 ## Technical details
 
-- Share: extend `ShareSessionData` with optional fields + `polyline`; new metric picker and size selector in `ShareWorkoutDialog`; decode Strava `map.summary_polyline` from `strava_activities.raw` (verify it is stored) and render as SVG; photo via local `FileReader`, no storage.
-- Calendar: `useScheduleData` also loads the user's `strava_activities` for the visible range; WeeklyView/DailyView/MonthlyView render linked, suggested and unplanned states.
-- Suggestion scoring reuses the matching rules in `_shared/stravaMap.ts` (same date, discipline, closest duration), ported client-side for display only.
-- Link/unlink writes go through one shared helper, reused by StravaInbox, with the existing duplicate-link guard. Unlink deletes only Strava-sourced completions; manual entries are never removed.
-- Adaptation suggestions write to `session_substitutions` as pending. Per governance, the rules deciding "much harder / missed key session" are hand-coded logic and should be reviewed.
-- New strings in en and pt-BR.
-
-## Open
-- Runna screenshots to refine Part 2 layout.
+- Progress card: new `PlanProgressCard` on Dashboard, reading the athlete's `planned_sessions` for the active plan and `completed_sessions` (own `athlete_id` only). Session state is a pure function (completed / in progress / planned / missed) with unit tests. Colors come from the existing discipline config in `schedule/config.ts`, using theme tokens only.
+- Calendar: `useScheduleData` also loads `strava_activities` for the visible range. Suggestion scoring mirrors `_shared/stravaMap.ts` rules (same date, discipline, closest duration) client-side, for display only.
+- One shared link/unlink helper, reused by StravaInbox, keeping the duplicate-link guard. Unlink removes only Strava-sourced completions, never manual entries. Training load recalculates via the existing trigger.
+- Adaptation suggestions are written as pending `session_substitutions`. The "missed / much harder" rules count as hand-coded training logic per the project rules and should be reviewed.
+- Share: extend `ShareSessionData` with optional metrics and `polyline`; decode `map.summary_polyline` from `strava_activities.raw` (check it is stored first); photo via local `FileReader`, no upload.
+- All new text in English and Portuguese. Tasks are recorded in roadmap.md once building starts.
