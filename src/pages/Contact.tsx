@@ -90,37 +90,37 @@ export default function Contact() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="name">{t('exerciseLibrary.name')}</Label>
                 <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder={t('auto.k656')} required maxLength={100} />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('auth.email')}</Label>
                 <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required maxLength={255} />
               </div>
 
               <div className="space-y-2">
-                <Label>Category</Label>
+                <Label>{t('raceResults.category')}</Label>
                 <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="support">Support</SelectItem>
-                    <SelectItem value="feedback">Feedback</SelectItem>
+                    <SelectItem value="support">{t('contact.support')}</SelectItem>
+                    <SelectItem value="feedback">{t('contact.feedback')}</SelectItem>
                     <SelectItem value="bug">{t('auto.k100')}</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="other">{t('coachDashboard.other')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="message">Message</Label>
+                <Label htmlFor="message">{t('contact.message')}</Label>
                 <Textarea id="message" value={message} onChange={e => setMessage(e.target.value)} placeholder={t('auto.k239')} rows={5} required minLength={10} maxLength={2000} />
               </div>
 
               <Button type="submit" className="w-full gradient-hyrox" disabled={loading}>
-                {loading ? 'Sending…' : 'Send Message'}
+                {loading ? t('auth.sending') : t('contact.sendMessage')}
               </Button>
             </form>
           </CardContent>

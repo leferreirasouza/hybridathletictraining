@@ -4,6 +4,12 @@
     "tagline": "Treine mais inteligente. Corra mais rápido.",
     "version": "Hybrid Athletics v1.0 — Feito para performance"
   },
+  "contact": {
+    "support": "Suporte",
+    "feedback": "Feedback",
+    "message": "Mensagem",
+    "sendMessage": "Enviar mensagem"
+  },
   "nav": {
     "today": "Hoje",
     "plan": "Plano",
