@@ -49,20 +49,20 @@ interface PresetDef {
 const PRESETS: PresetDef[] = [
   {
     key: 'bodyweight_only',
-    title: t('auto.k99'),
-    description: t('auto.k337'),
+    title: 'Bodyweight Only',
+    description: 'No equipment needed',
     items: [],
   },
   {
     key: 'basic_home',
-    title: t('auto.k92'),
-    description: t('auto.k158'),
+    title: 'Basic Home Gym',
+    description: 'Dumbbells, bench, pull-up bar, bands',
     items: ['dumbbell', 'bench', 'pull_up_bar', 'resistance_band'],
   },
   {
     key: 'hyrox_box',
     title: 'HYROX / CrossFit Box',
-    description: t('auto.k213'),
+    description: 'Full HYROX kit + barbell + KB',
     items: [
       'gym_access', 'sled', 'rower', 'skierg', 'wall_ball', 'sandbag',
       'rope', 'kettlebell', 'barbell', 'box',
@@ -70,8 +70,8 @@ const PRESETS: PresetDef[] = [
   },
   {
     key: 'full_gym',
-    title: t('auto.k212'),
-    description: t('auto.k179'),
+    title: 'Full Gym',
+    description: 'Everything, including machines',
     items: [
       'gym_access', 'sled', 'rower', 'skierg', 'wall_ball', 'sandbag', 'rope',
       'kettlebell', 'barbell', 'dumbbell', 'pull_up_bar', 'bench', 'box',
