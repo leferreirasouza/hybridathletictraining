@@ -761,7 +761,10 @@ Current Running Volume: ${profile.currentWeeklyKm ?? 0} km/week across ${profile
       }
 
       if (adjustments.length > 0) {
-        await supabase.from("periodization_adjustments").insert(adjustments);
+        const { error: adjErr } = await supabase.from("periodization_adjustments").insert(adjustments);
+        if (adjErr) {
+          console.error("periodization_adjustments insert failed (non-fatal, but logged — this table has had 0 rows ever and this was previously silent):", adjErr);
+        }
       }
     }
 
