@@ -24,6 +24,7 @@ import ExcelJS from 'exceljs';
 import PlanCreationWizard from '@/pages/PlanCreationWizard';
 import { useTranslation } from 'react-i18next';
 import { useOrgPlans } from '@/hooks/useOrgPlans';
+import WeekBuilderTab from '@/components/plan-builder/WeekBuilderTab';
 import { SwapSessionDialog } from '@/components/schedule/SwapSessionDialog';
 
 type Discipline = Database['public']['Enums']['discipline'];
@@ -852,14 +853,19 @@ export default function PlanBuilder() {
       </div>
 
       <Tabs value={managerTab} onValueChange={(value) => { const next = new URLSearchParams(searchParams); next.set('tab', value); setSearchParams(next, { replace: true }); }}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="plans" className="gap-1.5"><List className="h-3.5 w-3.5" /> Current Plans</TabsTrigger>
+          <TabsTrigger value="week">Week Builder</TabsTrigger>
           <TabsTrigger value="build">Fine-tune a Plan</TabsTrigger>
           <TabsTrigger value="import">{t('planBuilder.importFile')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="plans" className="mt-4">
           <CurrentPlansTab onFineTune={goToBuildWithPlan} />
+        </TabsContent>
+
+        <TabsContent value="week" className="mt-4">
+          <WeekBuilderTab />
         </TabsContent>
 
         <TabsContent value="build" className="mt-4 space-y-4">
