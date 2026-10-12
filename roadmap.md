@@ -1,7 +1,13 @@
 # Roadmap
 
-- [x] Plan progress card on athlete dashboard (week by week, completed / today / planned / missed)
-- [x] Strava workouts in weekly calendar: week strip, suggested match, link / unlink, unplanned log
-- [x] "Link Strava activity" on each planned session
-- [x] Share: metric picker, sizes (story/feed/square), own photo, Strava route map
-- [ ] Adapt-the-plan suggestions after missed / much harder workouts — blocked: training logic needs hand-written rules and review per project governance
+- [x] Plan progress card, Strava in calendar, link/unlink, share overhaul, Week Builder
+- [x] Suggestions display; athletes, coaches and admins can Accept/Dismiss (via respond_to_plan_suggestion)
+- [x] Decisions: no "In progress" label; suggestion rules hand-written by owner
+- [ ] Suggestion RULES (missed / much harder) — owner/Claude Code hand-writes; nothing creates suggestions yet
+- [ ] Portuguese for Week Builder and Share dialog
+- [ ] Stripe secrets + webhook (owner)
+- [ ] Real Strava workout to confirm live subscription (owner)
+- [ ] Rotate secrets pasted in chat (owner)
+- [ ] Hand review: strava-subscribe, admin RPCs, week_templates, respond_to_plan_suggestion
+- [ ] Verify periodization engine and onboarding PAR-Q save with real data
+- [ ] Garmin blocked on Garmin program

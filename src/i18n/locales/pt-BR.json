@@ -625,5 +625,42 @@
     "linkActivity": "Vincular atividade do Strava",
     "linkActivityDesc": "Escolha um treino do Strava perto deste dia.",
     "noActivities": "Nenhum treino do Strava sem vínculo perto deste dia."
+  },
+  "adminSync": {
+    "title": "Atletas e Strava",
+    "search": "Buscar atleta",
+    "refresh": "Atualizar",
+    "none": "Nenhum atleta encontrado.",
+    "athlete": "Atleta",
+    "strava": "Strava",
+    "lastSync": "Última sincronização",
+    "latestReceived": "Último treino recebido",
+    "activities": "Atividades",
+    "load": "CTL / ATL / TSB",
+    "actions": "Ações",
+    "connected": "Conectado",
+    "notConnected": "Não conectado",
+    "workout": "treino",
+    "inInbox": "{{n}} na caixa de entrada",
+    "computed": "calculado",
+    "recalc": "Recalcular",
+    "recalcBusy": "Recalculando…",
+    "athleteFallback": "Atleta"
+  },
+  "planSuggest": {
+    "title": "Mudança sugerida",
+    "time": "Tempo",
+    "distance": "Distância",
+    "intensity": "Intensidade",
+    "accept": "Aceitar",
+    "dismiss": "Dispensar",
+    "updated": "Plano atualizado",
+    "dismissed": "Sugestão dispensada",
+    "failed": "Não foi possível responder à sugestão: ",
+    "session": "Sessão",
+    "r_missed_session": "Sessão perdida",
+    "r_harder_than_planned": "Mais difícil que o planejado",
+    "r_tsb_fatigue": "Fadiga alta",
+    "r_interference": "Conflito de treino"
   }
 }

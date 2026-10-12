@@ -2070,6 +2070,10 @@ export type Database = {
         Args: { _athlete_id: string }
         Returns: undefined
       }
+      respond_to_plan_suggestion: {
+        Args: { _accept: boolean; _adjustment_id: string }
+        Returns: undefined
+      }
       session_trimp: {
         Args: {
           _avg_hr: number
