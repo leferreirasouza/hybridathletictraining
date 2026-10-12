@@ -87,7 +87,7 @@ export default function WeeklyView({ sessions, weekNumber, weeklySummary, comple
                 </span>
                 <div className="flex gap-0.5 flex-wrap justify-center min-h-[6px]">
                   {planned.map(s => (
-                    <span key={s.id} className={`h-1.5 w-1.5 rounded-sm ${completedPlanIds.has(s.id) ? 'bg-success' : getDiscipline(s.discipline).color.split(' ').find(c => c.startsWith('text-'))?.replace('text-', 'bg-') ?? 'bg-primary'}`} />
+                    <span key={s.id} className={`h-1.5 w-1.5 rounded-sm ${completedPlanIds.has(s.id) ? 'bg-success' : 'bg-primary'}`} />
                   ))}
                   {strava.map(a => <span key={a.id} className="h-1.5 w-1.5 rounded-sm bg-muted-foreground" />)}
                 </div>
