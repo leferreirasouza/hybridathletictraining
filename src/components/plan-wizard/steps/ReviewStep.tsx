@@ -344,6 +344,7 @@ function GeneratedPlanPreview({
   plan: { planId: string; planName: string; totalWeeks: number; sessionsCreated: number };
   onContinue: () => void;
 }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [sessions, setSessions] = useState<PreviewSession[]>([]);
 
@@ -494,6 +495,7 @@ function riskStyles(level?: string) {
 }
 
 function PredictionView({ prediction }: { prediction: any }) {
+  const { t } = useTranslation();
   // Fallback for plain-string predictions
   if (typeof prediction === 'string') {
     return <p className="text-sm text-foreground whitespace-pre-wrap">{prediction}</p>;

@@ -19,15 +19,15 @@ const STYLES: { key: CardStyle; label: string }[] = [
   { key: 'photo', label: 'Photo' },
 ];
 const SIZES: { key: CardSize; label: string }[] = [
-  { key: 'story', label: t('auto.k521') },
-  { key: 'feed', label: t('auto.k197') },
-  { key: 'square', label: t('auto.k518') },
+  { key: 'story', label: 'Story 9:16' },
+  { key: 'feed', label: 'Feed 4:5' },
+  { key: 'square', label: 'Square 1:1' },
 ];
 const ALL_METRICS: { key: MetricKey; label: string }[] = [
   { key: 'distance', label: 'Distance' },
   { key: 'duration', label: 'Time' },
   { key: 'pace', label: 'Pace' },
-  { key: 'hr', label: t('auto.k75') },
+  { key: 'hr', label: 'Avg HR' },
   { key: 'rpe', label: 'Effort' },
   { key: 'elevation', label: 'Elevation' },
   { key: 'calories', label: 'Calories' },

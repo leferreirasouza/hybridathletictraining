@@ -2,6 +2,7 @@ import { getDiscipline } from '@/components/schedule/config';
 import { CARD_SIZES, type CardSize, type CardStyle, type MetricKey, type ShareSessionData } from './types';
 
 import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
 /** Google encoded polyline -> [lat, lng][] */
 export function decodePolyline(str: string): [number, number][] {
   let i = 0, lat = 0, lng = 0;
@@ -40,7 +41,7 @@ export function metricValue(data: ShareSessionData, key: MetricKey): { label: st
     case 'distance': return data.distanceKm != null ? { label: 'Distance', value: `${data.distanceKm} km` } : null;
     case 'duration': return data.durationMin != null ? { label: 'Time', value: `${data.durationMin} min` } : null;
     case 'pace': return data.avgPace ? { label: 'Pace', value: `${data.avgPace} /km` } : null;
-    case 'hr': return data.avgHr != null ? { label: t('auto.k75'), value: `${data.avgHr} bpm` } : null;
+    case 'hr': return data.avgHr != null ? { label: i18n.t('auto.k75'), value: `${data.avgHr} bpm` } : null;
     case 'rpe': return data.rpe != null ? { label: 'Effort', value: `${data.rpe}/10` } : null;
     case 'elevation': return data.elevationM != null ? { label: 'Elevation', value: `${Math.round(data.elevationM)} m` } : null;
     case 'calories': return data.calories != null ? { label: 'Calories', value: `${data.calories}` } : null;

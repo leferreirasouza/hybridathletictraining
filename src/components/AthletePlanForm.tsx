@@ -31,21 +31,21 @@ const hyroxStations = [
 ];
 
 const experienceLevels = [
-  { value: 'beginner', label: 'Beginner', desc: t('auto.k201') },
-  { value: 'intermediate', label: 'Intermediate', desc: t('auto.k5') },
-  { value: 'advanced', label: 'Advanced', desc: t('auto.k9') },
+  { value: 'beginner', label: 'Beginner', desc: 'First race or <6 months training' },
+  { value: 'intermediate', label: 'Intermediate', desc: '1-3 races completed' },
+  { value: 'advanced', label: 'Advanced', desc: '3+ races, competitive times' },
 ];
 
 const focusOptions = [
-  { value: 'balanced', label: 'Balanced', desc: t('auto.k466') },
-  { value: 'running', label: t('auto.k469'), desc: t('auto.k420') },
-  { value: 'stations', label: t('auto.k520'), desc: t('auto.k421') },
+  { value: 'balanced', label: 'Balanced', desc: 'Running + Stations equally' },
+  { value: 'running', label: 'Running Focus', desc: 'Prioritize running speed/endurance' },
+  { value: 'stations', label: 'Stations Focus', desc: 'Prioritize station performance' },
 ];
 
 const runningDistances = [
   { value: '5k', label: '5K' },
   { value: '10k', label: '10K' },
-  { value: 'half', label: t('auto.k231') },
+  { value: 'half', label: 'Half Marathon' },
   { value: 'marathon', label: 'Marathon' },
   { value: 'other', label: 'Other' },
 ];

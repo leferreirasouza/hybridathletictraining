@@ -386,13 +386,13 @@ export default function WeekBuilderTab() {
           ) : (
             <>
               <div className="space-y-1.5 max-h-72 overflow-auto">
-                {templates.map((t) => (
-                  <div key={t.id} className={`flex items-center gap-2 rounded-md border px-2 py-1.5 ${tplPick === t.id ? 'border-primary' : 'border-border/60'}`}>
-                    <button className="flex-1 text-left" onClick={() => setTplPick(t.id)}>
-                      <p className="text-sm font-medium">{t.name}</p>
-                      <p className="text-[11px] text-muted-foreground">{(t.sessions as unknown[]).length} sessions</p>
+                {templates.map((template) => (
+                  <div key={template.id} className={`flex items-center gap-2 rounded-md border px-2 py-1.5 ${tplPick === template.id ? 'border-primary' : 'border-border/60'}`}>
+                    <button className="flex-1 text-left" onClick={() => setTplPick(template.id)}>
+                      <p className="text-sm font-medium">{template.name}</p>
+                      <p className="text-[11px] text-muted-foreground">{(template.sessions as unknown[]).length} sessions</p>
                     </button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => deleteTemplate(t.id)} aria-label={t('auto.k148')}><Trash2 className="h-3.5 w-3.5" /></Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => deleteTemplate(template.id)} aria-label={t('auto.k148')}><Trash2 className="h-3.5 w-3.5" /></Button>
                   </div>
                 ))}
               </div>

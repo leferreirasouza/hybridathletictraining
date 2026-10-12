@@ -10,20 +10,20 @@ import StravaInbox from '@/components/strava/StravaInbox';
 
 import { useTranslation } from 'react-i18next';
 const ACTION_META: Record<string, { label: string; icon: typeof Activity; color: string }> = {
-  'session.completed': { label: t('auto.k500'), icon: Dumbbell, color: 'text-success' },
-  'session.deleted': { label: t('auto.k496'), icon: Dumbbell, color: 'text-destructive' },
-  'plan.created': { label: t('auto.k397'), icon: Calendar, color: 'text-primary' },
-  'plan.imported': { label: t('auto.k402'), icon: Calendar, color: 'text-primary' },
+  'session.completed': { label: 'Session Logged', icon: Dumbbell, color: 'text-success' },
+  'session.deleted': { label: 'Session Deleted', icon: Dumbbell, color: 'text-destructive' },
+  'plan.created': { label: 'Plan Created', icon: Calendar, color: 'text-primary' },
+  'plan.imported': { label: 'Plan Imported', icon: Calendar, color: 'text-primary' },
   'plan.ai_generated': { label: 'AI Plan Generated', icon: Calendar, color: 'text-accent-foreground' },
-  'substitution.created': { label: t('auto.k535'), icon: ArrowRightLeft, color: 'text-warning' },
-  'substitution.approved': { label: t('auto.k531'), icon: ArrowRightLeft, color: 'text-success' },
-  'substitution.rejected': { label: t('auto.k534'), icon: ArrowRightLeft, color: 'text-destructive' },
-  'assignment.created': { label: t('auto.k69'), icon: Shield, color: 'text-primary' },
-  'race.added': { label: t('auto.k427'), icon: Trophy, color: 'text-primary' },
-  'race.deleted': { label: t('auto.k433'), icon: Trophy, color: 'text-destructive' },
-  'auth.login': { label: t('auto.k285'), icon: LogIn, color: 'text-muted-foreground' },
-  'auth.signup': { label: t('auto.k20'), icon: UserPlus, color: 'text-success' },
-  'auth.password_reset': { label: t('auto.k376'), icon: Shield, color: 'text-warning' },
+  'substitution.created': { label: 'Swap Requested', icon: ArrowRightLeft, color: 'text-warning' },
+  'substitution.approved': { label: 'Swap Approved', icon: ArrowRightLeft, color: 'text-success' },
+  'substitution.rejected': { label: 'Swap Rejected', icon: ArrowRightLeft, color: 'text-destructive' },
+  'assignment.created': { label: 'Athlete Assigned', icon: Shield, color: 'text-primary' },
+  'race.added': { label: 'Race Added', icon: Trophy, color: 'text-primary' },
+  'race.deleted': { label: 'Race Deleted', icon: Trophy, color: 'text-destructive' },
+  'auth.login': { label: 'Logged In', icon: LogIn, color: 'text-muted-foreground' },
+  'auth.signup': { label: 'Account Created', icon: UserPlus, color: 'text-success' },
+  'auth.password_reset': { label: 'Password Reset', icon: Shield, color: 'text-warning' },
 };
 
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.04 } } };

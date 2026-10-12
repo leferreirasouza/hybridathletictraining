@@ -49,8 +49,8 @@ const intensityOptions: { value: Intensity; label: string }[] = [
   { value: 'easy', label: 'Easy' },
   { value: 'moderate', label: 'Moderate' },
   { value: 'hard', label: 'Hard' },
-  { value: 'race_pace', label: t('auto.k437') },
-  { value: 'max_effort', label: t('auto.k289') },
+  { value: 'race_pace', label: 'Race Pace' },
+  { value: 'max_effort', label: 'Max Effort' },
 ];
 
 const rolePriority: Record<AppRole, number> = {

@@ -381,6 +381,7 @@ function UploadDialog({
   orgId?: string;
   onComplete: () => void;
 }) {
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<string>('pdf');
   const [uploading, setUploading] = useState(false);
@@ -714,6 +715,7 @@ function ChunkDetailDialog({
   doc: KnowledgeDocument | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [chunkSearch, setChunkSearch] = useState('');
 
   const { data: chunks = [], isLoading } = useQuery({
