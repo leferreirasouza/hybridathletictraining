@@ -8,7 +8,7 @@ import { logAudit } from '@/lib/auditLog';
 
 // Display + confirm only. Suggestions are created by hand-reviewed server
 // logic; nothing here decides what to change — it never modifies a plan
-// unless a coach presses Accept.
+// unless the athlete or coach presses Accept.
 
 
 function change(label: string, from: unknown, to: unknown, unit = '') {
