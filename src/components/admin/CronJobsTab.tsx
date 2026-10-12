@@ -10,6 +10,7 @@ import { Clock, RefreshCw, CheckCircle2, XCircle, History, Activity } from 'luci
 import { toast } from 'sonner';
 import { CronExpressionParser } from 'cron-parser';
 
+import { useTranslation } from 'react-i18next';
 interface CronJob {
   jobid: number;
   jobname: string;
@@ -64,6 +65,7 @@ function fmt(ts: string | null): string {
 }
 
 export default function CronJobsTab() {
+  const { t } = useTranslation();
   const [jobs, setJobs] = useState<CronJob[]>([]);
   const [logs, setLogs] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,7 +108,7 @@ export default function CronJobsTab() {
   };
 
   const statusBadge = (status: string | null) => {
-    if (!status) return <Badge variant="outline">never run</Badge>;
+    if (!status) return <Badge variant="outline">{t('auto.k319')}</Badge>;
     if (status === 'succeeded')
       return (
         <Badge className="bg-success/15 text-success border-success/30 gap-1">
@@ -127,7 +129,7 @@ export default function CronJobsTab() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Clock className="h-5 w-5 text-primary" /> Scheduled Jobs ({jobs.length})
+            <Clock className="h-5 w-5 text-primary" />  {t('auto.k476')}{jobs.length})
           </CardTitle>
           <Button size="sm" variant="outline" onClick={fetchAll} disabled={loading} className="gap-1.5">
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
@@ -139,7 +141,7 @@ export default function CronJobsTab() {
               <div className="h-6 w-6 rounded-lg gradient-hyrox animate-pulse" />
             </div>
           ) : jobs.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">No scheduled jobs.</p>
+            <p className="text-center text-muted-foreground py-8">{t('auto.k351')}</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -147,9 +149,9 @@ export default function CronJobsTab() {
                   <TableRow>
                     <TableHead>Job</TableHead>
                     <TableHead>Schedule</TableHead>
-                    <TableHead>Last run</TableHead>
-                    <TableHead>Next run</TableHead>
-                    <TableHead className="text-right">Success / Fail</TableHead>
+                    <TableHead>{t('auto.k276')}</TableHead>
+                    <TableHead>{t('auto.k327')}</TableHead>
+                    <TableHead className="text-right">{t('auto.k530')}</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -198,12 +200,12 @@ export default function CronJobsTab() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Activity className="h-5 w-5 text-primary" /> Recent Audit Entries
+            <Activity className="h-5 w-5 text-primary" />  {t('auto.k443')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {logs.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8 text-sm">No cron audit entries yet.</p>
+            <p className="text-center text-muted-foreground py-8 text-sm">{t('auto.k335')}</p>
           ) : (
             <ScrollArea className="max-h-96 pr-2">
               <div className="space-y-2">
@@ -241,7 +243,7 @@ export default function CronJobsTab() {
               <div className="h-6 w-6 rounded-lg gradient-hyrox animate-pulse" />
             </div>
           ) : runs.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8 text-sm">No runs recorded yet.</p>
+            <p className="text-center text-muted-foreground py-8 text-sm">{t('auto.k350')}</p>
           ) : (
             <ScrollArea className="max-h-[60vh]">
               <Table>

@@ -138,7 +138,7 @@ export default function RacePicker({ onSelect, selectedRaceId, planType }: RaceP
     } as any).select().single();
 
     if (error) {
-      toast.error('Failed to create race');
+      toast.error(t('auto.k186'));
       return;
     }
     toast.success(t('racePicker.raceCreated'));

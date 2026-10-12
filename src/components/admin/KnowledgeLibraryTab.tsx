@@ -16,6 +16,7 @@ import { BookOpen, Search, FileText, Globe, Upload, Trash2, ExternalLink, Plus, 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -70,6 +71,7 @@ const statusVariant = (status: string) => {
 };
 
 export default function KnowledgeLibraryTab() {
+  const { t } = useTranslation();
   const { user, currentOrg } = useAuth();
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -122,7 +124,7 @@ export default function KnowledgeLibraryTab() {
       await supabase.from('knowledge_chunks').delete().eq('document_id', deleteId);
       const { error } = await supabase.from('knowledge_documents').delete().eq('id', deleteId);
       if (error) throw error;
-      toast.success('Document deleted');
+      toast.success(t('auto.k155'));
       refetch();
     } catch (err: any) {
       toast.error(err.message || 'Failed to delete');
@@ -190,7 +192,7 @@ export default function KnowledgeLibraryTab() {
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <BookOpen className="h-5 w-5 text-primary" /> Knowledge Library ({documents.length})
+            <BookOpen className="h-5 w-5 text-primary" />  {t('auto.k274')}{documents.length})
           </CardTitle>
           <div className="flex items-center gap-2">
             <div className="relative w-full sm:w-64">
@@ -198,17 +200,17 @@ export default function KnowledgeLibraryTab() {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search documents..."
+                placeholder={t('auto.k479')}
                 className="pl-9 h-9"
               />
             </div>
             {unverifiedCount > 0 && (
               <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={handleVerifyAll}>
-                <ShieldCheck className="h-4 w-4" /> Verify All ({unverifiedCount})
+                <ShieldCheck className="h-4 w-4" />  {t('auto.k604')}{unverifiedCount})
               </Button>
             )}
             <Button size="sm" className="gap-1.5 shrink-0" onClick={() => setUploadOpen(true)}>
-              <Plus className="h-4 w-4" /> Add Source
+              <Plus className="h-4 w-4" />  {t('auto.k33')}
             </Button>
           </div>
         </CardHeader>
@@ -224,7 +226,7 @@ export default function KnowledgeLibraryTab() {
                 {search ? 'No documents match your search' : 'No knowledge documents yet'}
               </p>
               <Button variant="outline" size="sm" className="mt-4 gap-1.5" onClick={() => setUploadOpen(true)}>
-                <Plus className="h-4 w-4" /> Add your first source
+                <Plus className="h-4 w-4" />  {t('auto.k40')}
               </Button>
             </div>
           ) : (
@@ -238,7 +240,7 @@ export default function KnowledgeLibraryTab() {
                     <TableHead>Status</TableHead>
                     <TableHead className="text-center">Chunks</TableHead>
                     <TableHead>Organization</TableHead>
-                    <TableHead>Uploaded By</TableHead>
+                    <TableHead>{t('auto.k600')}</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -344,9 +346,10 @@ export default function KnowledgeLibraryTab() {
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete document?</AlertDialogTitle>
+            <AlertDialogTitle>{t('auto.k143')}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the document and all its chunks. This action cannot be undone.
+              
+              {t('auto.k564')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -394,7 +397,7 @@ function UploadDialog({
     const files = Array.from(e.target.files || []);
     const pdfs = files.filter(f => f.type === 'application/pdf' || f.name.endsWith('.pdf'));
     if (pdfs.length !== files.length) {
-      toast.error('Only PDF files are supported');
+      toast.error(t('auto.k365'));
     }
     setSelectedFiles(prev => [...prev, ...pdfs].slice(0, 20)); // Max 20
   };
@@ -502,7 +505,7 @@ function UploadDialog({
       .filter(u => u.length > 0 && (u.startsWith('http://') || u.startsWith('https://')));
 
     if (urlList.length === 0) {
-      toast.error('Please enter at least one valid URL (starting with http:// or https://)');
+      toast.error(t('auto.k408'));
       return;
     }
 
@@ -592,33 +595,35 @@ function UploadDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-primary" /> Add Knowledge Source
+            <BookOpen className="h-5 w-5 text-primary" />  {t('auto.k30')}
           </DialogTitle>
         </DialogHeader>
 
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="w-full">
             <TabsTrigger value="pdf" className="flex-1 gap-1.5">
-              <FileUp className="h-3.5 w-3.5" /> Upload PDFs
+              <FileUp className="h-3.5 w-3.5" />  {t('auto.k598')}
             </TabsTrigger>
             <TabsTrigger value="url" className="flex-1 gap-1.5">
-              <Link className="h-3.5 w-3.5" /> Web URLs
+              <Link className="h-3.5 w-3.5" />  {t('auto.k616')}
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pdf" className="space-y-4 mt-4">
             <div>
-              <Label className="text-sm mb-2 block">Select PDF files (max 20, up to 20MB each)</Label>
+              <Label className="text-sm mb-2 block">{t('auto.k493')}</Label>
               <div
                 className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
                 <p className="text-sm text-muted-foreground">
-                  Click to select PDFs or drag & drop
+                  
+                  {t('auto.k110')}
                 </p>
                 <p className="text-xs text-muted-foreground/70 mt-1">
-                  Training manuals, research papers, methodology guides
+                  
+                  {t('auto.k591')}
                 </p>
               </div>
               <input
@@ -662,7 +667,7 @@ function UploadDialog({
 
           <TabsContent value="url" className="space-y-4 mt-4">
             <div>
-              <Label className="text-sm mb-2 block">Enter URLs (one per line)</Label>
+              <Label className="text-sm mb-2 block">{t('auto.k173')}</Label>
               <Textarea
                 value={urls}
                 onChange={(e) => setUrls(e.target.value)}
@@ -671,8 +676,8 @@ function UploadDialog({
                 className="font-mono text-xs"
               />
               <p className="text-xs text-muted-foreground mt-1.5">
-                Research papers, articles, and publicly accessible training resources.
-                The AI will extract and clean the content automatically.
+                
+                {t('auto.k450')}
               </p>
             </div>
 
@@ -762,7 +767,7 @@ function ChunkDetailDialog({
             </Badge>
             {doc.metadata?.total_characters && (
               <Badge variant="outline" className="text-[10px]">
-                {(doc.metadata.total_characters / 1000).toFixed(1)}k chars
+                {(doc.metadata.total_characters / 1000).toFixed(1)}{t('auto.k268')}
               </Badge>
             )}
           </div>
@@ -784,7 +789,7 @@ function ChunkDetailDialog({
           <Input
             value={chunkSearch}
             onChange={(e) => setChunkSearch(e.target.value)}
-            placeholder="Search within chunks..."
+            placeholder={t('auto.k482')}
             className="pl-8 h-8 text-xs"
           />
           {chunkSearch && (
@@ -812,7 +817,8 @@ function ChunkDetailDialog({
                 <div key={chunk.id} className="rounded-lg border border-border bg-muted/30 p-3">
                   <div className="flex items-center justify-between mb-2">
                     <Badge variant="outline" className="text-[10px] font-mono">
-                      Chunk #{chunk.chunk_index}
+                      
+                      {t('auto.k107')}{chunk.chunk_index}
                     </Badge>
                     <span className="text-[10px] text-muted-foreground">
                       {chunk.content.length} chars

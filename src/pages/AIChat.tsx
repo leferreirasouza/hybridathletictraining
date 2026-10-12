@@ -50,7 +50,7 @@ export default function AIChat() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        toast.error('You must be logged in to use AI Coach.');
+        toast.error(t('auto.k646'));
         setIsLoading(false);
         return;
       }
@@ -64,8 +64,8 @@ export default function AIChat() {
         body: JSON.stringify({ messages: allMessages }),
       });
 
-      if (resp.status === 401) { toast.error('Session expired. Please log in again.'); setIsLoading(false); return; }
-      if (resp.status === 429) { toast.error('Rate limit exceeded. Please wait a moment.'); setIsLoading(false); return; }
+      if (resp.status === 401) { toast.error(t('auto.k497')); setIsLoading(false); return; }
+      if (resp.status === 429) { toast.error(t('auto.k442')); setIsLoading(false); return; }
       if (resp.status === 402) { toast.error('AI credits exhausted.'); setIsLoading(false); return; }
       if (!resp.ok || !resp.body) throw new Error('Failed to start stream');
 
@@ -126,7 +126,7 @@ export default function AIChat() {
       }
     } catch (e) {
       console.error(e);
-      toast.error('Failed to get AI response');
+      toast.error(t('auto.k190'));
     } finally {
       setIsLoading(false);
     }

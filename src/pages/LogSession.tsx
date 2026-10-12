@@ -76,7 +76,7 @@ export default function LogSession() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) { toast.error('Not logged in'); return; }
+    if (!user) { toast.error(t('auto.k356')); return; }
     setSaving(true);
 
     const { error } = await supabase.from('completed_sessions').insert({

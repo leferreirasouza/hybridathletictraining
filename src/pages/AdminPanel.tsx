@@ -59,7 +59,7 @@ export default function AdminPanel() {
         <TabsList>
           {isMasterAdmin && <TabsTrigger value="orgs">{t('admin.organizations')}</TabsTrigger>}
           <TabsTrigger value="users">{t('admin.userManagement')}</TabsTrigger>
-          <TabsTrigger value="athletes">Athletes & Strava</TabsTrigger>
+          <TabsTrigger value="athletes">{t('auto.k71')}</TabsTrigger>
           {isMasterAdmin && <TabsTrigger value="knowledge" className="gap-1.5"><BookOpen className="h-3.5 w-3.5" /> Knowledge</TabsTrigger>}
           {isMasterAdmin && <TabsTrigger value="cron" className="gap-1.5"><Clock className="h-3.5 w-3.5" /> Cron</TabsTrigger>}
           <TabsTrigger value="activity">{t('admin.activityLogTab')}</TabsTrigger>
@@ -115,7 +115,7 @@ function OrganizationsTab() {
   const openEdit = (org: Organization) => { setEditingOrg(org); setFormName(org.name); setFormLogo(org.logo_url ?? ''); setDialogOpen(true); };
 
   const handleSave = async () => {
-    if (!formName.trim()) { toast.error('Name required'); return; }
+    if (!formName.trim()) { toast.error(t('auto.k318')); return; }
     setSaving(true);
     if (editingOrg) {
       const { error } = await supabase.from('organizations').update({ name: formName.trim(), logo_url: formLogo.trim() || null }).eq('id', editingOrg.id);
@@ -152,7 +152,7 @@ function OrganizationsTab() {
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
                 <Label>{t('admin.orgName')}</Label>
-                <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Organization name" />
+                <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t('auto.k371')} />
               </div>
               <div className="space-y-2">
                 <Label>{t('admin.logoUrl')}</Label>

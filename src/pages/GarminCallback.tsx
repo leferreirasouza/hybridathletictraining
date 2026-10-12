@@ -4,7 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { useTranslation } from 'react-i18next';
 export default function GarminCallback() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [status, setStatus] = useState<'working' | 'success' | 'error'>('working');
@@ -38,7 +40,7 @@ export default function GarminCallback() {
       localStorage.setItem('ha-garmin-connected', '1');
       setStatus('success');
       setMessage('Garmin connected!');
-      toast.success('Garmin connected');
+      toast.success(t('auto.k216'));
       setTimeout(() => navigate('/settings'), 1200);
     })();
   }, [params, navigate]);
@@ -52,7 +54,8 @@ export default function GarminCallback() {
         <p className="text-sm text-foreground">{message}</p>
         {status === 'error' && (
           <button onClick={() => navigate('/settings')} className="text-xs text-primary underline">
-            Back to Settings
+            
+            {t('auto.k88')}
           </button>
         )}
       </div>

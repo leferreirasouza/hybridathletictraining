@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Loader2, UserPlus } from 'lucide-react';
 
+import { useTranslation } from 'react-i18next';
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export default function AssignAthleteDialog({ open, onOpenChange, onAssigned, existingAthleteIds }: Props) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [orgId, setOrgId] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<{ id: string; full_name: string }[]>([]);
@@ -71,7 +73,7 @@ export default function AssignAthleteDialog({ open, onOpenChange, onAssigned, ex
     if (error) {
       toast.error(error.message.includes('primary') ? 'This athlete already has a primary coach' : error.message);
     } else {
-      toast.success('Athlete assigned! ✅');
+      toast.success(t('auto.k70'));
       setSelectedAthleteId('');
       onOpenChange(false);
       onAssigned();
@@ -83,19 +85,19 @@ export default function AssignAthleteDialog({ open, onOpenChange, onAssigned, ex
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="font-display flex items-center gap-2">
-            <UserPlus className="h-4 w-4" /> Assign Athlete
+            <UserPlus className="h-4 w-4" />  {t('auto.k64')}
           </DialogTitle>
         </DialogHeader>
         {loading ? (
           <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : candidates.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">No unassigned athletes in your organization.</p>
+          <p className="text-sm text-muted-foreground py-4 text-center">{t('auto.k354')}</p>
         ) : (
           <div className="space-y-4 pt-2">
             <div className="space-y-1.5">
               <Label className="text-xs">Athlete</Label>
               <Select value={selectedAthleteId} onValueChange={setSelectedAthleteId}>
-                <SelectTrigger><SelectValue placeholder="Select athlete..." /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t('auto.k489')} /></SelectTrigger>
                 <SelectContent>
                   {candidates.map(c => (
                     <SelectItem key={c.id} value={c.id}>
@@ -106,7 +108,7 @@ export default function AssignAthleteDialog({ open, onOpenChange, onAssigned, ex
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Coach type</Label>
+              <Label className="text-xs">{t('auto.k114')}</Label>
               <Select value={coachType} onValueChange={v => setCoachType(v as any)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>

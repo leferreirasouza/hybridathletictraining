@@ -49,8 +49,8 @@ const intensityOptions: { value: Intensity; label: string }[] = [
   { value: 'easy', label: 'Easy' },
   { value: 'moderate', label: 'Moderate' },
   { value: 'hard', label: 'Hard' },
-  { value: 'race_pace', label: 'Race Pace' },
-  { value: 'max_effort', label: 'Max Effort' },
+  { value: 'race_pace', label: t('auto.k437') },
+  { value: 'max_effort', label: t('auto.k289') },
 ];
 
 const rolePriority: Record<AppRole, number> = {
@@ -162,7 +162,7 @@ function ExercisePicker({
             autoFocus
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search exercises..."
+            placeholder={t('auto.k480')}
             className="pl-8 h-8 text-xs"
           />
         </div>
@@ -181,7 +181,7 @@ function ExercisePicker({
         ) : filtered.length === 0 ? (
           <div className="text-center py-8">
             <Dumbbell className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-            <p className="text-xs text-muted-foreground">No exercises found</p>
+            <p className="text-xs text-muted-foreground">{t('auto.k338')}</p>
           </div>
         ) : (
           <div className="space-y-1 pr-2">
@@ -270,14 +270,14 @@ function CurrentPlansTab({ onFineTune }: { onFineTune: (planId: string) => void 
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success('Plan deleted permanently');
+      toast.success(t('auto.k399'));
       queryClient.invalidateQueries({ queryKey: ['org-plans'] });
     }
   };
 
   const handleAssignAthlete = async (planId: string, versionIds: string[], athleteId: string) => {
     if (!versionIds.length) {
-      toast.error('No plan versions found');
+      toast.error(t('auto.k343'));
       return;
     }
     const { error } = await supabase
@@ -306,10 +306,10 @@ function CurrentPlansTab({ onFineTune }: { onFineTune: (planId: string) => void 
       <Card className="glass">
         <CardContent className="p-8 text-center">
           <List className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-          <p className="font-display font-bold">No plans yet</p>
-          <p className="text-sm text-muted-foreground mt-1">Create a plan from scratch or import one from a spreadsheet.</p>
+          <p className="font-display font-bold">{t('auto.k344')}</p>
+          <p className="text-sm text-muted-foreground mt-1">{t('auto.k125')}</p>
           <Button className="gradient-hyrox mt-3" onClick={() => navigate('/create-plan')}>
-            <Plus className="h-4 w-4 mr-2" /> Generate a Plan
+            <Plus className="h-4 w-4 mr-2" />  {t('auto.k220')}
           </Button>
         </CardContent>
       </Card>
@@ -339,7 +339,7 @@ function CurrentPlansTab({ onFineTune }: { onFineTune: (planId: string) => void 
               <p className="text-xs text-muted-foreground mt-0.5 truncate">{plan.description}</p>
             )}
             <p className="text-[10px] text-muted-foreground mt-1">
-              Created {new Date(plan.created_at).toLocaleDateString()} · {plan.versionCount} version(s)
+              Created {new Date(plan.created_at).toLocaleDateString()} · {plan.versionCount}  {t('auto.k605')}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -370,15 +370,17 @@ function CurrentPlansTab({ onFineTune }: { onFineTune: (planId: string) => void 
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Delete plan permanently?</AlertDialogTitle>
+                  <AlertDialogTitle>{t('auto.k147')}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will permanently delete "{plan.name}" and all its sessions, versions, and data. This action cannot be undone.
+                    
+                    {t('auto.k562')}{plan.name}{t('auto.k0')}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction onClick={() => handleDelete(plan.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    Delete Forever
+                    
+                    {t('auto.k144')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -388,7 +390,7 @@ function CurrentPlansTab({ onFineTune }: { onFineTune: (planId: string) => void 
         {/* Assign athlete row */}
         <div className="flex items-center gap-2 pt-1 border-t border-border/50">
           <UserCircle className="h-4 w-4 text-muted-foreground shrink-0" />
-          <span className="text-xs text-muted-foreground shrink-0">Assigned to:</span>
+          <span className="text-xs text-muted-foreground shrink-0">{t('auto.k66')}</span>
           <Select
             value={plan.assignedAthleteId || ''}
             onValueChange={(val) => handleAssignAthlete(plan.id, plan.versionIds, val)}
@@ -407,7 +409,7 @@ function CurrentPlansTab({ onFineTune }: { onFineTune: (planId: string) => void 
         </div>
         <div className="flex justify-end pt-1">
           <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={() => onFineTune(plan.id)}>
-            <Pencil className="h-3 w-3" /> Fine-tune this plan
+            <Pencil className="h-3 w-3" />  {t('auto.k200')}
           </Button>
         </div>
       </CardContent>
@@ -417,14 +419,14 @@ function CurrentPlansTab({ onFineTune }: { onFineTune: (planId: string) => void 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Active Plans</p>
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('auto.k24')}</p>
         <Button size="sm" className="gradient-hyrox gap-1.5" onClick={() => navigate('/create-plan')}>
-          <Plus className="h-3.5 w-3.5" /> New Plan
+          <Plus className="h-3.5 w-3.5" />  {t('auto.k321')}
         </Button>
       </div>
       <div className="space-y-3">
         {activePlans.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">No active plans — restore one below or create a new plan.</p>
+          <p className="text-sm text-muted-foreground text-center py-4">{t('auto.k330')}</p>
         ) : (
           activePlans.map(renderPlanCard)
         )}
@@ -436,7 +438,8 @@ function CurrentPlansTab({ onFineTune }: { onFineTune: (planId: string) => void 
             <Button variant="ghost" size="sm" className="w-full justify-between text-xs text-muted-foreground hover:text-foreground group">
               <span className="flex items-center gap-2">
                 <Archive className="h-3.5 w-3.5" />
-                Archived Plans ({archivedPlans.length})
+                
+                {t('auto.k62')}{archivedPlans.length})
               </span>
               <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
             </Button>
@@ -646,9 +649,9 @@ export default function PlanBuilder() {
   };
 
   const handleSave = async () => {
-    if (!planName.trim()) { toast.error('Please enter a plan name'); return; }
-    if (!user || !currentOrg) { toast.error('No org context'); return; }
-    if (!targetAthleteId) { toast.error('Please select an athlete'); return; }
+    if (!planName.trim()) { toast.error(t('auto.k407')); return; }
+    if (!user || !currentOrg) { toast.error(t('auto.k342')); return; }
+    if (!targetAthleteId) { toast.error(t('auto.k410')); return; }
     const exerciseErrors: string[] = [];
     Object.entries(sessionsByWeek).forEach(([week, rows]) => {
       rows.filter(r => r.name.trim()).forEach(r => {
@@ -747,7 +750,7 @@ export default function PlanBuilder() {
   };
 
   const handleImport = async () => {
-    if (!user || !currentOrg) { toast.error('No org context'); return; }
+    if (!user || !currentOrg) { toast.error(t('auto.k342')); return; }
     const input = document.createElement('input');
     input.type = 'file'; input.accept = '.csv,.xlsx,.xls';
     input.onchange = async (e) => {
@@ -819,10 +822,10 @@ export default function PlanBuilder() {
                 <Input value={planName} onChange={e => setPlanName(e.target.value)} placeholder={t('planBuilder.autoDetected')} className="text-center" />
               </div>
               <div className="max-w-xs mx-auto space-y-2">
-                <Label className="text-xs text-muted-foreground">Assign athlete</Label>
+                <Label className="text-xs text-muted-foreground">{t('auto.k63')}</Label>
                 <Select value={targetAthleteId} onValueChange={setSelectedAthleteId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select athlete" />
+                    <SelectValue placeholder={t('auto.k488')} />
                   </SelectTrigger>
                   <SelectContent>
                     {assigneeOptions.map((option) => (
@@ -854,9 +857,9 @@ export default function PlanBuilder() {
 
       <Tabs value={managerTab} onValueChange={(value) => { const next = new URLSearchParams(searchParams); next.set('tab', value); setSearchParams(next, { replace: true }); }}>
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="plans" className="gap-1.5"><List className="h-3.5 w-3.5" /> Current Plans</TabsTrigger>
-          <TabsTrigger value="week">Week Builder</TabsTrigger>
-          <TabsTrigger value="build">Fine-tune a Plan</TabsTrigger>
+          <TabsTrigger value="plans" className="gap-1.5"><List className="h-3.5 w-3.5" />  {t('auto.k130')}</TabsTrigger>
+          <TabsTrigger value="week">{t('auto.k620')}</TabsTrigger>
+          <TabsTrigger value="build">{t('auto.k199')}</TabsTrigger>
           <TabsTrigger value="import">{t('planBuilder.importFile')}</TabsTrigger>
         </TabsList>
 
@@ -872,12 +875,13 @@ export default function PlanBuilder() {
           {!selectedPlanId ? (
             <Card className="glass">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base font-display">Pick a plan to fine-tune</CardTitle>
+                <CardTitle className="text-base font-display">{t('auto.k387')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 {fineTunePlans.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">
-                    No plans yet. Generate one from the wizard or import a spreadsheet, then come back here to tweak it.
+                    
+                    {t('auto.k345')}
                   </p>
                 ) : (
                   fineTunePlans.map((p) => (
@@ -889,7 +893,7 @@ export default function PlanBuilder() {
                       <div className="min-w-0">
                         <p className="font-display font-bold text-sm truncate">{p.name}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {p.source} · {p.versionCount} version(s) · {new Date(p.created_at).toLocaleDateString()}
+                          {p.source} · {p.versionCount}  {t('auto.k606')} {new Date(p.created_at).toLocaleDateString()}
                         </p>
                       </div>
                       <Pencil className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -902,9 +906,9 @@ export default function PlanBuilder() {
             <>
             <div className="flex items-center justify-between">
               <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setSelectedPlanId('')}>
-                <ArrowLeft className="h-3.5 w-3.5" /> Back to plan picker
+                <ArrowLeft className="h-3.5 w-3.5" />  {t('auto.k86')}
               </Button>
-              <Badge variant="outline" className="text-[10px]">Editing existing plan</Badge>
+              <Badge variant="outline" className="text-[10px]">{t('auto.k171')}</Badge>
             </div>
           <Card className="glass">
             <CardContent className="p-4 space-y-3">
@@ -918,10 +922,10 @@ export default function PlanBuilder() {
                   <Input type="number" min={1} max={52} value={weekCount} onChange={e => setWeekCount(Number(e.target.value))} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Assign athlete</Label>
+                  <Label>{t('auto.k63')}</Label>
                   <Select value={targetAthleteId} onValueChange={setSelectedAthleteId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select athlete" />
+                      <SelectValue placeholder={t('auto.k488')} />
                     </SelectTrigger>
                     <SelectContent>
                       {assigneeOptions.map((option) => (
@@ -1000,7 +1004,7 @@ export default function PlanBuilder() {
                     </div>
                     <div>
                       <Label className="text-xs">{t('planBuilder.sessionName')}</Label>
-                      <Input className="h-8 text-xs" value={row.name} onChange={e => updateRow(row.id, 'name', e.target.value)} placeholder="Tempo Run" />
+                      <Input className="h-8 text-xs" value={row.name} onChange={e => updateRow(row.id, 'name', e.target.value)} placeholder={t('auto.k547')} />
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
@@ -1028,7 +1032,7 @@ export default function PlanBuilder() {
                     <div className="flex items-center justify-between">
                       <Label className="text-xs flex items-center gap-1.5"><Dumbbell className="h-3 w-3" /> Exercises {row.exercises.length > 0 && <span className="text-muted-foreground">({row.exercises.length})</span>}</Label>
                       <Button type="button" variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => setPickerForRow(row.id)}>
-                        <Plus className="h-3 w-3" /> Add Exercise
+                        <Plus className="h-3 w-3" />  {t('auto.k29')}
                       </Button>
                     </div>
                     {row.exercises.length > 0 && (
@@ -1066,8 +1070,8 @@ export default function PlanBuilder() {
                   </div>
 
                   <div>
-                    <Label className="text-xs">Workout notes</Label>
-                    <Textarea className="text-xs min-h-[40px]" rows={1} value={row.details} onChange={e => updateRow(row.id, 'details', e.target.value)} placeholder="Additional context, pacing, cues..." />
+                    <Label className="text-xs">{t('auto.k640')}</Label>
+                    <Textarea className="text-xs min-h-[40px]" rows={1} value={row.details} onChange={e => updateRow(row.id, 'details', e.target.value)} placeholder={t('auto.k42')} />
                   </div>
                 </motion.div>
               ))}
@@ -1078,7 +1082,7 @@ export default function PlanBuilder() {
               <Dialog open={!!pickerForRow} onOpenChange={(open) => !open && setPickerForRow(null)}>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-base"><Dumbbell className="h-4 w-4 text-primary" /> Add Exercise</DialogTitle>
+                    <DialogTitle className="flex items-center gap-2 text-base"><Dumbbell className="h-4 w-4 text-primary" />  {t('auto.k29')}</DialogTitle>
                   </DialogHeader>
                   <ExercisePicker
                     orgId={currentOrg?.id}

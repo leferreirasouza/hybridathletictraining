@@ -90,7 +90,7 @@ function AthleteWeekReport({ weekNumber, planVersionId, userId, userName }: {
       const { data, error } = await supabase.functions.invoke('weekly-report', {
         body: { athleteName: userName, weekData: { weekNumber, ...stats } },
       });
-      if (error) return 'Unable to generate AI commentary.';
+      if (error) return t('auto.k596');
       return data?.commentary || 'No commentary.';
     },
     enabled: stats.plannedCount > 0 && completed.length >= 0,

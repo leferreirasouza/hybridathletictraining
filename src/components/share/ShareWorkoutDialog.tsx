@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { CARD_SIZES, MAX_METRICS, type CardSize, type CardStyle, type MetricKey, type ShareSessionData } from './types';
 import ShareCard, { metricValue } from './ShareCard';
 
+import { useTranslation } from 'react-i18next';
 const STYLES: { key: CardStyle; label: string }[] = [
   { key: 'bold', label: 'Bold' },
   { key: 'minimal', label: 'Minimal' },
@@ -18,15 +19,15 @@ const STYLES: { key: CardStyle; label: string }[] = [
   { key: 'photo', label: 'Photo' },
 ];
 const SIZES: { key: CardSize; label: string }[] = [
-  { key: 'story', label: 'Story 9:16' },
-  { key: 'feed', label: 'Feed 4:5' },
-  { key: 'square', label: 'Square 1:1' },
+  { key: 'story', label: t('auto.k521') },
+  { key: 'feed', label: t('auto.k197') },
+  { key: 'square', label: t('auto.k518') },
 ];
 const ALL_METRICS: { key: MetricKey; label: string }[] = [
   { key: 'distance', label: 'Distance' },
   { key: 'duration', label: 'Time' },
   { key: 'pace', label: 'Pace' },
-  { key: 'hr', label: 'Avg HR' },
+  { key: 'hr', label: t('auto.k75') },
   { key: 'rpe', label: 'Effort' },
   { key: 'elevation', label: 'Elevation' },
   { key: 'calories', label: 'Calories' },
@@ -39,6 +40,7 @@ interface Props {
 }
 
 export default function ShareWorkoutDialog({ open, onOpenChange, session }: Props) {
+  const { t } = useTranslation();
   const [style, setStyle] = useState<CardStyle>('bold');
   const [size, setSize] = useState<CardSize>('story');
   const [showName, setShowName] = useState(true);
@@ -114,24 +116,24 @@ export default function ShareWorkoutDialog({ open, onOpenChange, session }: Prop
     setExporting(true);
     const blob = await generateImage();
     setExporting(false);
-    if (!blob) { toast.error('Failed to generate image'); return; }
+    if (!blob) { toast.error(t('auto.k189')); return; }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = fileName; a.click();
     URL.revokeObjectURL(url);
-    toast.success('Image downloaded!');
+    toast.success(t('auto.k254'));
   };
 
   const handleShare = async () => {
     setExporting(true);
     const blob = await generateImage();
     setExporting(false);
-    if (!blob) { toast.error('Failed to generate image'); return; }
+    if (!blob) { toast.error(t('auto.k189')); return; }
     const file = new File([blob], fileName, { type: 'image/png' });
     try {
-      await navigator.share({ title: 'My Training Session — Hybrid Athletics', files: [file] });
+      await navigator.share({ title: t('auto.k314'), files: [file] });
     } catch (err: any) {
-      if (err?.name !== 'AbortError') toast.error('Share failed');
+      if (err?.name !== 'AbortError') toast.error(t('auto.k513'));
     }
   };
 
@@ -144,7 +146,7 @@ export default function ShareWorkoutDialog({ open, onOpenChange, session }: Prop
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm sm:max-w-md p-0 overflow-hidden max-h-[92vh] overflow-y-auto">
         <DialogHeader className="p-4 pb-2">
-          <DialogTitle className="font-display text-base">Share Your Workout</DialogTitle>
+          <DialogTitle className="font-display text-base">{t('auto.k514')}</DialogTitle>
         </DialogHeader>
 
         <div className="flex justify-center px-4">
@@ -175,20 +177,21 @@ export default function ShareWorkoutDialog({ open, onOpenChange, session }: Prop
           <Section title={`Metrics (up to ${MAX_METRICS})`}>
             {available.length ? available.map(m => (
               <Chip key={m.key} active={metrics.includes(m.key)} onClick={() => toggleMetric(m.key)}>{m.label}</Chip>
-            )) : <span className="text-xs text-muted-foreground">No metrics recorded for this workout</span>}
+            )) : <span className="text-xs text-muted-foreground">{t('auto.k340')}</span>}
           </Section>
 
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <Toggle label="Session name" checked={showName} onChange={setShowName} />
+            <Toggle label={t('auto.k502')} checked={showName} onChange={setShowName} />
             <Toggle label="Date" checked={showDate} onChange={setShowDate} />
-            {strava?.polyline && <Toggle label={<span className="flex items-center gap-1"><Map className="h-3 w-3" /> Route map</span>} checked={showRoute} onChange={setShowRoute} />}
+            {strava?.polyline && <Toggle label={<span className="flex items-center gap-1"><Map className="h-3 w-3" />  {t('auto.k456')}</span>} checked={showRoute} onChange={setShowRoute} />}
           </div>
         </div>
 
         <div className="flex gap-2 p-4 pt-0">
           <Button variant="outline" className="flex-1" onClick={handleDownload} disabled={exporting}>
             {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-            Save Image
+            
+            {t('auto.k472')}
           </Button>
           {canNativeShare && (
             <Button className="flex-1 gradient-hyrox" onClick={handleShare} disabled={exporting}>

@@ -5,12 +5,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { WizardAnswers } from '../wizardTypes';
 import { StepShell } from './_shared';
 
+import { useTranslation } from 'react-i18next';
 interface Props {
   answers: WizardAnswers;
   update: (patch: Partial<WizardAnswers>) => void;
 }
 
 export default function AthletePickerStep({ answers, update }: Props) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { data: options = [], isLoading } = useAssigneeOptions(true);
 
@@ -21,8 +23,8 @@ export default function AthletePickerStep({ answers, update }: Props) {
 
   return (
     <StepShell
-      title="Who is this plan for?"
-      subtitle="Pick an athlete you coach, or yourself."
+      title={t('auto.k634')}
+      subtitle={t('auto.k389')}
     >
       <Select
         value={answers.athleteId ?? user?.id ?? ''}

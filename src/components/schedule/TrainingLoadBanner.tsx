@@ -4,6 +4,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { analyzeWeeklyLoad, type LoadWarning, type RiskLevel } from '@/lib/trainingGuardrails';
 
+import { useTranslation } from 'react-i18next';
 interface TrainingLoadBannerProps {
   sessions: Array<{
     week_number: number;
@@ -30,6 +31,7 @@ const riskBg: Record<RiskLevel, string> = {
 };
 
 export default function TrainingLoadBanner({ sessions, weekNumber, experience = 'intermediate' }: TrainingLoadBannerProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   const { metrics, warnings } = useMemo(
@@ -56,7 +58,7 @@ export default function TrainingLoadBanner({ sessions, weekNumber, experience = 
           <button className="flex items-center justify-between w-full px-3 py-2 text-xs font-medium">
             <span className="flex items-center gap-1.5">
               <Shield className={`h-3.5 w-3.5 ${riskColors[overallRisk]}`} />
-              <span>Training Load — Wk {weekNumber}</span>
+              <span>{t('auto.k589')} {weekNumber}</span>
             </span>
             <span className="flex items-center gap-1.5">
               <span className={`font-semibold ${riskColors[overallRisk]}`}>{summaryText}</span>
@@ -69,8 +71,8 @@ export default function TrainingLoadBanner({ sessions, weekNumber, experience = 
           <div className="px-3 pb-3 space-y-2 border-t border-border/30 pt-2">
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
               <MetricRow label="Sessions" value={metrics.totalSessions} />
-              <MetricRow label="Run km" value={metrics.totalRunKm.toFixed(1)} />
-              <MetricRow label="Bike km" value={metrics.totalBikeKm.toFixed(1)} />
+              <MetricRow label={t('auto.k461')} value={metrics.totalRunKm.toFixed(1)} />
+              <MetricRow label={t('auto.k96')} value={metrics.totalBikeKm.toFixed(1)} />
               <MetricRow label="Duration" value={`${Math.round(metrics.totalDurationMin)}min`} />
               <MetricRow label="High-Int." value={metrics.highIntensitySessions} />
               <MetricRow label="Strength" value={metrics.strengthSessions} />
@@ -89,7 +91,7 @@ export default function TrainingLoadBanner({ sessions, weekNumber, experience = 
 
             {overallRisk === 'safe' && (
               <p className="text-[10px] text-green-600 dark:text-green-400 flex items-center gap-1">
-                <CheckCircle className="h-3 w-3" /> All metrics within safe limits
+                <CheckCircle className="h-3 w-3" />  {t('auto.k52')}
               </p>
             )}
           </div>

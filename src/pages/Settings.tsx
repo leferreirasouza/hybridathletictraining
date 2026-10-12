@@ -44,7 +44,7 @@ function applyTheme(mode: ThemeMode) {
 
 const LANGUAGES = [
   { value: 'en', label: 'English' },
-  { value: 'pt-BR', label: 'Português (BR)' },
+  { value: 'pt-BR', label: t('auto.k412') },
 ];
 
 export default function Settings() {
@@ -102,7 +102,7 @@ export default function Settings() {
     } catch { /* best-effort */ }
     localStorage.removeItem('ha-garmin-connected');
     setGarminConnected(false);
-    toast.success('Garmin disconnected.');
+    toast.success(t('auto.k217'));
   };
 
   const [notifPrefs, setNotifPrefs] = useState(getNotifPrefs);
@@ -269,9 +269,9 @@ export default function Settings() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">{t('settings.askEveryTime')}</SelectItem>
-                  <SelectItem value="google">Google Calendar</SelectItem>
-                  <SelectItem value="outlook">Outlook Calendar</SelectItem>
-                  <SelectItem value="apple">Apple Calendar</SelectItem>
+                  <SelectItem value="google">{t('auto.k229')}</SelectItem>
+                  <SelectItem value="outlook">{t('auto.k374')}</SelectItem>
+                  <SelectItem value="apple">{t('auto.k59')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -373,7 +373,7 @@ export default function Settings() {
               <Watch className="h-4 w-4 text-primary" />
               Wearables
             </CardTitle>
-            <CardDescription>Connect your wearable to auto-sync activities and health metrics.</CardDescription>
+            <CardDescription>{t('auto.k121')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between gap-3">
@@ -401,7 +401,8 @@ export default function Settings() {
             </div>
             {!garminConnected && (
               <p className="text-[10px] text-muted-foreground">
-                Garmin Health API access is pending approval. The connect button will activate once credentials are issued.
+                
+                {t('auto.k218')}
               </p>
             )}
           </CardContent>

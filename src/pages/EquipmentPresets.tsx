@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArrowLeft, Loader2, Plus, Save, Trash2, X, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { useTranslation } from 'react-i18next';
 const RUN_TYPES = ['easy', 'tempo', 'interval', 'long', 'fartlek'] as const;
 type RunType = typeof RUN_TYPES[number];
 
@@ -53,6 +54,7 @@ const emptyDraft = (): DraftState => ({
 });
 
 export default function EquipmentPresets() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, currentOrg, effectiveRole } = useAuth();
   const canManage = effectiveRole === 'coach' || effectiveRole === 'admin' || effectiveRole === 'master_admin';
@@ -70,7 +72,7 @@ export default function EquipmentPresets() {
       .select('*')
       .eq('organization_id', currentOrg.id)
       .order('name', { ascending: true });
-    if (error) toast.error('Failed to load presets');
+    if (error) toast.error(t('auto.k192'));
     else setPresets((data || []) as Preset[]);
     setLoading(false);
   };
@@ -89,10 +91,10 @@ export default function EquipmentPresets() {
 
   const draftError = (): string | null => {
     if (!draft) return null;
-    if (!draft.name.trim()) return 'Name is required.';
-    if (equipmentSelected.length === 0) return 'Pick at least one equipment option ("none" if no equipment).';
+    if (!draft.name.trim()) return t('auto.k317');
+    if (equipmentSelected.length === 0) return t('auto.k391');
     if (equipmentSelected.includes('none') && equipmentSelected.length > 1) {
-      return 'If "none" is selected, no other equipment can be selected.';
+      return t('auto.k252');
     }
     if (weightsSum !== 100) return `Run type weights must total 100% (currently ${weightsSum}%).`;
     return null;
@@ -130,16 +132,16 @@ export default function EquipmentPresets() {
       toast.error(error.message?.includes('duplicate') ? 'A preset with that name already exists.' : (error.message || 'Save failed'));
       return;
     }
-    toast.success('Preset saved');
+    toast.success(t('auto.k417'));
     setDraft(null);
     load();
   };
 
   const onDelete = async (id: string) => {
-    if (!confirm('Delete this preset?')) return;
+    if (!confirm(t('auto.k149'))) return;
     const { error } = await (supabase as any).from('equipment_presets').delete().eq('id', id);
     if (error) toast.error(error.message || 'Delete failed');
-    else { toast.success('Preset deleted'); load(); }
+    else { toast.success(t('auto.k416')); load(); }
   };
 
   if (!canManage) {
@@ -147,7 +149,7 @@ export default function EquipmentPresets() {
       <div className="container max-w-2xl py-6">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Only coaches and admins can manage equipment presets.</AlertDescription>
+          <AlertDescription>{t('auto.k364')}</AlertDescription>
         </Alert>
       </div>
     );
@@ -160,14 +162,15 @@ export default function EquipmentPresets() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Equipment Presets</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t('auto.k176')}</h1>
           <p className="text-sm text-muted-foreground">
-            Create reusable equipment + run-mix presets your athletes can apply with one click.
+            
+            {t('auto.k126')}
           </p>
         </div>
         {!draft && (
           <Button onClick={startNew}>
-            <Plus className="h-4 w-4 mr-2" /> New preset
+            <Plus className="h-4 w-4 mr-2" />  {t('auto.k322')}
           </Button>
         )}
       </div>
@@ -177,7 +180,7 @@ export default function EquipmentPresets() {
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>{draft.id ? 'Edit preset' : 'New preset'}</CardTitle>
-              <CardDescription>Define equipment and a run-type mix athletes can apply.</CardDescription>
+              <CardDescription>{t('auto.k139')}</CardDescription>
             </div>
             <Button variant="ghost" size="icon" onClick={() => setDraft(null)} aria-label="Cancel">
               <X className="h-4 w-4" />
@@ -190,17 +193,17 @@ export default function EquipmentPresets() {
                 id="preset-name"
                 value={draft.name}
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                placeholder="e.g. Home gym, Full HYROX setup"
+                placeholder={t('auto.k163')}
                 maxLength={80}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="preset-desc">Description (optional)</Label>
+              <Label htmlFor="preset-desc">{t('auto.k150')}</Label>
               <Textarea
                 id="preset-desc"
                 value={draft.description}
                 onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-                placeholder="When to use this preset"
+                placeholder={t('auto.k633')}
                 maxLength={300}
               />
             </div>
@@ -223,7 +226,7 @@ export default function EquipmentPresets() {
             </div>
 
             <div className="space-y-4">
-              <Label>Run type mix</Label>
+              <Label>{t('auto.k465')}</Label>
               {RUN_TYPES.map((k) => {
                 const pct = Math.round((draft.weights[k] || 0) * 100);
                 return (
@@ -259,7 +262,8 @@ export default function EquipmentPresets() {
               <Button variant="outline" onClick={() => setDraft(null)} disabled={saving}>Cancel</Button>
               <Button onClick={onSave} disabled={saving || !!draftError()}>
                 {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                Save preset
+                
+                {t('auto.k474')}
               </Button>
             </div>
           </CardContent>
@@ -271,7 +275,8 @@ export default function EquipmentPresets() {
       ) : presets.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
-            No presets yet. Create one to give athletes a one-click setup.
+            
+            {t('auto.k346')}
           </CardContent>
         </Card>
       ) : (

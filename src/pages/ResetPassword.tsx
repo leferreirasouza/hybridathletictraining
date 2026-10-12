@@ -9,7 +9,9 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Dumbbell, KeyRound } from 'lucide-react';
 
+import { useTranslation } from 'react-i18next';
 export default function ResetPassword() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -29,11 +31,11 @@ export default function ResetPassword() {
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
+      toast.error(t('auto.k378'));
       return;
     }
     if (password.length < 6) {
-      toast.error('Password must be at least 6 characters');
+      toast.error(t('auto.k375'));
       return;
     }
     setLoading(true);
@@ -41,7 +43,7 @@ export default function ResetPassword() {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success('Password updated! Redirecting…');
+      toast.success(t('auto.k377'));
       setTimeout(() => navigate('/dashboard'), 1500);
     }
     setLoading(false);
@@ -54,14 +56,15 @@ export default function ResetPassword() {
           <div className="h-16 w-16 rounded-2xl gradient-hyrox flex items-center justify-center mb-4 shadow-lg">
             <Dumbbell className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-display font-bold tracking-tight">Hybrid Athletics</h1>
+          <h1 className="text-2xl font-display font-bold tracking-tight">{t('auto.k247')}</h1>
         </div>
 
         <Card className="glass">
           <CardHeader>
             <CardTitle className="text-lg font-display flex items-center gap-2">
               <KeyRound className="h-5 w-5 text-primary" />
-              Set New Password
+              
+              {t('auto.k510')}
             </CardTitle>
             <CardDescription>
               {ready ? 'Choose a new password for your account' : 'Verifying your reset link…'}
@@ -71,11 +74,11 @@ export default function ResetPassword() {
             <form onSubmit={handleReset}>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="new-password">New Password</Label>
+                  <Label htmlFor="new-password">{t('auto.k320')}</Label>
                   <Input id="new-password" type="password" value={password} onChange={e => setPassword(e.target.value)} minLength={6} required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm Password</Label>
+                  <Label htmlFor="confirm-password">{t('auto.k120')}</Label>
                   <Input id="confirm-password" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} minLength={6} required />
                 </div>
                 <Button type="submit" className="w-full gradient-hyrox" disabled={loading}>

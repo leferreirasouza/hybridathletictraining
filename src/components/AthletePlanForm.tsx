@@ -24,27 +24,28 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import RacePicker from '@/components/races/RacePicker';
 
+import { useTranslation } from 'react-i18next';
 const hyroxStations = [
   'SkiErg', 'Sled Push', 'Sled Pull', 'Burpee Broad Jumps',
   'Row', 'Farmers Carry', 'Sandbag Lunges', 'Wall Balls',
 ];
 
 const experienceLevels = [
-  { value: 'beginner', label: 'Beginner', desc: 'First race or <6 months training' },
-  { value: 'intermediate', label: 'Intermediate', desc: '1-3 races completed' },
-  { value: 'advanced', label: 'Advanced', desc: '3+ races, competitive times' },
+  { value: 'beginner', label: 'Beginner', desc: t('auto.k201') },
+  { value: 'intermediate', label: 'Intermediate', desc: t('auto.k5') },
+  { value: 'advanced', label: 'Advanced', desc: t('auto.k9') },
 ];
 
 const focusOptions = [
-  { value: 'balanced', label: 'Balanced', desc: 'Running + Stations equally' },
-  { value: 'running', label: 'Running Focus', desc: 'Prioritize running speed/endurance' },
-  { value: 'stations', label: 'Stations Focus', desc: 'Prioritize station performance' },
+  { value: 'balanced', label: 'Balanced', desc: t('auto.k466') },
+  { value: 'running', label: t('auto.k469'), desc: t('auto.k420') },
+  { value: 'stations', label: t('auto.k520'), desc: t('auto.k421') },
 ];
 
 const runningDistances = [
   { value: '5k', label: '5K' },
   { value: '10k', label: '10K' },
-  { value: 'half', label: 'Half Marathon' },
+  { value: 'half', label: t('auto.k231') },
   { value: 'marathon', label: 'Marathon' },
   { value: 'other', label: 'Other' },
 ];
@@ -79,6 +80,7 @@ function parseTimeToSeconds(time: string): number | null {
 }
 
 export default function AthletePlanForm() {
+  const { t } = useTranslation();
   const { user, currentOrg } = useAuth();
   const navigate = useNavigate();
   const [generating, setGenerating] = useState(false);
@@ -257,9 +259,9 @@ export default function AthletePlanForm() {
   };
 
   const handleGenerate = async () => {
-    if (!user || !currentOrg) { toast.error('Not logged in'); return; }
+    if (!user || !currentOrg) { toast.error(t('auto.k356')); return; }
     if (!trainingDays || parseInt(trainingDays) < 2 || parseInt(trainingDays) > 7) {
-      toast.error('Training days must be between 2 and 7');
+      toast.error(t('auto.k585'));
       return;
     }
 
@@ -317,7 +319,7 @@ export default function AthletePlanForm() {
       <Card className="glass overflow-hidden">
         <div className="h-1 gradient-hyrox" />
         <CardContent className="p-4 space-y-3">
-          <Label className="font-display font-bold text-sm">What are you training for?</Label>
+          <Label className="font-display font-bold text-sm">{t('auto.k627')}</Label>
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
@@ -329,7 +331,7 @@ export default function AthletePlanForm() {
             >
               <div className="text-lg mb-1">🏋️</div>
               <p className="text-sm font-bold">HYROX Race</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">8 runs + 8 stations</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{t('auto.k16')}</p>
             </button>
             <button
               type="button"
@@ -340,7 +342,7 @@ export default function AthletePlanForm() {
               )}
             >
               <div className="text-lg mb-1">🏃</div>
-              <p className="text-sm font-bold">Running Race</p>
+              <p className="text-sm font-bold">{t('auto.k470')}</p>
               <p className="text-[10px] text-muted-foreground mt-0.5">5K, 10K, Half, Marathon</p>
             </button>
           </div>
@@ -356,7 +358,7 @@ export default function AthletePlanForm() {
             </div>
             <div className="flex-1">
               <p className="text-xs font-medium">
-                {raceResults.length} race result{raceResults.length > 1 ? 's' : ''} will be used
+                {raceResults.length}  {t('auto.k440')}{raceResults.length > 1 ? 's' : ''}  {t('auto.k636')}
               </p>
               <p className="text-[10px] text-muted-foreground">
                 AI will analyze your splits to tailor the plan
@@ -376,9 +378,10 @@ export default function AthletePlanForm() {
               <Trophy className="h-4 w-4 text-primary" />
             </div>
             <div className="flex-1">
-              <p className="text-xs font-medium">Add race results for a better plan</p>
+              <p className="text-xs font-medium">{t('auto.k32')}</p>
               <p className="text-[10px] text-muted-foreground">
-                Upload ROX Fit screenshots or enter splits manually
+                
+                {t('auto.k599')}
               </p>
             </div>
             <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => navigate('/races')}>
@@ -396,19 +399,19 @@ export default function AthletePlanForm() {
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-primary" />
-                  <Label className="font-display font-bold text-sm">Race Analysis</Label>
+                  <Label className="font-display font-bold text-sm">{t('auto.k428')}</Label>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="bg-muted/30 rounded-lg p-2">
-                    <p className="text-xs text-muted-foreground">Last Total</p>
+                    <p className="text-xs text-muted-foreground">{t('auto.k277')}</p>
                     <p className="text-sm font-mono font-bold">{fmtTime(raceAnalysis.totalTime || 0)}</p>
                   </div>
                   <div className="bg-muted/30 rounded-lg p-2">
-                    <p className="text-xs text-muted-foreground">Avg Run</p>
+                    <p className="text-xs text-muted-foreground">{t('auto.k77')}</p>
                     <p className="text-sm font-mono font-bold">{fmtTime(Math.round(raceAnalysis.avgRunTime))}</p>
                   </div>
                   <div className="bg-muted/30 rounded-lg p-2">
-                    <p className="text-xs text-muted-foreground">Avg Station</p>
+                    <p className="text-xs text-muted-foreground">{t('auto.k83')}</p>
                     <p className="text-sm font-mono font-bold">{fmtTime(Math.round(raceAnalysis.avgStationTime))}</p>
                   </div>
                 </div>
@@ -416,7 +419,8 @@ export default function AthletePlanForm() {
                   <div className="space-y-1.5">
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                       <AlertTriangle className="h-3 w-3 text-warning" />
-                      Below-average stations (auto-detected):
+                      
+                      {t('auto.k93')}
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {suggestedWeakStations.map(s => (
@@ -429,7 +433,8 @@ export default function AthletePlanForm() {
                       className="text-xs h-7 mt-1"
                       onClick={() => setWeakStations(prev => [...new Set([...prev, ...suggestedWeakStations])])}
                     >
-                      Add to weak stations
+                      
+                      {t('auto.k36')}
                     </Button>
                   </div>
                 )}
@@ -442,13 +447,13 @@ export default function AthletePlanForm() {
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <Target className="h-4 w-4 text-primary" />
-                  <Label className="font-display font-bold text-sm">First Race? Age Group Reference</Label>
+                  <Label className="font-display font-bold text-sm">{t('auto.k202')}</Label>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Since you have no prior races, we'll use age-group averages as starting targets.
                 </p>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Your Age Group</Label>
+                  <Label className="text-xs">{t('auto.k650')}</Label>
                   <Select value={ageGroup} onValueChange={setAgeGroup}>
                     <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -461,11 +466,11 @@ export default function AthletePlanForm() {
                 {ageGroupRef && (
                   <div className="grid grid-cols-2 gap-2 text-center">
                     <div className="bg-primary/5 rounded-lg p-2 border border-primary/10">
-                      <p className="text-[10px] text-muted-foreground">Avg Total Time</p>
+                      <p className="text-[10px] text-muted-foreground">{t('auto.k84')}</p>
                       <p className="text-sm font-mono font-bold text-primary">{fmtTime(ageGroupRef.total)}</p>
                     </div>
                     <div className="bg-primary/5 rounded-lg p-2 border border-primary/10">
-                      <p className="text-[10px] text-muted-foreground">Avg Run Pace</p>
+                      <p className="text-[10px] text-muted-foreground">{t('auto.k80')}</p>
                       <p className="text-sm font-mono font-bold text-primary">{fmtTime(ageGroupRef.runPerKm)}/km</p>
                     </div>
                   </div>
@@ -481,16 +486,18 @@ export default function AthletePlanForm() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-display flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
-            Your Athlete Profile
+            
+            {t('auto.k651')}
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Tell us about yourself and we'll generate a tailored plan.
+            
+            {t('auto.k544')}
           </p>
         </CardHeader>
         <CardContent className="space-y-5">
           {/* Experience */}
           <div className="space-y-2">
-            <Label>Experience Level</Label>
+            <Label>{t('auto.k182')}</Label>
             <div className="grid grid-cols-3 gap-2">
               {experienceLevels.map(lvl => (
                 <button
@@ -513,7 +520,7 @@ export default function AthletePlanForm() {
           {/* Plan Focus - only for HYROX */}
           {raceType === 'hyrox' && (
             <div className="space-y-2">
-              <Label>Plan Focus</Label>
+              <Label>{t('auto.k401')}</Label>
               <div className="grid grid-cols-3 gap-2">
                 {focusOptions.map(opt => (
                   <button
@@ -537,7 +544,7 @@ export default function AthletePlanForm() {
           {/* Training Availability */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Training Days/Week</Label>
+              <Label>{t('auto.k586')}</Label>
               <Select value={trainingDays} onValueChange={setTrainingDays}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -548,7 +555,7 @@ export default function AthletePlanForm() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Plan Duration</Label>
+              <Label>{t('auto.k400')}</Label>
               <Select value={planWeeks} onValueChange={setPlanWeeks}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -563,11 +570,11 @@ export default function AthletePlanForm() {
           {/* Paces */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label className="text-xs">Easy Pace (min/km)</Label>
+              <Label className="text-xs">{t('auto.k170')}</Label>
               <Input value={easyPace} onChange={e => setEasyPace(e.target.value)} placeholder="6:00" className="h-9" />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs">Race Pace (min/km)</Label>
+              <Label className="text-xs">{t('auto.k438')}</Label>
               <Input value={racePace} onChange={e => setRacePace(e.target.value)} placeholder="5:00" className="h-9" />
             </div>
           </div>
@@ -578,7 +585,7 @@ export default function AthletePlanForm() {
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <Timer className="h-4 w-4 text-primary" />
-                  <Label className="font-display font-bold text-sm">Race Target</Label>
+                  <Label className="font-display font-bold text-sm">{t('auto.k441')}</Label>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -593,17 +600,18 @@ export default function AthletePlanForm() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Target Time (h:mm:ss or mm:ss)</Label>
+                    <Label className="text-xs">{t('auto.k541')}</Label>
                     <Input
                       value={targetTime}
                       onChange={e => setTargetTime(e.target.value)}
-                      placeholder="e.g. 50:00 or 1:45:00"
+                      placeholder={t('auto.k161')}
                       className="h-8 text-xs"
                     />
                   </div>
                 </div>
                 <p className="text-[10px] text-muted-foreground">
-                  Leave target blank to get an AI prediction based on your training data
+                  
+                  {t('auto.k279')}
                 </p>
               </CardContent>
             </Card>
@@ -619,7 +627,7 @@ export default function AthletePlanForm() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Total Race Target (h:mm:ss)</Label>
+                    <Label className="text-xs">{t('auto.k578')}</Label>
                     <Input
                       value={totalTarget}
                       onChange={e => setTotalTarget(e.target.value)}
@@ -628,7 +636,7 @@ export default function AthletePlanForm() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Run Splits Target (min/km)</Label>
+                    <Label className="text-xs">{t('auto.k463')}</Label>
                     <Input
                       value={runKmTarget}
                       onChange={e => setRunKmTarget(e.target.value)}
@@ -639,15 +647,16 @@ export default function AthletePlanForm() {
                 </div>
                 {!hasRaceHistory && (
                   <p className="text-[10px] text-muted-foreground">
-                    Defaults based on {ageGroupRef?.label} age group averages. Adjust to your fitness level.
+                    
+                    {t('auto.k138')} {ageGroupRef?.label}  {t('auto.k48')}
                   </p>
                 )}
 
                 {/* Per-Station Targets */}
                 <div className="space-y-2 pt-2 border-t border-border/30">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-medium">Station Time Targets (mm:ss)</Label>
-                    <p className="text-[10px] text-muted-foreground">Optional — set goals per station</p>
+                    <Label className="text-xs font-medium">{t('auto.k519')}</Label>
+                    <p className="text-[10px] text-muted-foreground">{t('auto.k369')}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     {hyroxStations.map(station => {
@@ -667,7 +676,8 @@ export default function AthletePlanForm() {
                   </div>
                   {hasRaceHistory && (
                     <p className="text-[10px] text-muted-foreground">
-                      Placeholders show your last race times. Set targets to improve specific stations.
+                      
+                      {t('auto.k394')}
                     </p>
                   )}
                 </div>
@@ -680,19 +690,19 @@ export default function AthletePlanForm() {
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <Flag className="h-4 w-4 text-primary" />
-                <Label className="font-display font-bold text-sm">Next Race</Label>
+                <Label className="font-display font-bold text-sm">{t('auto.k326')}</Label>
               </div>
 
               {/* Race Picker from database */}
               <div className="space-y-1.5">
-                <Label className="text-xs">Search Official Races</Label>
+                <Label className="text-xs">{t('auto.k481')}</Label>
                 <RacePicker onSelect={handleRaceSelect} selectedRaceId={selectedRaceId} planType={raceType} />
               </div>
 
               {/* Manual override fields */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Race Name</Label>
+                  <Label className="text-xs">{t('auto.k435')}</Label>
                   <Input
                     value={nextRaceName}
                     onChange={e => { setNextRaceName(e.target.value); setSelectedRaceId(undefined); }}
@@ -705,13 +715,13 @@ export default function AthletePlanForm() {
                   <Input
                     value={nextRaceLocation}
                     onChange={e => { setNextRaceLocation(e.target.value); setSelectedRaceId(undefined); }}
-                    placeholder="Munich, DE"
+                    placeholder={t('auto.k310')}
                     className="h-8 text-xs"
                   />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Race Date</Label>
+                <Label className="text-xs">{t('auto.k431')}</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -752,10 +762,10 @@ export default function AthletePlanForm() {
               {nextRaceDate && (
                 <div className="flex items-center gap-2 pt-1">
                   <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-0">
-                    {differenceInDays(nextRaceDate, new Date())} days away
+                    {differenceInDays(nextRaceDate, new Date())}  {t('auto.k135')}
                   </Badge>
                   <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-0">
-                    ~{differenceInWeeks(nextRaceDate, new Date())} weeks → {planWeeks}w plan
+                    ~{differenceInWeeks(nextRaceDate, new Date())}  {t('auto.k624')} {planWeeks}{t('auto.k611')}
                   </Badge>
                 </div>
               )}
@@ -765,7 +775,7 @@ export default function AthletePlanForm() {
           {/* Weak Stations - only for HYROX */}
           {raceType === 'hyrox' && (
             <div className="space-y-2">
-              <Label>Weakest Stations (select any)</Label>
+              <Label>{t('auto.k615')}</Label>
               <div className="flex flex-wrap gap-2">
                 {hyroxStations.map(station => (
                   <Badge
@@ -793,11 +803,11 @@ export default function AthletePlanForm() {
 
           {/* Injuries */}
           <div className="space-y-2">
-            <Label>Injuries / Limitations (optional)</Label>
+            <Label>{t('auto.k258')}</Label>
             <Textarea
               value={injuries}
               onChange={e => setInjuries(e.target.value)}
-              placeholder="e.g. Knee pain when lunging, tight hip flexors…"
+              placeholder={t('auto.k164')}
               rows={2}
               className="text-sm"
               maxLength={500}
@@ -806,7 +816,7 @@ export default function AthletePlanForm() {
 
           {/* Goals */}
           <div className="space-y-2">
-            <Label>Additional Goals (optional)</Label>
+            <Label>{t('auto.k43')}</Label>
             <Textarea
               value={goals}
               onChange={e => setGoals(e.target.value)}
@@ -851,7 +861,7 @@ export default function AthletePlanForm() {
                 <div className="flex items-center gap-2 bg-primary/5 rounded-lg p-3 border border-primary/10">
                   <Timer className="h-4 w-4 text-primary shrink-0" />
                   <div>
-                    <p className="text-xs font-medium">Predicted Finish: <span className="font-mono font-bold text-primary">{prediction.predictedTime}</span></p>
+                    <p className="text-xs font-medium">{t('auto.k413')} <span className="font-mono font-bold text-primary">{prediction.predictedTime}</span></p>
                     {prediction.confidence && <p className="text-[10px] text-muted-foreground">Confidence: {prediction.confidence}</p>}
                   </div>
                 </div>
@@ -906,9 +916,9 @@ export default function AthletePlanForm() {
         disabled={generating}
       >
         {generating ? (
-          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating your plan…</>
+          <><Loader2 className="h-4 w-4 mr-2 animate-spin" />  {t('auto.k222')}</>
         ) : (
-          <><Sparkles className="h-4 w-4 mr-2" /> Generate My {raceType === 'hyrox' ? 'HYROX' : 'Running'} Plan</>
+          <><Sparkles className="h-4 w-4 mr-2" />  {t('auto.k221')} {raceType === 'hyrox' ? 'HYROX' : 'Running'} Plan</>
         )}
       </Button>
 
@@ -923,14 +933,16 @@ export default function AthletePlanForm() {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-primary" />
-              You already have {existingPlans?.length} active plan{(existingPlans?.length ?? 0) !== 1 ? 's' : ''}
+              
+              {t('auto.k645')} {existingPlans?.length}  {t('auto.k23')}{(existingPlans?.length ?? 0) !== 1 ? 's' : ''}
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
               <p>
-                This new AI plan will be <strong>added alongside</strong> your existing plans — it will <strong>not replace or overwrite</strong> them.
+                
+                {t('auto.k555')} <strong>{t('auto.k41')}</strong>  {t('auto.k653')} <strong>{t('auto.k357')}</strong> them.
               </p>
               <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1">
-                <p className="text-xs font-medium text-foreground">Your current plans:</p>
+                <p className="text-xs font-medium text-foreground">{t('auto.k652')}</p>
                 {existingPlans?.map(p => (
                   <div key={p.id} className="flex items-center gap-2 text-xs">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary" />
@@ -940,14 +952,16 @@ export default function AthletePlanForm() {
                 ))}
               </div>
               <p className="text-xs text-muted-foreground">
-                All plans will appear merged in your training schedule. You can archive any plan from Plan History.
+                
+                {t('auto.k54')}
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => { setShowConfirmDialog(false); handleGenerate(); }}>
-              Add New Plan
+              
+              {t('auto.k31')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

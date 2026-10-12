@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Footprints, Bike, TrendingUp, Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
 } from 'recharts';
@@ -44,6 +45,7 @@ function getYearKey(dateStr: string): string {
 }
 
 export default function MileageHistory() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [granularity, setGranularity] = useState<Granularity>('monthly');
 
@@ -126,8 +128,8 @@ export default function MileageHistory() {
         {/* Header */}
         <motion.div variants={item} className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-display font-bold">Mileage History</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Track your running &amp; cycling distance over time</p>
+            <h1 className="text-xl font-display font-bold">{t('auto.k301')}</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">{t('auto.k583')}</p>
           </div>
           <Tabs value={granularity} onValueChange={(v) => setGranularity(v as Granularity)}>
             <TabsList className="h-8">
@@ -146,7 +148,7 @@ export default function MileageHistory() {
               </div>
               <div>
                 <p className="text-lg font-display font-bold leading-tight">{totalRun.toFixed(1)} km</p>
-                <p className="text-[10px] text-muted-foreground">Total Running</p>
+                <p className="text-[10px] text-muted-foreground">{t('auto.k579')}</p>
               </div>
             </CardContent>
           </Card>
@@ -157,7 +159,7 @@ export default function MileageHistory() {
               </div>
               <div>
                 <p className="text-lg font-display font-bold leading-tight">{totalBike.toFixed(1)} km</p>
-                <p className="text-[10px] text-muted-foreground">Total Cycling</p>
+                <p className="text-[10px] text-muted-foreground">{t('auto.k576')}</p>
               </div>
             </CardContent>
           </Card>
@@ -200,7 +202,8 @@ export default function MileageHistory() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-display flex items-center gap-1.5">
                     <TrendingUp className="h-3.5 w-3.5 text-primary" />
-                    Cumulative Distance
+                    
+                    {t('auto.k127')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pb-3">
@@ -233,8 +236,8 @@ export default function MileageHistory() {
                   <div className="space-y-1">
                     <div className="grid grid-cols-3 text-[10px] text-muted-foreground font-medium px-2 pb-1 border-b border-border">
                       <span>Period</span>
-                      <span className="text-right">Run (km)</span>
-                      <span className="text-right">Bike (km)</span>
+                      <span className="text-right">{t('auto.k457')}</span>
+                      <span className="text-right">{t('auto.k94')}</span>
                     </div>
                     {[...chartData].reverse().map((row) => (
                       <div key={row.label} className="grid grid-cols-3 text-xs px-2 py-1.5 rounded hover:bg-muted/50">
@@ -253,8 +256,8 @@ export default function MileageHistory() {
             <Card className="glass">
               <CardContent className="p-8 text-center space-y-3">
                 <Footprints className="h-10 w-10 mx-auto text-muted-foreground" />
-                <p className="font-display font-bold">No mileage data yet</p>
-                <p className="text-sm text-muted-foreground">Log sessions with distance to start tracking your mileage history.</p>
+                <p className="font-display font-bold">{t('auto.k341')}</p>
+                <p className="text-sm text-muted-foreground">{t('auto.k284')}</p>
               </CardContent>
             </Card>
           </motion.div>

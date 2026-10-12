@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { Camera, Loader2, Upload, Check, AlertTriangle, ImagePlus, X, Images } from 'lucide-react';
 
+import { useTranslation } from 'react-i18next';
 type ExtractedExercise = {
   name: string;
   category: string;
@@ -44,6 +45,7 @@ interface Props {
 const MAX_IMAGES = 20;
 
 export default function ScreenshotParserDialog({ open, onOpenChange }: Props) {
+  const { t } = useTranslation();
   const { user, currentOrg } = useAuth();
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -234,7 +236,8 @@ export default function ScreenshotParserDialog({ open, onOpenChange }: Props) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Camera className="h-5 w-5 text-primary" />
-            Extract Exercises from Screenshots
+            
+            {t('auto.k184')}
           </DialogTitle>
         </DialogHeader>
 
@@ -252,7 +255,8 @@ export default function ScreenshotParserDialog({ open, onOpenChange }: Props) {
                   {images.length === 0 ? 'Upload training screenshots' : 'Add more screenshots'}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Up to {MAX_IMAGES} images · {images.length}/{MAX_IMAGES} added
+                  
+                  {t('auto.k597')} {MAX_IMAGES}  {t('auto.k256')} {images.length}/{MAX_IMAGES} added
                 </p>
               </div>
             </button>
@@ -328,7 +332,8 @@ export default function ScreenshotParserDialog({ open, onOpenChange }: Props) {
                 {exercises.length === 0 && !parsing && (
                   <Button onClick={handleParseAll} className="w-full">
                     <Upload className="h-4 w-4 mr-2" />
-                    Extract from {images.length} Image{images.length !== 1 ? 's' : ''}
+                    
+                    {t('auto.k185')} {images.length} Image{images.length !== 1 ? 's' : ''}
                   </Button>
                 )}
               </div>
@@ -338,7 +343,7 @@ export default function ScreenshotParserDialog({ open, onOpenChange }: Props) {
             {exercises.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">{exercises.length} exercises found</p>
+                  <p className="text-sm font-medium">{exercises.length}  {t('auto.k181')}</p>
                   <span className="text-xs text-muted-foreground">{selected.size} selected</span>
                 </div>
 
@@ -395,7 +400,7 @@ export default function ScreenshotParserDialog({ open, onOpenChange }: Props) {
         {exercises.length > 0 && (
           <Button onClick={handleSave} disabled={saving || selected.size === 0} className="mt-2">
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
-            Add {selected.size} to Library (Pending Review)
+            Add {selected.size}  {t('auto.k572')}
           </Button>
         )}
       </DialogContent>

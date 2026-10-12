@@ -7,7 +7,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Activity, AlertCircle } from 'lucide-react';
 
+import { useTranslation } from 'react-i18next';
 export default function StravaCallback() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { user, loading } = useAuth();
@@ -54,7 +56,7 @@ export default function StravaCallback() {
         if (!resp.ok || !json.ok) throw new Error(json.error || 'Token exchange failed');
 
         setStatus('success');
-        toast.success('Strava connected!');
+        toast.success(t('auto.k522'));
         setTimeout(() => navigate('/profile', { replace: true }), 800);
       } catch (e: any) {
         console.error(e);
@@ -69,7 +71,7 @@ export default function StravaCallback() {
       <Card className="glass w-full max-w-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 font-display">
-            <Activity className="h-5 w-5 text-primary" /> Strava Connection
+            <Activity className="h-5 w-5 text-primary" />  {t('auto.k523')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -83,8 +85,8 @@ export default function StravaCallback() {
           )}
           {status === 'success' && (
             <div className="text-center space-y-3 py-2">
-              <div className="text-success font-medium">✓ Connected successfully</div>
-              <p className="text-sm text-muted-foreground">Redirecting to your profile…</p>
+              <div className="text-success font-medium">{t('auto.k4')}</div>
+              <p className="text-sm text-muted-foreground">{t('auto.k444')}</p>
             </div>
           )}
           {status === 'error' && (
@@ -95,10 +97,12 @@ export default function StravaCallback() {
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => navigate('/profile')}>
-                  Back to Profile
+                  
+                  {t('auto.k87')}
                 </Button>
                 <Button className="flex-1 gradient-hyrox" onClick={() => navigate('/profile')}>
-                  Try Again
+                  
+                  {t('auto.k595')}
                 </Button>
               </div>
             </div>

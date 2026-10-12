@@ -5,6 +5,7 @@ import { AlertTriangle, CheckCircle, Shield, Activity } from 'lucide-react';
 import { analyzeWeeklyLoad, type LoadWarning, type RiskLevel } from '@/lib/trainingGuardrails';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
+import { useTranslation } from 'react-i18next';
 interface TrainingLoadCardProps {
   sessions: Array<{
     week_number: number;
@@ -31,6 +32,7 @@ const riskBg: Record<RiskLevel, string> = {
 };
 
 export default function TrainingLoadCard({ sessions, weekNumber, experience = 'intermediate' }: TrainingLoadCardProps) {
+  const { t } = useTranslation();
   const { metrics, warnings } = useMemo(
     () => analyzeWeeklyLoad(sessions, weekNumber, experience),
     [sessions, weekNumber, experience]
@@ -51,7 +53,8 @@ export default function TrainingLoadCard({ sessions, weekNumber, experience = 'i
       <CardHeader className="pb-2 pt-3 px-3">
         <CardTitle className="text-xs font-display flex items-center gap-1.5">
           <Shield className={`h-3.5 w-3.5 ${riskColors[overallRisk]}`} />
-          Training Load — Week {weekNumber}
+          
+          {t('auto.k588')} {weekNumber}
           <StatusIcon className={`h-3.5 w-3.5 ml-auto ${riskColors[overallRisk]}`} />
         </CardTitle>
       </CardHeader>
@@ -59,8 +62,8 @@ export default function TrainingLoadCard({ sessions, weekNumber, experience = 'i
         {/* Metrics summary */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
           <MetricRow label="Sessions" value={metrics.totalSessions} />
-          <MetricRow label="Run km" value={metrics.totalRunKm.toFixed(1)} />
-          <MetricRow label="Bike km" value={metrics.totalBikeKm.toFixed(1)} />
+          <MetricRow label={t('auto.k461')} value={metrics.totalRunKm.toFixed(1)} />
+          <MetricRow label={t('auto.k96')} value={metrics.totalBikeKm.toFixed(1)} />
           <MetricRow label="Duration" value={`${Math.round(metrics.totalDurationMin)}min`} />
           <MetricRow label="High-Int." value={metrics.highIntensitySessions} />
           <MetricRow label="Strength" value={metrics.strengthSessions} />
@@ -80,7 +83,7 @@ export default function TrainingLoadCard({ sessions, weekNumber, experience = 'i
 
         {overallRisk === 'safe' && (
           <p className="text-[10px] text-green-600 dark:text-green-400 flex items-center gap-1">
-            <CheckCircle className="h-3 w-3" /> All metrics within safe limits
+            <CheckCircle className="h-3 w-3" />  {t('auto.k52')}
           </p>
         )}
       </CardContent>

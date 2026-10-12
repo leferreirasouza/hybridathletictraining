@@ -49,6 +49,7 @@ function writeHidden(userId: string, set: Set<string>) {
 }
 
 export default function PlanHistory() {
+  const { t } = useTranslation();
   useTranslation();
   const { user, currentOrg, effectiveRole } = useAuth();
   const navigate = useNavigate();
@@ -120,7 +121,7 @@ export default function PlanHistory() {
       await supabase.from('plan_history' as any).insert({
         plan_id: planId, action: 'archived', performed_by: user!.id,
       });
-      toast.success('Plan archived — it can be restored anytime');
+      toast.success(t('auto.k395'));
       queryClient.invalidateQueries({ queryKey: ['all-plans-history'] });
       queryClient.invalidateQueries({ queryKey: ['org-plans'] });
     } catch (e: any) {
@@ -141,7 +142,7 @@ export default function PlanHistory() {
       await supabase.from('plan_history' as any).insert({
         plan_id: planId, action: 'restored', performed_by: user!.id,
       });
-      toast.success('Plan restored');
+      toast.success(t('auto.k404'));
       queryClient.invalidateQueries({ queryKey: ['all-plans-history'] });
       queryClient.invalidateQueries({ queryKey: ['org-plans'] });
     } catch (e: any) {
@@ -170,7 +171,7 @@ export default function PlanHistory() {
         writeHidden(user.id, next);
         setHidden(next);
       }
-      toast.success('Plan deleted permanently');
+      toast.success(t('auto.k399'));
       queryClient.invalidateQueries({ queryKey: ['all-plans-history'] });
       queryClient.invalidateQueries({ queryKey: ['org-plans'] });
     } catch (e: any) {
@@ -198,10 +199,10 @@ export default function PlanHistory() {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <ListChecks className="h-5 w-5 text-primary" />
-          <h1 className="text-xl font-display font-bold">My Plans</h1>
+          <h1 className="text-xl font-display font-bold">{t('auto.k313')}</h1>
         </div>
         <Button size="sm" variant="outline" onClick={() => navigate('/schedule')} className="gap-1.5">
-          <CalendarDays className="h-4 w-4" /> Open Schedule
+          <CalendarDays className="h-4 w-4" />  {t('auto.k367')}
         </Button>
       </div>
 
@@ -209,18 +210,18 @@ export default function PlanHistory() {
         <CardContent className="p-4 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
           <div className="text-sm text-muted-foreground">
-            Toggle <strong>Show on Schedule</strong> to hide a plan from your calendar without deleting it.
-            <strong> Archive</strong> keeps everything safe and reversible.
-            <strong> Delete</strong> is permanent and removes all sessions.
+            Toggle <strong>{t('auto.k515')}</strong>  {t('auto.k571')}
+            <strong> Archive</strong>  {t('auto.k269')}
+            <strong> Delete</strong>  {t('auto.k263')}
           </div>
         </CardContent>
       </Card>
 
       {/* Active Plans */}
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Active Plans ({activePlans.length})</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{t('auto.k25')}{activePlans.length})</h2>
         {activePlans.length === 0 && (
-          <p className="text-sm text-muted-foreground">No active plans</p>
+          <p className="text-sm text-muted-foreground">{t('auto.k329')}</p>
         )}
         {activePlans.map((plan, i) => {
           const Icon = sourceIcon[plan.source] || PenTool;
@@ -253,7 +254,7 @@ export default function PlanHistory() {
                   <div className="flex items-center gap-3 shrink-0">
                     <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
                       {isHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                      <span>Show on Schedule</span>
+                      <span>{t('auto.k515')}</span>
                       <Switch checked={!isHidden} onCheckedChange={() => toggleVisibility(plan.id)} />
                     </label>
 
@@ -265,9 +266,10 @@ export default function PlanHistory() {
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Archive "{plan.name}"?</AlertDialogTitle>
+                          <AlertDialogTitle>{t('auto.k61')}{plan.name}"?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Hidden from your schedule; all sessions preserved and restorable anytime.
+                            
+                            {t('auto.k238')}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -286,9 +288,10 @@ export default function PlanHistory() {
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Delete "{plan.name}" permanently?</AlertDialogTitle>
+                            <AlertDialogTitle>{t('auto.k140')}{plan.name}{t('auto.k1')}</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This removes the plan and all its sessions. This cannot be undone.
+                              
+                              {t('auto.k559')}
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -297,7 +300,8 @@ export default function PlanHistory() {
                               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                               onClick={() => handleDelete(plan.id)}
                             >
-                              Delete permanently
+                              
+                              {t('auto.k145')}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
@@ -314,7 +318,7 @@ export default function PlanHistory() {
       {/* Archived Plans */}
       {archivedPlans.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Archived Plans ({archivedPlans.length})</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{t('auto.k62')}{archivedPlans.length})</h2>
           {archivedPlans.map((plan, i) => {
             const Icon = sourceIcon[plan.source] || PenTool;
             return (
@@ -356,9 +360,10 @@ export default function PlanHistory() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Delete "{plan.name}" permanently?</AlertDialogTitle>
+                              <AlertDialogTitle>{t('auto.k140')}{plan.name}{t('auto.k1')}</AlertDialogTitle>
                               <AlertDialogDescription>
-                                This removes the plan and all its sessions. This cannot be undone.
+                                
+                                {t('auto.k559')}
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -367,7 +372,8 @@ export default function PlanHistory() {
                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                 onClick={() => handleDelete(plan.id)}
                               >
-                                Delete permanently
+                                
+                                {t('auto.k145')}
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>

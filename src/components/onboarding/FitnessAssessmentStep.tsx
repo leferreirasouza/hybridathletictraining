@@ -38,19 +38,20 @@ export default function FitnessAssessmentStep({ data, onChange, onNext, onBack }
     <Card className="glass">
       <CardHeader>
         <CardTitle className="text-lg font-display flex items-center gap-2">
-          <ClipboardCheck className="h-5 w-5 text-primary" /> Fitness Assessment
+          <ClipboardCheck className="h-5 w-5 text-primary" />  {t('auto.k204')}
         </CardTitle>
         <CardDescription>
-          Help us understand your background so we can personalize your training safely. All fields are optional.
+          
+          {t('auto.k236')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Training History */}
         <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Training History</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('auto.k587')}</p>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Years training</Label>
+              <Label className="text-xs">{t('auto.k643')}</Label>
               <Input
                 type="number"
                 value={data.training_years}
@@ -60,7 +61,7 @@ export default function FitnessAssessmentStep({ data, onChange, onNext, onBack }
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Weekly hours</Label>
+              <Label className="text-xs">{t('auto.k621')}</Label>
               <Input
                 type="number"
                 step="0.5"
@@ -72,11 +73,11 @@ export default function FitnessAssessmentStep({ data, onChange, onNext, onBack }
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Race experience</Label>
+            <Label className="text-xs">{t('auto.k434')}</Label>
             <Textarea
               value={data.previous_race_experience}
               onChange={e => update('previous_race_experience', e.target.value)}
-              placeholder="e.g., 2x HYROX Open, 1x half marathon..."
+              placeholder={t('auto.k166')}
               rows={2}
               className="text-sm"
             />
@@ -85,31 +86,31 @@ export default function FitnessAssessmentStep({ data, onChange, onNext, onBack }
 
         {/* Injury History */}
         <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Injury & Mobility</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('auto.k259')}</p>
           <div className="space-y-1.5">
-            <Label className="text-xs">Current injuries / pain areas</Label>
+            <Label className="text-xs">{t('auto.k128')}</Label>
             <Input
               value={data.current_injuries}
               onChange={e => update('current_injuries', e.target.value)}
-              placeholder="e.g., mild knee tendinitis"
+              placeholder={t('auto.k169')}
               className="h-9"
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Past injuries</Label>
+            <Label className="text-xs">{t('auto.k379')}</Label>
             <Input
               value={data.past_injuries}
               onChange={e => update('past_injuries', e.target.value)}
-              placeholder="e.g., ACL reconstruction 2022"
+              placeholder={t('auto.k167')}
               className="h-9"
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Mobility limitations</Label>
+            <Label className="text-xs">{t('auto.k308')}</Label>
             <Input
               value={data.mobility_limitations}
               onChange={e => update('mobility_limitations', e.target.value)}
-              placeholder="e.g., limited ankle dorsiflexion"
+              placeholder={t('auto.k168')}
               className="h-9"
             />
           </div>
@@ -117,10 +118,10 @@ export default function FitnessAssessmentStep({ data, onChange, onNext, onBack }
 
         {/* Health & Lifestyle */}
         <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Health & Lifestyle</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('auto.k232')}</p>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Resting HR (bpm)</Label>
+              <Label className="text-xs">{t('auto.k452')}</Label>
               <Input
                 type="number"
                 value={data.resting_hr}
@@ -130,7 +131,7 @@ export default function FitnessAssessmentStep({ data, onChange, onNext, onBack }
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Avg sleep (hours)</Label>
+              <Label className="text-xs">{t('auto.k82')}</Label>
               <Input
                 type="number"
                 step="0.5"
@@ -143,7 +144,7 @@ export default function FitnessAssessmentStep({ data, onChange, onNext, onBack }
           </div>
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <Label className="text-xs">Stress level</Label>
+              <Label className="text-xs">{t('auto.k527')}</Label>
               <span className="text-xs text-muted-foreground tabular-nums">{data.stress_level}/10</span>
             </div>
             <Slider
@@ -159,7 +160,7 @@ export default function FitnessAssessmentStep({ data, onChange, onNext, onBack }
           </div>
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <Label className="text-xs">Nutrition quality</Label>
+              <Label className="text-xs">{t('auto.k363')}</Label>
               <span className="text-xs text-muted-foreground tabular-nums">{data.nutrition_quality}/10</span>
             </div>
             <Slider

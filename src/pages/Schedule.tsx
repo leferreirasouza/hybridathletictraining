@@ -285,7 +285,8 @@ export default function Schedule() {
                 <SelectItem value="all">
                   <span className="flex items-center gap-1.5">
                     <span className="inline-block w-2 h-2 rounded-full bg-gradient-to-r from-primary to-blue-500" />
-                    All Plans
+                    
+                    {t('auto.k53')}
                   </span>
                 </SelectItem>
                 {plans.map(p => (
@@ -301,8 +302,8 @@ export default function Schedule() {
         <Card className="glass border-border">
           <CardContent className="p-8 text-center space-y-3">
             <EyeOff className="h-10 w-10 mx-auto text-muted-foreground" />
-            <p className="font-display font-bold">Personal plans hidden</p>
-            <p className="text-sm text-muted-foreground">Toggle "Show My Plans" to view your athlete schedule.</p>
+            <p className="font-display font-bold">{t('auto.k385')}</p>
+            <p className="text-sm text-muted-foreground">{t('auto.k575')}</p>
           </CardContent>
         </Card>
       ) : noPlan ? (
@@ -370,7 +371,7 @@ export default function Schedule() {
                 {view !== 'month' && (
                   <div className="flex items-center justify-between mt-3 gap-1">
                     <div className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" title="Jump back 4 weeks" onClick={() => jumpWeeks(-4)} disabled={displayWeek <= 1}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title={t('auto.k266')} onClick={() => jumpWeeks(-4)} disabled={displayWeek <= 1}>
                         <ChevronsLeft className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => Math.max(0, w - 1))} disabled={displayWeek <= 1}>
@@ -395,7 +396,8 @@ export default function Schedule() {
                         disabled={maxWeek <= 1}
                       >
                         <Flag className="h-3 w-3 mr-1" />
-                        Race day
+                        
+                        {t('auto.k432')}
                       </Button>
                     </div>
                     <div className="flex items-center gap-0.5">
@@ -406,7 +408,7 @@ export default function Schedule() {
                       ) : (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Add week to calendar">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title={t('auto.k39')}>
                               <CalendarPlus className="h-4 w-4 text-primary" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -418,7 +420,7 @@ export default function Schedule() {
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => w + 1)} disabled={displayWeek >= maxWeek}>
                         <ChevronRight className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" title="Jump forward 4 weeks" onClick={() => jumpWeeks(4)} disabled={displayWeek >= maxWeek}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title={t('auto.k267')} onClick={() => jumpWeeks(4)} disabled={displayWeek >= maxWeek}>
                         <ChevronsRight className="h-4 w-4" />
                       </Button>
                     </div>
@@ -493,19 +495,19 @@ export default function Schedule() {
                   <CardContent className="space-y-2 text-xs">
                     {weeklySummary.run_km_target && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Run Target</span>
+                        <span className="text-muted-foreground">{t('auto.k464')}</span>
                         <span className="font-mono font-bold">{weeklySummary.run_km_target} km</span>
                       </div>
                     )}
                     {weeklySummary.bike_z2_min_target && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Bike Z2</span>
+                        <span className="text-muted-foreground">{t('auto.k98')}</span>
                         <span className="font-mono font-bold">{weeklySummary.bike_z2_min_target} min</span>
                       </div>
                     )}
                     {weeklySummary.run_days && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Run Days</span>
+                        <span className="text-muted-foreground">{t('auto.k459')}</span>
                         <span className="font-medium">{weeklySummary.run_days}</span>
                       </div>
                     )}

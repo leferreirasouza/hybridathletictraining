@@ -10,6 +10,7 @@ import { Search, ScrollText, CalendarIcon, ChevronLeft, ChevronRight, X, Downloa
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 
+import { useTranslation } from 'react-i18next';
 interface AuditEntry {
   id: string;
   action: string;
@@ -24,6 +25,7 @@ interface AuditEntry {
 const PAGE_SIZE = 25;
 
 export default function AdminActivityTab() {
+  const { t } = useTranslation();
   const [logs, setLogs] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -96,12 +98,12 @@ export default function AdminActivityTab() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
         <CardTitle className="flex items-center gap-2 text-lg">
-          <ScrollText className="h-5 w-5 text-primary" /> Activity Log
+          <ScrollText className="h-5 w-5 text-primary" />  {t('auto.k26')}
         </CardTitle>
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">{filtered.length} entries</span>
           <Button variant="outline" size="sm" className="gap-1.5 h-8" onClick={exportCsv} disabled={filtered.length === 0}>
-            <Download className="h-3.5 w-3.5" /> Export CSV
+            <Download className="h-3.5 w-3.5" />  {t('auto.k183')}
           </Button>
         </div>
       </CardHeader>
@@ -113,7 +115,7 @@ export default function AdminActivityTab() {
             <Input
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(0); }}
-              placeholder="Search action, entity, user..."
+              placeholder={t('auto.k477')}
               className="pl-9 h-9"
             />
           </div>
@@ -160,7 +162,7 @@ export default function AdminActivityTab() {
 
           {hasDateFilter && (
             <Button variant="ghost" size="sm" className="h-9 gap-1 text-muted-foreground" onClick={clearDates}>
-              <X className="h-3.5 w-3.5" /> Clear dates
+              <X className="h-3.5 w-3.5" />  {t('auto.k108')}
             </Button>
           )}
         </div>

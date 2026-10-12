@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ShieldCheck, AlertTriangle, Activity, HeartPulse, Users } from 'lucide-react';
 import { GUARDRAILS, analyzeWeeklyLoad, type LoadWarning } from '@/lib/trainingGuardrails';
 
+import { useTranslation } from 'react-i18next';
 interface AthleteGuardrailData {
   athleteId: string;
   athleteName: string;
@@ -19,6 +20,7 @@ interface AthleteGuardrailData {
 }
 
 export default function GuardrailDashboard() {
+  const { t } = useTranslation();
   const { user, currentOrg } = useAuth();
 
   const { data: athletes = [], isLoading } = useQuery({
@@ -117,15 +119,15 @@ export default function GuardrailDashboard() {
           <div className="p-3 rounded-lg border bg-primary/5 text-center">
             <HeartPulse className="h-4 w-4 mx-auto mb-1 text-primary" />
             <p className="text-2xl font-bold tabular-nums">{healthFlagCount}</p>
-            <p className="text-[10px] text-muted-foreground uppercase">Health Flags</p>
+            <p className="text-[10px] text-muted-foreground uppercase">{t('auto.k233')}</p>
           </div>
         </div>
 
         <Tabs defaultValue="alerts">
           <TabsList className="w-full">
-            <TabsTrigger value="alerts" className="flex-1 text-xs">Active Alerts ({athletesWithWarnings.length})</TabsTrigger>
-            <TabsTrigger value="all" className="flex-1 text-xs">All Athletes ({athletes.length})</TabsTrigger>
-            <TabsTrigger value="limits" className="flex-1 text-xs">Safety Limits</TabsTrigger>
+            <TabsTrigger value="alerts" className="flex-1 text-xs">{t('auto.k22')}{athletesWithWarnings.length})</TabsTrigger>
+            <TabsTrigger value="all" className="flex-1 text-xs">{t('auto.k50')}{athletes.length})</TabsTrigger>
+            <TabsTrigger value="limits" className="flex-1 text-xs">{t('auto.k471')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="alerts" className="mt-4">
@@ -136,7 +138,7 @@ export default function GuardrailDashboard() {
             ) : athletesWithWarnings.length === 0 ? (
               <div className="text-center py-8">
                 <ShieldCheck className="h-10 w-10 mx-auto text-emerald-500/40 mb-3" />
-                <p className="text-sm text-muted-foreground">All athletes are within safe training limits</p>
+                <p className="text-sm text-muted-foreground">{t('auto.k51')}</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -162,7 +164,7 @@ export default function GuardrailDashboard() {
                     </div>
                     {athlete.currentInjuries && (
                       <p className="text-xs text-muted-foreground">
-                        <span className="font-medium">Current injuries:</span> {athlete.currentInjuries}
+                        <span className="font-medium">{t('auto.k129')}</span> {athlete.currentInjuries}
                       </p>
                     )}
                     {athlete.weeklyWarnings.length > 0 && (
@@ -237,7 +239,8 @@ export default function GuardrailDashboard() {
           <TabsContent value="limits" className="mt-4">
             <div className="space-y-4">
               <p className="text-xs text-muted-foreground">
-                These evidence-based limits are applied to all AI-generated and imported plans. They are enforced by experience level.
+                
+                {t('auto.k553')}
               </p>
               <Table>
                 <TableHeader>
@@ -251,43 +254,43 @@ export default function GuardrailDashboard() {
                 </TableHeader>
                 <TableBody>
                   <TableRow>
-                    <TableCell className="text-sm font-medium">Max Weekly Running (km)</TableCell>
+                    <TableCell className="text-sm font-medium">{t('auto.k294')}</TableCell>
                     {['beginner', 'intermediate', 'advanced', 'elite'].map(l => (
                       <TableCell key={l} className="tabular-nums text-sm">{GUARDRAILS.MAX_WEEKLY_RUN_KM[l]}</TableCell>
                     ))}
                   </TableRow>
                   <TableRow>
-                    <TableCell className="text-sm font-medium">Max Weekly Sessions</TableCell>
+                    <TableCell className="text-sm font-medium">{t('auto.k295')}</TableCell>
                     {['beginner', 'intermediate', 'advanced', 'elite'].map(l => (
                       <TableCell key={l} className="tabular-nums text-sm">{GUARDRAILS.MAX_WEEKLY_SESSIONS[l]}</TableCell>
                     ))}
                   </TableRow>
                   <TableRow>
-                    <TableCell className="text-sm font-medium">Max Weekly Duration (min)</TableCell>
+                    <TableCell className="text-sm font-medium">{t('auto.k293')}</TableCell>
                     {['beginner', 'intermediate', 'advanced', 'elite'].map(l => (
                       <TableCell key={l} className="tabular-nums text-sm">{GUARDRAILS.MAX_WEEKLY_DURATION_MIN[l]}</TableCell>
                     ))}
                   </TableRow>
                   <TableRow>
-                    <TableCell className="text-sm font-medium">Max High-Intensity/week</TableCell>
+                    <TableCell className="text-sm font-medium">{t('auto.k290')}</TableCell>
                     {['beginner', 'intermediate', 'advanced', 'elite'].map(l => (
                       <TableCell key={l} className="tabular-nums text-sm">{GUARDRAILS.MAX_HIGH_INTENSITY_PER_WEEK[l]}</TableCell>
                     ))}
                   </TableRow>
                   <TableRow>
-                    <TableCell className="text-sm font-medium">Max Mileage Increase</TableCell>
+                    <TableCell className="text-sm font-medium">{t('auto.k292')}</TableCell>
                     <TableCell colSpan={4} className="tabular-nums text-sm">{GUARDRAILS.MAX_WEEKLY_MILEAGE_INCREASE_PCT}% week-over-week</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell className="text-sm font-medium">Max Consecutive Days</TableCell>
+                    <TableCell className="text-sm font-medium">{t('auto.k288')}</TableCell>
                     <TableCell colSpan={4} className="tabular-nums text-sm">{GUARDRAILS.MAX_CONSECUTIVE_DAYS} days</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell className="text-sm font-medium">Min Strength/week</TableCell>
+                    <TableCell className="text-sm font-medium">{t('auto.k302')}</TableCell>
                     <TableCell colSpan={4} className="tabular-nums text-sm">{GUARDRAILS.MIN_STRENGTH_PER_WEEK} session</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell className="text-sm font-medium">Intensity Distribution</TableCell>
+                    <TableCell className="text-sm font-medium">{t('auto.k262')}</TableCell>
                     <TableCell colSpan={4} className="text-sm">{GUARDRAILS.TARGET_EASY_PCT}% easy / {GUARDRAILS.TARGET_HARD_PCT}% hard</TableCell>
                   </TableRow>
                 </TableBody>
