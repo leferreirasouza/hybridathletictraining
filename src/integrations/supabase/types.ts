@@ -1893,6 +1893,44 @@ export type Database = {
           },
         ]
       }
+      week_templates: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          organization_id: string
+          sessions: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          organization_id: string
+          sessions?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          sessions?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "week_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       weekly_summaries: {
         Row: {
           bike_z2_min_target: number | null
