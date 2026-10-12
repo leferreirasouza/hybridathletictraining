@@ -79,7 +79,7 @@ export default function GoalRaceCard() {
             <div className="flex items-center gap-1.5">
               <Flag className="h-3.5 w-3.5 text-primary shrink-0" />
               <p className="text-sm font-display font-bold truncate">
-                {profile.goal_race_name || 'Goal Race'}
+                {profile.goal_race_name || t('auto.k226')}
               </p>
             </div>
             {profile.goal_race_location && (

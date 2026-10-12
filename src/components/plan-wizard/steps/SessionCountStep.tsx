@@ -12,13 +12,13 @@ interface Props {
 
 const COPY: Record<Props['variant'], { title: string; subtitle: string; field: keyof WizardAnswers; max: number }> = {
   strength: {
-    title: 'How many strength sessions per week?',
+    title: t('auto.k243'),
     subtitle: 'Most athletes do best with 2–3. Set 0 to skip strength.',
     field: 'strengthSessionsPerWeek',
     max: 6,
   },
   mobility: {
-    title: 'Mobility / physio sessions (optional)',
+    title: t('auto.k304'),
     subtitle: 'Short focused sessions — 15–30 min each. Leave at 0 to skip entirely.',
     field: 'mobilitySessionsPerWeek',
     max: 7,

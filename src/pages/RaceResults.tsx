@@ -509,7 +509,7 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
       toast.success(t('raceResults.multiSaved', { count: rows.length }));
       onSuccess();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to save');
+      toast.error(err.message || t('auto.k194'));
     } finally {
       setSaving(false);
     }
@@ -541,7 +541,7 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
       toast.success(t('raceResults.raceSaved'));
       onSuccess();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to save');
+      toast.error(err.message || t('auto.k194'));
     } finally {
       setSaving(false);
     }

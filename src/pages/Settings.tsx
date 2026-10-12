@@ -44,7 +44,7 @@ function applyTheme(mode: ThemeMode) {
 
 const LANGUAGES = [
   { value: 'en', label: 'English' },
-  { value: 'pt-BR', label: 'Português (BR)' },
+  { value: 'pt-BR', label: t('auto.k412') },
 ];
 
 export default function Settings() {

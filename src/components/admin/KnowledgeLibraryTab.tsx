@@ -127,7 +127,7 @@ export default function KnowledgeLibraryTab() {
       toast.success(t('auto.k155'));
       refetch();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to delete');
+      toast.error(err.message || t('auto.k187'));
     } finally {
       setDeleting(false);
       setDeleteId(null);

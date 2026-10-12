@@ -290,7 +290,7 @@ export default function Analytics() {
                     <Tooltip
                       contentStyle={tooltipStyle}
                       labelStyle={{ color: 'hsl(var(--foreground))' }}
-                      formatter={(value: number) => [value, 'Avg RPE']}
+                      formatter={(value: number) => [value, t('auto.k76')]}
                     />
                     <Line
                       type="monotone"

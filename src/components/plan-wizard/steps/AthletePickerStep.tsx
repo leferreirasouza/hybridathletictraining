@@ -31,7 +31,7 @@ export default function AthletePickerStep({ answers, update }: Props) {
         onValueChange={(v) => update({ athleteId: v })}
       >
         <SelectTrigger>
-          <SelectValue placeholder={isLoading ? 'Loading…' : 'Select athlete'} />
+          <SelectValue placeholder={isLoading ? t('auto.k282') : t('auto.k488')} />
         </SelectTrigger>
         <SelectContent>
           {options.map((o) => (

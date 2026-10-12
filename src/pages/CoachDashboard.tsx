@@ -465,7 +465,7 @@ export default function CoachDashboard() {
               disabled={confirmText !== 'DELETE' || deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete permanently'}
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : t('auto.k145')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

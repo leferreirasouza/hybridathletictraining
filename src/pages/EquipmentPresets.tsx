@@ -179,7 +179,7 @@ export default function EquipmentPresets() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>{draft.id ? 'Edit preset' : 'New preset'}</CardTitle>
+              <CardTitle>{draft.id ? 'Edit preset' : t('auto.k322')}</CardTitle>
               <CardDescription>{t('auto.k139')}</CardDescription>
             </div>
             <Button variant="ghost" size="icon" onClick={() => setDraft(null)} aria-label="Cancel">

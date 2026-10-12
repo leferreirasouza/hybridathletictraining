@@ -175,7 +175,7 @@ export default function PlanHistory() {
       queryClient.invalidateQueries({ queryKey: ['all-plans-history'] });
       queryClient.invalidateQueries({ queryKey: ['org-plans'] });
     } catch (e: any) {
-      toast.error(e.message || 'Failed to delete');
+      toast.error(e.message || t('auto.k187'));
     } finally {
       setActing(null);
     }
