@@ -1,5 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +8,7 @@ import { Users } from 'lucide-react';
 
 export default function CoachInfoCard() {
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const { data: coaches } = useQuery({
     queryKey: ['my-coaches', user?.id],
@@ -29,7 +31,7 @@ export default function CoachInfoCard() {
       const nameMap = new Map((profiles || []).map(p => [p.id, p.full_name]));
       return assignments.map(a => ({
         ...a,
-        full_name: nameMap.get(a.coach_id) || 'Coach',
+        full_name: nameMap.get(a.coach_id) || t('roles.coach'),
       }));
     },
     enabled: !!user,
@@ -43,7 +45,7 @@ export default function CoachInfoCard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground">No coach assigned yet — your admin will set this up</p>
+            <p className="text-xs text-muted-foreground">{t('dashboard.noCoachAssigned')}</p>
           </div>
         </CardContent>
       </Card>
@@ -54,14 +56,21 @@ export default function CoachInfoCard() {
     <Card className="glass">
       <CardContent className="p-3 space-y-2">
         <p className="text-xs font-medium flex items-center gap-1.5">
-          <Users className="h-3.5 w-3.5 text-primary" /> Your Coaches
+          <Users className="h-3.5 w-3.5 text-primary" /> {t('dashboard.yourCoaches')}
         </p>
-        {coaches.map((c: any) => (
-          <div key={c.coach_id} className="flex items-center justify-between text-sm">
-            <span className="font-medium">{c.full_name}</span>
-            <Badge variant="outline" className="text-[10px] capitalize">{c.coach_type}</Badge>
-          </div>
-        ))}
+        {coaches.map((c: any) => {
+          const typeLabel = c.coach_type === 'primary'
+            ? t('dashboard.coachTypePrimary')
+            : c.coach_type === 'secondary'
+              ? t('dashboard.coachTypeSecondary')
+              : c.coach_type;
+          return (
+            <div key={c.coach_id} className="flex items-center justify-between text-sm">
+              <span className="font-medium">{c.full_name}</span>
+              <Badge variant="outline" className="text-[10px] capitalize">{typeLabel}</Badge>
+            </div>
+          );
+        })}
       </CardContent>
     </Card>
   );
