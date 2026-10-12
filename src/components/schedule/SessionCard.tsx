@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { getDiscipline, intensityConfig, dayLabelsFull } from './config';
 import { Clock, MapPin, ChevronRight, Flame, Check, CheckCircle2, CalendarPlus, ArrowLeftRight } from 'lucide-react';
 import { SwapSessionDialog } from './SwapSessionDialog';
+import { LinkStravaActivityButton } from './StravaWeekItems';
 import { addToCalendar, CalendarProvider } from '@/lib/calendarExport';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { CalendarProviderMenuItems } from './CalendarProviderMenuItems';
@@ -295,6 +296,7 @@ function SessionDetailSheet({ session, isCompleted, substitution }: { session: S
       {/* Actions */}
       <div className="space-y-2">
         {!isCompleted && <QuickLogButton session={session} />}
+        {!isCompleted && <LinkStravaActivityButton session={session} />}
         {isCompleted && (
           <div className="flex items-center justify-center gap-2 text-success text-sm py-2">
             <CheckCircle2 className="h-4 w-4" />

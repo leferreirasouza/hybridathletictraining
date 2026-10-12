@@ -584,5 +584,17 @@
       "planned": "Planned",
       "missed": "Missed"
     }
+  },
+  "stravaCal": {
+    "linkedTo": "Linked to {{name}}",
+    "logged": "Logged",
+    "unlink": "Unlink",
+    "unlinked": "Workout unlinked",
+    "suggest": "Looks like your {{name}} — link?",
+    "notThis": "Not this",
+    "unplanned": "Unplanned workout",
+    "linkActivity": "Link Strava activity",
+    "linkActivityDesc": "Pick a Strava workout from around this day.",
+    "noActivities": "No unlinked Strava workouts near this day."
   }
 }
