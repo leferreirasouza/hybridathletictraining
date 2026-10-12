@@ -3,7 +3,25 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { lazy as reactLazy, Suspense, type ComponentType } from "react";
+
+// A page chunk can go stale after an update ("Importing a module script failed").
+// Reload once to fetch the fresh version instead of leaving a blank screen.
+function lazy<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>) {
+  return reactLazy(() =>
+    factory().then(
+      (m) => { sessionStorage.removeItem("chunk-reload"); return m; },
+      (err) => {
+        if (!sessionStorage.getItem("chunk-reload")) {
+          sessionStorage.setItem("chunk-reload", "1");
+          window.location.reload();
+          return new Promise<{ default: T }>(() => {});
+        }
+        throw err;
+      },
+    ),
+  );
+}
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/layouts/AppLayout";
 import Auth from "@/pages/Auth";
