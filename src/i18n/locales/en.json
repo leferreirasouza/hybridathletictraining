@@ -625,5 +625,42 @@
     "linkActivity": "Link Strava activity",
     "linkActivityDesc": "Pick a Strava workout from around this day.",
     "noActivities": "No unlinked Strava workouts near this day."
+  },
+  "adminSync": {
+    "title": "Athletes & Strava",
+    "search": "Search athlete",
+    "refresh": "Refresh",
+    "none": "No athletes found.",
+    "athlete": "Athlete",
+    "strava": "Strava",
+    "lastSync": "Last sync",
+    "latestReceived": "Latest workout received",
+    "activities": "Activities",
+    "load": "CTL / ATL / TSB",
+    "actions": "Actions",
+    "connected": "Connected",
+    "notConnected": "Not connected",
+    "workout": "workout",
+    "inInbox": "{{n}} in inbox",
+    "computed": "computed",
+    "recalc": "Recalculate",
+    "recalcBusy": "Recalculating…",
+    "athleteFallback": "Athlete"
+  },
+  "planSuggest": {
+    "title": "Suggested change",
+    "time": "Time",
+    "distance": "Distance",
+    "intensity": "Intensity",
+    "accept": "Accept",
+    "dismiss": "Dismiss",
+    "updated": "Plan updated",
+    "dismissed": "Suggestion dismissed",
+    "failed": "Could not answer the suggestion: ",
+    "session": "Session",
+    "r_missed_session": "Missed session",
+    "r_harder_than_planned": "Harder than planned",
+    "r_tsb_fatigue": "High fatigue",
+    "r_interference": "Training clash"
   }
 }
