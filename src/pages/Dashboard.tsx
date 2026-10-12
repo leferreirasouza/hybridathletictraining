@@ -14,6 +14,8 @@ import { getDiscipline } from '@/components/schedule/config';
 import GoalRaceCard from '@/components/dashboard/GoalRaceCard';
 import ProfileCompletionCard from '@/components/dashboard/ProfileCompletionCard';
 import CoachInfoCard from '@/components/dashboard/CoachInfoCard';
+import TrainingLoadCard from '@/components/dashboard/TrainingLoadCard';
+import RecentHistoryCard from '@/components/dashboard/RecentHistoryCard';
 import FirstPlanCTA from '@/components/dashboard/FirstPlanCTA';
 import { useTranslation } from 'react-i18next';
 
@@ -313,6 +315,11 @@ export default function Dashboard() {
           </div>
         </div>
         )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <motion.div variants={item}><TrainingLoadCard /></motion.div>
+          <motion.div variants={item}><RecentHistoryCard /></motion.div>
+        </div>
 
         {/* Bottom CTAs — side by side on desktop */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
