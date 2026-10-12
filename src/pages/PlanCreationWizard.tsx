@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { buildWizardSteps, isStepComplete, type StepId } from '@/components/plan-wizard/wizardSteps.config';
 import type { WizardAnswers } from '@/components/plan-wizard/wizardTypes';
+import { useTranslation } from 'react-i18next';
 
 import AthletePickerStep from '@/components/plan-wizard/steps/AthletePickerStep';
 import GoalTypeStep from '@/components/plan-wizard/steps/GoalTypeStep';
@@ -53,6 +54,7 @@ function loadDraft(uid: string | undefined): { answers: WizardAnswers; stepIndex
  * answers (see wizardSteps.config.ts) — no hardcoded ternary chains here.
  */
 export default function PlanCreationWizard({ onExit, successPath = '/schedule' }: Props) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, currentRole } = useAuth();
   const isCoach = currentRole === 'coach' || currentRole === 'admin' || currentRole === 'master_admin';
@@ -109,16 +111,16 @@ export default function PlanCreationWizard({ onExit, successPath = '/schedule' }
     <div className="fixed inset-0 bg-background z-50 flex flex-col">
       {/* Top bar */}
       <div className="px-4 pt-4 pb-2 flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={handleBack} aria-label="Back">
+        <Button variant="ghost" size="icon" onClick={handleBack} aria-label={t('onboarding.back')}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <Progress value={progress} className="h-1 flex-1" />
-        <Button variant="ghost" size="icon" onClick={handleExit} aria-label="Exit">
+        <Button variant="ghost" size="icon" onClick={handleExit} aria-label={t('nav.exit')}>
           <X className="h-5 w-5" />
         </Button>
       </div>
       <div className="px-4 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-        Step {stepIndex + 1} of {stepIds.length}
+        {t('onboarding.stepOf', { step: stepIndex + 1, total: stepIds.length })}
       </div>
 
       {/* Step body */}
@@ -143,7 +145,7 @@ export default function PlanCreationWizard({ onExit, successPath = '/schedule' }
         <div className="border-t border-border bg-background/95 backdrop-blur px-4 py-4">
           <div className="max-w-md md:max-w-xl mx-auto">
             <Button className="w-full" size="lg" disabled={!canContinue} onClick={handleContinue}>
-              Continue
+              {t('onboarding.continue')}
             </Button>
           </div>
         </div>
