@@ -11,3 +11,7 @@
 - [ ] Hand review: strava-subscribe, admin RPCs, week_templates, respond_to_plan_suggestion
 - [ ] Verify periodization engine and onboarding PAR-Q save with real data
 - [ ] Garmin blocked on Garmin program
+
+- [x] Translate all currently English-only routed pages and shared user-facing flows into English/Portuguese locale resources.
+
+- [x] Add locale parity checks and verify public screens in both languages.
