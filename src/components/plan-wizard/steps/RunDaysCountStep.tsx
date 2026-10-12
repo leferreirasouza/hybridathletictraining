@@ -8,6 +8,7 @@ import type { WizardAnswers } from '../wizardTypes';
 import { StepShell } from './_shared';
 
 
+import { useTranslation } from 'react-i18next';
 const KM_MIN = 0;
 const KM_MAX = 300; // realistic elite ceiling; anything higher is almost certainly a typo
 const KM_STEP = 0.5;
@@ -20,6 +21,7 @@ const kmSchema = z
   .multipleOf(KM_STEP, `Use increments of ${KM_STEP} km`);
 
 export default function RunDaysCountStep({ answers, update }: { answers: WizardAnswers; update: (p: Partial<WizardAnswers>) => void }) {
+  const { t } = useTranslation();
   const currentDays = answers.currentRunDaysPerWeek ?? 0;
   const currentKm = answers.currentWeeklyKm ?? 0;
   const target = answers.runDaysPerWeek ?? 3;
@@ -67,11 +69,11 @@ export default function RunDaysCountStep({ answers, update }: { answers: WizardA
 
 
   return (
-    <StepShell title="How many days a week do you want to run?" subtitle="Volume matters more than day-count — tell us both.">
+    <StepShell title={t('auto.k242')} subtitle={t('auto.k610')}>
       <div className="space-y-6">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="text-sm">Currently running (days/week)</Label>
+            <Label className="text-sm">{t('auto.k133')}</Label>
             <Input
               type="number"
               inputMode="numeric"
@@ -83,7 +85,7 @@ export default function RunDaysCountStep({ answers, update }: { answers: WizardA
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-sm">Current weekly volume (km)</Label>
+            <Label className="text-sm">{t('auto.k132')}</Label>
             <Input
               type="number"
               inputMode="decimal"
@@ -108,12 +110,13 @@ export default function RunDaysCountStep({ answers, update }: { answers: WizardA
           </div>
         </div>
         <p className="text-xs text-muted-foreground -mt-3">
-          Used for injury-prevention checks (10%-rule). Range: {KM_MIN}–{KM_MAX} km, in {KM_STEP} km steps.
+          
+          {t('auto.k602')} {KM_MIN}–{KM_MAX}  {t('auto.k273')} {KM_STEP}  {t('auto.k272')}
         </p>
 
         <div className="space-y-3">
           <div className="flex items-baseline justify-between">
-            <Label className="text-sm">Target days per week</Label>
+            <Label className="text-sm">{t('auto.k539')}</Label>
             <span className="font-mono font-bold text-2xl text-primary">{target}</span>
           </div>
           <Slider
@@ -166,6 +169,7 @@ interface CalloutProps {
 }
 
 function RuleCallout(p: CalloutProps) {
+  const { t } = useTranslation();
   const styles = TONE_STYLES[p.tone];
   const { Icon } = styles;
   const headline =
@@ -193,28 +197,29 @@ function RuleCallout(p: CalloutProps) {
       {p.currentKm > 0 && (
         <div className="rounded-md border border-border/60 bg-background/40 p-2.5 space-y-1.5">
           <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-            <TrendingUp className="h-3 w-3" /> Impact on your generated plan
+            <TrendingUp className="h-3 w-3" />  {t('auto.k257')}
           </div>
           <ul className="text-xs space-y-1">
             <li className="flex justify-between gap-3">
-              <span className="text-muted-foreground">Week 1 max</span>
+              <span className="text-muted-foreground">{t('auto.k618')}</span>
               <span className="font-mono font-medium">{p.safeWeek1Km.toFixed(1)} km</span>
             </li>
             <li className="flex justify-between gap-3">
-              <span className="text-muted-foreground">Week 4 target</span>
+              <span className="text-muted-foreground">{t('auto.k619')}</span>
               <span className="font-mono font-medium">{p.safeWeek4Km.toFixed(1)} km</span>
             </li>
             {p.volumeOvershoot && (
               <li className="flex justify-between gap-3 pt-1 border-t border-border/40">
-                <span className="text-muted-foreground">Your implied ask</span>
+                <span className="text-muted-foreground">{t('auto.k654')}</span>
                 <span className="font-mono font-medium text-destructive">
-                  {p.impliedTargetKm.toFixed(1)} km → will be capped
+                  {p.impliedTargetKm.toFixed(1)}  {t('auto.k271')}
                 </span>
               </li>
             )}
           </ul>
           <p className="text-[10px] text-muted-foreground pt-1">
-            The AI planner enforces the 10%-rule week over week — it won’t exceed these ceilings.
+            
+            {t('auto.k551')}
           </p>
         </div>
       )}

@@ -12,6 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 
+import { useTranslation } from 'react-i18next';
 interface SwapSessionDialogProps {
   session: {
     id: string;
@@ -27,6 +28,7 @@ interface SwapSessionDialogProps {
 type Step = 'reason' | 'method' | 'ai_result' | 'coach_sent';
 
 export function SwapSessionDialog({ session }: SwapSessionDialogProps) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -64,6 +66,7 @@ export function SwapSessionDialog({ session }: SwapSessionDialogProps) {
       : 'Other reason';
 
   const handleGenerateAI = async () => {
+  const { t } = useTranslation();
     setLoading(true);
     try {
       const prompt = `I need a SINGLE substitute session for today. 
@@ -153,7 +156,7 @@ Requirements:
       });
       setStep('ai_result');
     } catch (e) {
-      toast.error('Failed to generate alternative. Try again or request from coach.');
+      toast.error(t('auto.k188'));
       console.error(e);
     } finally {
       setLoading(false);
@@ -161,6 +164,7 @@ Requirements:
   };
 
   const handleAcceptAI = async () => {
+  const { t } = useTranslation();
     if (!user || !aiResult) return;
     setLoading(true);
     const { error } = await supabase.from('session_substitutions' as any).insert({
@@ -180,13 +184,14 @@ Requirements:
     if (error) {
       toast.error('Failed to save: ' + error.message);
     } else {
-      toast.success('Session swapped! 🔄');
+      toast.success(t('auto.k503'));
       queryClient.invalidateQueries({ queryKey: ['session-substitutions'] });
       handleOpenChange(false);
     }
   };
 
   const handleRequestCoach = async () => {
+  const { t } = useTranslation();
     if (!user) return;
     setLoading(true);
     const { error } = await supabase.from('session_substitutions' as any).insert({
@@ -206,7 +211,7 @@ Requirements:
     if (error) {
       toast.error('Failed to send: ' + error.message);
     } else {
-      toast.success('Request sent to coach! 📩');
+      toast.success(t('auto.k448'));
       queryClient.invalidateQueries({ queryKey: ['session-substitutions'] });
       setStep('coach_sent');
     }
@@ -225,7 +230,7 @@ Requirements:
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" className="w-full" size="sm">
-          <ArrowLeftRight className="h-4 w-4 mr-2" /> Swap Session
+          <ArrowLeftRight className="h-4 w-4 mr-2" />  {t('auto.k536')}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-sm">
@@ -239,15 +244,15 @@ Requirements:
         {step === 'reason' && (
           <div className="space-y-4 pt-2">
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Why do you need to swap?</Label>
+              <Label className="text-sm font-medium">{t('auto.k635')}</Label>
               <RadioGroup value={reason} onValueChange={setReason}>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="no_equipment" id="no_equipment" />
-                  <Label htmlFor="no_equipment" className="text-sm cursor-pointer">Equipment unavailable</Label>
+                  <Label htmlFor="no_equipment" className="text-sm cursor-pointer">{t('auto.k178')}</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="less_time" id="less_time" />
-                  <Label htmlFor="less_time" className="text-sm cursor-pointer">Less time available</Label>
+                  <Label htmlFor="less_time" className="text-sm cursor-pointer">{t('auto.k280')}</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="other" id="other" />
@@ -256,11 +261,11 @@ Requirements:
               </RadioGroup>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Details (optional)</Label>
+              <Label className="text-xs">{t('auto.k151')}</Label>
               <Textarea
                 value={reasonDetails}
                 onChange={e => setReasonDetails(e.target.value)}
-                placeholder="e.g. Only have dumbbells today, or only 20 min available"
+                placeholder={t('auto.k165')}
                 rows={2}
               />
             </div>
@@ -270,7 +275,7 @@ Requirements:
 
         {step === 'method' && (
           <div className="space-y-4 pt-2">
-            <Label className="text-sm font-medium">How would you like to get a substitute?</Label>
+            <Label className="text-sm font-medium">{t('auto.k244')}</Label>
             <RadioGroup value={method} onValueChange={v => setMethod(v as 'ai' | 'coach')}>
               <div className="flex items-start space-x-3 p-3 rounded-lg border bg-card hover:border-primary/30 transition-colors cursor-pointer"
                 onClick={() => setMethod('ai')}>
@@ -279,7 +284,7 @@ Requirements:
                   <Label htmlFor="ai" className="text-sm font-medium cursor-pointer flex items-center gap-1.5">
                     <Bot className="h-4 w-4 text-primary" /> AI generates alternative
                   </Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">Instant equivalent session based on your constraints</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t('auto.k261')}</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3 p-3 rounded-lg border bg-card hover:border-primary/30 transition-colors cursor-pointer"
@@ -287,9 +292,9 @@ Requirements:
                 <RadioGroupItem value="coach" id="coach" className="mt-0.5" />
                 <div>
                   <Label htmlFor="coach" className="text-sm font-medium cursor-pointer flex items-center gap-1.5">
-                    <UserCheck className="h-4 w-4 text-primary" /> Request from coach
+                    <UserCheck className="h-4 w-4 text-primary" />  {t('auto.k447')}
                   </Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">Send a swap request for your coach to approve</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t('auto.k494')}</p>
                 </div>
               </div>
             </RadioGroup>
@@ -320,7 +325,8 @@ Requirements:
             </div>
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => { setStep('method'); setAiResult(null); }}>
-                Try Again
+                
+                {t('auto.k595')}
               </Button>
               <Button className="flex-1 gradient-hyrox" onClick={handleAcceptAI} disabled={loading}>
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Accept Swap'}
@@ -332,8 +338,8 @@ Requirements:
         {step === 'coach_sent' && (
           <div className="text-center py-6 space-y-3">
             <UserCheck className="h-10 w-10 text-primary mx-auto" />
-            <p className="text-sm font-medium">Request sent to your coach!</p>
-            <p className="text-xs text-muted-foreground">You'll see the substitute once they approve it.</p>
+            <p className="text-sm font-medium">{t('auto.k449')}</p>
+            <p className="text-xs text-muted-foreground">{t('auto.k649')}</p>
             <Button variant="outline" onClick={() => handleOpenChange(false)}>Done</Button>
           </div>
         )}

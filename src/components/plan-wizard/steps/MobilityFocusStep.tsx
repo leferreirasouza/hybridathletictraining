@@ -3,6 +3,7 @@ import { Label } from '@/components/ui/label';
 import type { WizardAnswers } from '../wizardTypes';
 import { StepShell } from './_shared';
 
+import { useTranslation } from 'react-i18next';
 const FOCI: { key: string; label: string; description: string }[] = [
   { key: 'mobility_recovery', label: 'Mobility / recovery', description: 'Soft-tissue, breath work, low-intensity flexibility.' },
   { key: 'skill_drills', label: 'Skill drills', description: 'HYROX station technique — sled, wall balls, burpees.' },
@@ -11,6 +12,7 @@ const FOCI: { key: string; label: string; description: string }[] = [
 ];
 
 export default function MobilityFocusStep({ answers, update }: { answers: WizardAnswers; update: (p: Partial<WizardAnswers>) => void }) {
+  const { t } = useTranslation();
   const weights = answers.mobilityWeights ?? {};
 
   const setWeight = (key: string, value: number) => {
@@ -24,8 +26,8 @@ export default function MobilityFocusStep({ answers, update }: { answers: Wizard
 
   return (
     <StepShell
-      title="What should mobility sessions focus on?"
-      subtitle="Set a weighting for each — higher = more sessions of that type."
+      title={t('auto.k628')}
+      subtitle={t('auto.k508')}
     >
       <div className="space-y-5">
         {FOCI.map((f) => {

@@ -21,6 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+import { useTranslation } from 'react-i18next';
 interface Session {
   id: string;
   session_name: string;
@@ -142,6 +143,7 @@ export function SessionCard({ session, showDay = true, isCompleted = false, subs
 }
 
 function QuickLogButton({ session }: { session: Session }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -152,7 +154,8 @@ function QuickLogButton({ session }: { session: Session }) {
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!user) { toast.error('Not logged in'); return; }
+  const { t } = useTranslation();
+    if (!user) { toast.error(t('auto.k356')); return; }
     setSaving(true);
     const { error } = await supabase.from('completed_sessions').insert({
       athlete_id: user.id,
@@ -167,7 +170,7 @@ function QuickLogButton({ session }: { session: Session }) {
     if (error) {
       toast.error('Failed to log: ' + error.message);
     } else {
-      toast.success('Session logged! 💪');
+      toast.success(t('auto.k501'));
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: ['completed-sessions'] });
       queryClient.invalidateQueries({ queryKey: ['analytics-completed'] });
@@ -188,11 +191,11 @@ function QuickLogButton({ session }: { session: Session }) {
         <div className="space-y-4 pt-2">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Duration (min)</Label>
+              <Label className="text-xs">{t('auto.k160')}</Label>
               <Input type="number" value={duration} onChange={e => setDuration(e.target.value)} placeholder="45" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Distance (km)</Label>
+              <Label className="text-xs">{t('auto.k153')}</Label>
               <Input type="number" step="0.1" value={distance} onChange={e => setDistance(e.target.value)} placeholder="8.0" />
             </div>
           </div>
@@ -204,8 +207,8 @@ function QuickLogButton({ session }: { session: Session }) {
             <Slider value={rpe} onValueChange={setRpe} min={1} max={10} step={1} />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Notes (optional)</Label>
-            <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="How did it go?" rows={2} />
+            <Label className="text-xs">{t('auto.k359')}</Label>
+            <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder={t('auto.k240')} rows={2} />
           </div>
           <Button className="w-full gradient-hyrox" onClick={handleSave} disabled={saving}>
             {saving ? 'Saving…' : 'Save'}
@@ -217,6 +220,7 @@ function QuickLogButton({ session }: { session: Session }) {
 }
 
 function SessionDetailSheet({ session, isCompleted, substitution }: { session: Session; isCompleted?: boolean; substitution?: Substitution | null }) {
+  const { t } = useTranslation();
   const disc = getDiscipline(session.discipline);
   const IntIcon = disc.icon;
   const intConf = session.intensity ? intensityConfig[session.intensity] : null;
@@ -273,7 +277,7 @@ function SessionDetailSheet({ session, isCompleted, substitution }: { session: S
       {substitution?.status === 'active' && (
         <div className="space-y-1.5">
           <h3 className="text-xs font-semibold text-primary uppercase tracking-wider flex items-center gap-1">
-            <ArrowLeftRight className="h-3 w-3" /> Swapped Session
+            <ArrowLeftRight className="h-3 w-3" />  {t('auto.k537')}
           </h3>
           <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/20">
             <p className="text-sm font-medium">{substitution.substitute_session_name}</p>
@@ -289,7 +293,7 @@ function SessionDetailSheet({ session, isCompleted, substitution }: { session: S
 
       {substitution?.status === 'pending_coach' && (
         <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-center">
-          <p className="text-sm text-amber-500 font-medium">⏳ Swap pending coach approval</p>
+          <p className="text-sm text-amber-500 font-medium">{t('auto.k3')}</p>
         </div>
       )}
 
@@ -307,7 +311,7 @@ function SessionDetailSheet({ session, isCompleted, substitution }: { session: S
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="w-full">
-              <CalendarPlus className="h-4 w-4 mr-2" /> Add to Calendar
+              <CalendarPlus className="h-4 w-4 mr-2" />  {t('auto.k35')}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="w-48">

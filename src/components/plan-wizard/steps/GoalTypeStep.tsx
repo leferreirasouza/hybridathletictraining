@@ -1,6 +1,7 @@
 import type { GoalType, WizardAnswers } from '../wizardTypes';
 import { ChoiceCard, StepShell } from './_shared';
 
+import { useTranslation } from 'react-i18next';
 const OPTIONS: { value: GoalType; title: string; description: string }[] = [
   { value: 'hyrox', title: 'HYROX race', description: '8 × 1km runs + 8 stations' },
   { value: 'general_fitness', title: 'General fitness', description: 'No race — build a strong, healthy engine' },
@@ -9,8 +10,9 @@ const OPTIONS: { value: GoalType; title: string; description: string }[] = [
 ];
 
 export default function GoalTypeStep({ answers, update }: { answers: WizardAnswers; update: (p: Partial<WizardAnswers>) => void }) {
+  const { t } = useTranslation();
   return (
-    <StepShell title="What's your main goal?" subtitle="We'll tailor the periodization to match.">
+    <StepShell title={t('auto.k630')} subtitle={t('auto.k614')}>
       <div className="grid gap-3">
         {OPTIONS.map((o) => (
           <ChoiceCard

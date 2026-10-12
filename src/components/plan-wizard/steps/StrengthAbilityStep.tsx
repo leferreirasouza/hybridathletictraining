@@ -1,6 +1,7 @@
 import type { AbilityLevel, WizardAnswers } from '../wizardTypes';
 import { ChoiceCard, StepShell } from './_shared';
 
+import { useTranslation } from 'react-i18next';
 const LEVELS: { value: AbilityLevel; title: string; description: string }[] = [
   { value: 'beginner', title: 'Beginner', description: 'New to lifting, or returning. Body-weight and light dumbbells.' },
   { value: 'intermediate', title: 'Intermediate', description: '6+ months consistent training. Comfortable with barbell basics.' },
@@ -9,8 +10,9 @@ const LEVELS: { value: AbilityLevel; title: string; description: string }[] = [
 ];
 
 export default function StrengthAbilityStep({ answers, update }: { answers: WizardAnswers; update: (p: Partial<WizardAnswers>) => void }) {
+  const { t } = useTranslation();
   return (
-    <StepShell title="How would you rate your strength training?" subtitle="Tier this honestly — we'll scale loads accordingly.">
+    <StepShell title={t('auto.k246')} subtitle={t('auto.k568')}>
       <div className="grid gap-3">
         {LEVELS.map((l) => (
           <ChoiceCard

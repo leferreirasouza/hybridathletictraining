@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { fmtTime, DISTANCE_LABELS, type RaceDistance, type WizardAnswers } from '../wizardTypes';
 import { StepShell } from './_shared';
 
+import { useTranslation } from 'react-i18next';
 const DISTANCES: RaceDistance[] = ['5k', '10k', 'half', 'marathon', 'hyrox', 'other'];
 
 function parseHMS(value: string): number | null {
@@ -17,6 +18,7 @@ function parseHMS(value: string): number | null {
 }
 
 export default function RaceTimeStep({ answers, update }: { answers: WizardAnswers; update: (p: Partial<WizardAnswers>) => void }) {
+  const { t } = useTranslation();
   const distance = answers.raceDistance ?? '10k';
   const [raw, setRaw] = useState<string>(answers.raceTimeSeconds ? fmtTime(answers.raceTimeSeconds) : '');
   const invalid = raw.trim() !== '' && parseHMS(raw) === null;
@@ -29,8 +31,8 @@ export default function RaceTimeStep({ answers, update }: { answers: WizardAnswe
 
   return (
     <StepShell
-      title="What's your current race time?"
-      subtitle="Your most recent or best — we'll use it to set training paces."
+      title={t('auto.k629')}
+      subtitle={t('auto.k655')}
     >
       <div className="space-y-4">
         <div className="space-y-2">
@@ -43,7 +45,7 @@ export default function RaceTimeStep({ answers, update }: { answers: WizardAnswe
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>Time (h:mm:ss or mm:ss)</Label>
+          <Label>{t('auto.k569')}</Label>
           <Input
             value={raw}
             inputMode="numeric"
@@ -53,7 +55,7 @@ export default function RaceTimeStep({ answers, update }: { answers: WizardAnswe
               const secs = parseHMS(v);
               update({ raceTimeSeconds: secs ?? undefined, raceDistance: distance });
             }}
-            placeholder="e.g. 50:00 or 1:45:00"
+            placeholder={t('auto.k161')}
             aria-invalid={invalid}
             className={invalid ? 'border-destructive focus-visible:ring-destructive' : undefined}
           />
@@ -65,10 +67,11 @@ export default function RaceTimeStep({ answers, update }: { answers: WizardAnswe
         </div>
         {answers.raceTimeSeconds ? (
           <p className="text-sm text-muted-foreground">
-            You ran <span className="font-mono font-bold text-primary">{fmtTime(answers.raceTimeSeconds)}</span> over {DISTANCE_LABELS[distance]}.
+            
+            {t('auto.k648')} <span className="font-mono font-bold text-primary">{fmtTime(answers.raceTimeSeconds)}</span> over {DISTANCE_LABELS[distance]}.
           </p>
         ) : !invalid ? (
-          <p className="text-xs text-muted-foreground">Format examples: <code>50:00</code>, <code>1:45:00</code>.</p>
+          <p className="text-xs text-muted-foreground">{t('auto.k209')} <code>50:00</code>, <code>1:45:00</code>.</p>
         ) : null}
       </div>
     </StepShell>
