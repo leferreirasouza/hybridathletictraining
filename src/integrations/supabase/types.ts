@@ -1948,6 +1948,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_athlete_sync_status: {
+        Args: never
+        Returns: {
+          athlete_id: string
+          atl: number
+          ctl: number
+          full_name: string
+          last_activity_received_at: string
+          last_activity_start: string
+          last_sync_at: string
+          last_sync_count: number
+          last_sync_status: string
+          load_computed_at: string
+          load_date: string
+          organization_name: string
+          strava_activities: number
+          strava_athlete_name: string
+          strava_connected: boolean
+          tsb: number
+          unmatched_activities: number
+        }[]
+      }
       admin_delete_athlete: { Args: { _athlete_id: string }; Returns: Json }
       admin_get_cron_jobs: {
         Args: never
@@ -1975,6 +1997,10 @@ export type Database = {
           start_time: string
           status: string
         }[]
+      }
+      admin_recompute_training_load: {
+        Args: { _athlete_id: string }
+        Returns: Json
       }
       assign_onboarding_role: {
         Args: { _org_id: string; _role: string }
