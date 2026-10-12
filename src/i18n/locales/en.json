@@ -138,7 +138,32 @@
     "aiCoachDesc": "Get personalized training advice and session adjustments",
     "firstPlanTitle": "Get Your First Training Plan",
     "firstPlanDesc": "Generate a personalized AI plan based on your profile and goal race, or import one from your coach.",
-    "import": "Import"
+    "import": "Import",
+    "trainingLoad": "Fitness & fatigue",
+    "recentHistory": "Recent sessions",
+    "bandFresh": "Fresh",
+    "bandNeutral": "Neutral",
+    "bandFatigued": "Fatigued",
+    "bandHighRisk": "High risk",
+    "fitnessCtl": "Fitness (CTL)",
+    "fatigueAtl": "Fatigue (ATL)",
+    "formTsb": "Form (TSB)",
+    "trainingLoadEmpty": "Log or sync a few workouts and your fitness (CTL), fatigue (ATL) and form (TSB) will appear here.",
+    "noCompletedSessions": "No completed sessions yet.",
+    "sourceManual": "Manual",
+    "disciplines": {
+      "run": "Run",
+      "bike": "Bike",
+      "rowing": "Row",
+      "skierg": "SkiErg",
+      "stairs": "Stairs",
+      "hyrox_station": "HYROX Station",
+      "strength": "Strength",
+      "mobility": "Mobility",
+      "prehab": "Prehab",
+      "accessories": "Accessories",
+      "custom": "Custom"
+    }
   },
   "schedule": {
     "title": "Schedule",

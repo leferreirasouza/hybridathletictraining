@@ -5,7 +5,7 @@ import { useTrainingLoad, fatigueRiskFromTsb } from '@/hooks/useTrainingLoad';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useTranslation } from 'react-i18next';
 
-const BAND_LABEL = { fresh: 'Fresh', neutral: 'Neutral', fatigued: 'Fatigued', high_risk: 'High risk' } as const;
+const BAND_KEY = { fresh: 'bandFresh', neutral: 'bandNeutral', fatigued: 'bandFatigued', high_risk: 'bandHighRisk' } as const;
 
 export default function TrainingLoadCard() {
   const { t } = useTranslation();
@@ -21,7 +21,7 @@ export default function TrainingLoadCard() {
           <CardTitle className="text-base font-display">
             {t('dashboard.trainingLoad', { defaultValue: 'Fitness & fatigue' })}
           </CardTitle>
-          {band && <Badge variant="secondary">{BAND_LABEL[band]}</Badge>}
+          {band && <Badge variant="secondary">{t(`dashboard.${BAND_KEY[band]}`)}</Badge>}
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -29,17 +29,17 @@ export default function TrainingLoadCard() {
           <div className="h-40 animate-pulse rounded-lg bg-muted/30" />
         ) : !latest ? (
           <p className="text-sm text-muted-foreground">
-            Log or sync a few workouts and your fitness (CTL), fatigue (ATL) and form (TSB) will appear here.
+            {t('dashboard.trainingLoadEmpty', { defaultValue: 'Log or sync a few workouts and your fitness (CTL), fatigue (ATL) and form (TSB) will appear here.' })}
           </p>
         ) : (
           <>
             <div className="grid grid-cols-3 gap-3 text-center">
               {[
-                { l: 'Fitness (CTL)', v: latest.ctl },
-                { l: 'Fatigue (ATL)', v: latest.atl },
-                { l: 'Form (TSB)', v: latest.tsb },
+                { k: 'fitnessCtl', l: t('dashboard.fitnessCtl', { defaultValue: 'Fitness (CTL)' }), v: latest.ctl },
+                { k: 'fatigueAtl', l: t('dashboard.fatigueAtl', { defaultValue: 'Fatigue (ATL)' }), v: latest.atl },
+                { k: 'formTsb', l: t('dashboard.formTsb', { defaultValue: 'Form (TSB)' }), v: latest.tsb },
               ].map((s) => (
-                <div key={s.l}>
+                <div key={s.k}>
                   <p className="text-lg font-display font-bold">{s.v.toFixed(1)}</p>
                   <p className="text-[10px] text-muted-foreground">{s.l}</p>
                 </div>
