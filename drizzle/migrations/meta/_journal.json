@@ -8,6 +8,13 @@
       "when": 1791768333685,
       "tag": "0000_admin_athlete_sync_status",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791769602760,
+      "tag": "0001_create_week_templates",
+      "breakpoints": true
     }
   ]
 }
