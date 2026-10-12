@@ -568,5 +568,21 @@
     "logged": "Atividade registrada",
     "ignored": "Atividade ignorada",
     "actionFailed": "Não funcionou. Tente novamente."
+  },
+  "planProgress": {
+    "title": "Seu plano",
+    "week": "Semana {{n}}",
+    "thisWeek": "Esta semana",
+    "workouts": "Treinos",
+    "distance": "Distância",
+    "weeksCompleted": "Semanas concluídas",
+    "showAll": "Ver as {{n}} semanas",
+    "showLess": "Ver menos",
+    "state": {
+      "completed": "Feito",
+      "in_progress": "Hoje",
+      "planned": "Planejado",
+      "missed": "Perdido"
+    }
   }
 }
