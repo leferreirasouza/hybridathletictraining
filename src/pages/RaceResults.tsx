@@ -144,7 +144,7 @@ function RaceCard({ race, onDelete }: { race: any; onDelete: () => void }) {
 
   const handleDelete = async () => {
     const { error } = await supabase.from('race_results' as any).delete().eq('id', race.id);
-    if (error) toast.error('Failed to delete');
+    if (error) toast.error(t('auto.k187'));
     else { toast.success(t('raceResults.raceDeleted')); onDelete(); }
   };
 
@@ -477,7 +477,7 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
   const handleSaveMultiple = async () => {
     if (!user) return;
     const selected = detectedRaces.filter(r => r.selected);
-    if (!selected.length) { toast.error('Select at least one race to save'); return; }
+    if (!selected.length) { toast.error(t('auto.k487')); return; }
 
     const missing = selected.filter(r => !r.raceDate);
     if (missing.length) { toast.error(t('raceResults.raceDateRequired')); return; }
@@ -509,7 +509,7 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
       toast.success(t('raceResults.multiSaved', { count: rows.length }));
       onSuccess();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to save');
+      toast.error(err.message || t('auto.k194'));
     } finally {
       setSaving(false);
     }
@@ -541,7 +541,7 @@ function AddRaceForm({ onSuccess }: { onSuccess: () => void }) {
       toast.success(t('raceResults.raceSaved'));
       onSuccess();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to save');
+      toast.error(err.message || t('auto.k194'));
     } finally {
       setSaving(false);
     }
@@ -839,7 +839,7 @@ function SingleRaceForm({
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">{t('onboarding.location')}</Label>
-          <Input value={raceLocation} onChange={e => setRaceLocation(e.target.value)} placeholder="Munich, DE" className="h-8 text-xs" />
+          <Input value={raceLocation} onChange={e => setRaceLocation(e.target.value)} placeholder={t('auto.k310')} className="h-8 text-xs" />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">

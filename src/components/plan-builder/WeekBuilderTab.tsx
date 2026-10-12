@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { sessionDate, toMonday, inferStartMonday, toTemplateSession, type TemplateSession } from '@/lib/weekBuilder';
 
+import { useTranslation } from 'react-i18next';
 type Discipline = Database['public']['Enums']['discipline'];
 type Intensity = Database['public']['Enums']['intensity_level'];
 type Planned = Database['public']['Tables']['planned_sessions']['Row'];
@@ -43,6 +44,7 @@ const nextMonday = () => {
 };
 
 export default function WeekBuilderTab() {
+  const { t } = useTranslation();
   const { user, currentOrg } = useAuth();
   const qc = useQueryClient();
   const { data: plans = [] } = useOrgPlans();
@@ -132,7 +134,7 @@ export default function WeekBuilderTab() {
 
   const createPlan = async () => {
     if (!user || !currentOrg) return;
-    if (!newName.trim() || !newAthlete) { toast.error('Add a plan name and pick an athlete'); return; }
+    if (!newName.trim() || !newAthlete) { toast.error(t('auto.k27')); return; }
     setBusy(true);
     try {
       const { data: p, error } = await supabase.from('training_plans')
@@ -146,7 +148,7 @@ export default function WeekBuilderTab() {
       await qc.invalidateQueries({ queryKey: ['org-plans'] });
       setPlanId(p.id);
       setNewName('');
-      toast.success('Plan created — add sessions to week 1');
+      toast.success(t('auto.k398'));
     } catch (e: any) {
       toast.error(e.message);
     } finally { setBusy(false); }
@@ -156,8 +158,8 @@ export default function WeekBuilderTab() {
 
   const saveDraft = async () => {
     if (!draft || !versionId) return;
-    if (!draft.session_name.trim()) { toast.error('Give the session a name'); return; }
-    if (!effectiveAthlete) { toast.error('This plan has no athlete yet — assign one in Current Plans'); return; }
+    if (!draft.session_name.trim()) { toast.error(t('auto.k225')); return; }
+    if (!effectiveAthlete) { toast.error(t('auto.k557')); return; }
     setBusy(true);
     const payload = {
       day_of_week: draft.day_of_week,
@@ -188,9 +190,9 @@ export default function WeekBuilderTab() {
   };
 
   const insertWeek = async (source: TemplateSession[], targetWeeks: number[]) => {
-    if (!versionId || !effectiveAthlete) { toast.error('This plan has no athlete yet'); return false; }
+    if (!versionId || !effectiveAthlete) { toast.error(t('auto.k556')); return false; }
     const rows = targetWeeks.flatMap((w) => source.map((s, i) => ({ ...rowFor(s, w, i), athlete_id: effectiveAthlete })));
-    if (!rows.length) { toast.error('Nothing to copy — this week is empty'); return false; }
+    if (!rows.length) { toast.error(t('auto.k362')); return false; }
     const { error } = await supabase.from('planned_sessions').insert(rows);
     if (error) { toast.error(error.message); return false; }
     refresh();
@@ -199,7 +201,7 @@ export default function WeekBuilderTab() {
 
   const doCopy = async () => {
     const targets = [...new Set(copyTargets.split(/[,\s]+/).map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= 52 && n !== week))];
-    if (!targets.length) { toast.error('Enter week numbers, e.g. 2, 3, 4'); return; }
+    if (!targets.length) { toast.error(t('auto.k174')); return; }
     setBusy(true);
     const ok = await insertWeek(weekSessions as unknown as TemplateSession[], targets);
     setBusy(false);
@@ -208,7 +210,7 @@ export default function WeekBuilderTab() {
 
   const saveTemplate = async () => {
     if (!user || !currentOrg || !tplName.trim()) return;
-    if (!weekSessions.length) { toast.error('This week is empty'); return; }
+    if (!weekSessions.length) { toast.error(t('auto.k560')); return; }
     const { error } = await supabase.from('week_templates').insert({
       organization_id: currentOrg.id, created_by: user.id, name: tplName.trim(),
       sessions: weekSessions.map((s) => toTemplateSession(s as unknown as TemplateSession)) as any,
@@ -248,15 +250,15 @@ export default function WeekBuilderTab() {
         <CardHeader className="pb-2"><CardTitle className="text-base font-display">Plan</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <Select value={planId} onValueChange={setPlanId}>
-            <SelectTrigger><SelectValue placeholder="Pick a plan to edit" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={t('auto.k386')} /></SelectTrigger>
             <SelectContent>
               {activePlans.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
             </SelectContent>
           </Select>
           {!planId && (
             <div className="space-y-2 rounded-lg border border-border/60 p-3">
-              <p className="text-xs font-medium text-muted-foreground">Or start a new plan by hand</p>
-              <Input placeholder="Plan name" value={newName} onChange={(e) => setNewName(e.target.value)} />
+              <p className="text-xs font-medium text-muted-foreground">{t('auto.k370')}</p>
+              <Input placeholder={t('auto.k403')} value={newName} onChange={(e) => setNewName(e.target.value)} />
               <Select value={newAthlete} onValueChange={setNewAthlete}>
                 <SelectTrigger><SelectValue placeholder="Athlete" /></SelectTrigger>
                 <SelectContent>
@@ -265,7 +267,7 @@ export default function WeekBuilderTab() {
               </Select>
               <div className="flex items-end gap-2">
                 <div className="flex-1">
-                  <Label className="text-xs">First week starts (Monday)</Label>
+                  <Label className="text-xs">{t('auto.k203')}</Label>
                   <Input type="date" value={startMonday} onChange={(e) => e.target.value && setStartMonday(toMonday(e.target.value))} />
                 </div>
                 <Button onClick={createPlan} disabled={busy} className="gap-1.5"><Plus className="h-4 w-4" /> Create</Button>
@@ -278,18 +280,18 @@ export default function WeekBuilderTab() {
       {planId && (
         <>
           <div className="flex items-center justify-between gap-2">
-            <Button variant="ghost" size="icon" disabled={week <= 1} onClick={() => setWeek(week - 1)} aria-label="Previous week"><ChevronLeft className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" disabled={week <= 1} onClick={() => setWeek(week - 1)} aria-label={t('auto.k419')}><ChevronLeft className="h-4 w-4" /></Button>
             <div className="text-center">
               <p className="font-display font-bold">Week {week}</p>
               <p className="text-[11px] text-muted-foreground">{sessionDate(startMonday, week, 1)} → {sessionDate(startMonday, week, 7)}</p>
             </div>
-            <Button variant="ghost" size="icon" disabled={week > maxWeek} onClick={() => setWeek(week + 1)} aria-label="Next week"><ChevronRight className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" disabled={week > maxWeek} onClick={() => setWeek(week + 1)} aria-label={t('auto.k328')}><ChevronRight className="h-4 w-4" /></Button>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setCopyOpen(true)}><Copy className="h-3.5 w-3.5" /> Copy week</Button>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setCopyOpen(true)}><Copy className="h-3.5 w-3.5" />  {t('auto.k123')}</Button>
             <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setTplOpen('save')}><Save className="h-3.5 w-3.5" /> Save as template</Button>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setTplOpen('apply')}><LayoutTemplate className="h-3.5 w-3.5" /> Use template</Button>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setTplOpen('apply')}><LayoutTemplate className="h-3.5 w-3.5" />  {t('auto.k601')}</Button>
           </div>
 
           {isLoading ? (
@@ -321,7 +323,7 @@ export default function WeekBuilderTab() {
               })}
             </div>
           )}
-          <p className="text-[11px] text-muted-foreground">Changes save straight away and show on the athlete's dashboard and schedule.</p>
+          <p className="text-[11px] text-muted-foreground">{t('auto.k104')}</p>
         </>
       )}
 
@@ -330,7 +332,7 @@ export default function WeekBuilderTab() {
           <DialogHeader><DialogTitle>{draft?.id ? 'Edit session' : 'New session'}</DialogTitle></DialogHeader>
           {draft && (
             <div className="space-y-3">
-              <Input placeholder="Session name" value={draft.session_name} onChange={(e) => setDraft({ ...draft, session_name: e.target.value })} />
+              <Input placeholder={t('auto.k502')} value={draft.session_name} onChange={(e) => setDraft({ ...draft, session_name: e.target.value })} />
               <div className="grid grid-cols-2 gap-2">
                 <Select value={String(draft.day_of_week)} onValueChange={(v) => setDraft({ ...draft, day_of_week: Number(v) })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -346,12 +348,12 @@ export default function WeekBuilderTab() {
               <Select value={draft.intensity || 'none'} onValueChange={(v) => setDraft({ ...draft, intensity: v === 'none' ? '' : (v as Intensity) })}>
                 <SelectTrigger><SelectValue placeholder="Intensity" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">No intensity</SelectItem>
+                  <SelectItem value="none">{t('auto.k339')}</SelectItem>
                   {INTENSITIES.map((d) => <SelectItem key={d} value={d}>{label(d)}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Textarea placeholder="Workout details" value={draft.workout_details} onChange={(e) => setDraft({ ...draft, workout_details: e.target.value })} />
-              <Textarea placeholder="Notes for the athlete" value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
+              <Textarea placeholder={t('auto.k639')} value={draft.workout_details} onChange={(e) => setDraft({ ...draft, workout_details: e.target.value })} />
+              <Textarea placeholder={t('auto.k360')} value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
             </div>
           )}
           <DialogFooter className="gap-2">
@@ -363,10 +365,10 @@ export default function WeekBuilderTab() {
 
       <Dialog open={copyOpen} onOpenChange={setCopyOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Copy week {week}</DialogTitle></DialogHeader>
-          <Label className="text-xs">To weeks (e.g. 2, 3, 4)</Label>
+          <DialogHeader><DialogTitle>{t('auto.k123')} {week}</DialogTitle></DialogHeader>
+          <Label className="text-xs">{t('auto.k574')}</Label>
           <Input value={copyTargets} onChange={(e) => setCopyTargets(e.target.value)} />
-          <p className="text-[11px] text-muted-foreground">Sessions are added alongside anything already in those weeks.</p>
+          <p className="text-[11px] text-muted-foreground">{t('auto.k505')}</p>
           <DialogFooter><Button onClick={doCopy} disabled={busy}>Copy</Button></DialogFooter>
         </DialogContent>
       </Dialog>
@@ -376,25 +378,25 @@ export default function WeekBuilderTab() {
           <DialogHeader><DialogTitle>{tplOpen === 'save' ? `Save week ${week} as a template` : `Add a template to week ${week}`}</DialogTitle></DialogHeader>
           {tplOpen === 'save' ? (
             <>
-              <Input placeholder="Template name, e.g. Base week" value={tplName} onChange={(e) => setTplName(e.target.value)} />
-              <DialogFooter><Button onClick={saveTemplate}>Save template</Button></DialogFooter>
+              <Input placeholder={t('auto.k546')} value={tplName} onChange={(e) => setTplName(e.target.value)} />
+              <DialogFooter><Button onClick={saveTemplate}>{t('auto.k475')}</Button></DialogFooter>
             </>
           ) : templates.length === 0 ? (
             <p className="text-sm text-muted-foreground">No templates yet. Build a week, then press "Save as template".</p>
           ) : (
             <>
               <div className="space-y-1.5 max-h-72 overflow-auto">
-                {templates.map((t) => (
-                  <div key={t.id} className={`flex items-center gap-2 rounded-md border px-2 py-1.5 ${tplPick === t.id ? 'border-primary' : 'border-border/60'}`}>
-                    <button className="flex-1 text-left" onClick={() => setTplPick(t.id)}>
-                      <p className="text-sm font-medium">{t.name}</p>
-                      <p className="text-[11px] text-muted-foreground">{(t.sessions as unknown[]).length} sessions</p>
+                {templates.map((template) => (
+                  <div key={template.id} className={`flex items-center gap-2 rounded-md border px-2 py-1.5 ${tplPick === template.id ? 'border-primary' : 'border-border/60'}`}>
+                    <button className="flex-1 text-left" onClick={() => setTplPick(template.id)}>
+                      <p className="text-sm font-medium">{template.name}</p>
+                      <p className="text-[11px] text-muted-foreground">{(template.sessions as unknown[]).length} sessions</p>
                     </button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => deleteTemplate(t.id)} aria-label="Delete template"><Trash2 className="h-3.5 w-3.5" /></Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => deleteTemplate(template.id)} aria-label={t('auto.k148')}><Trash2 className="h-3.5 w-3.5" /></Button>
                   </div>
                 ))}
               </div>
-              <DialogFooter><Button onClick={applyTemplate} disabled={!tplPick || busy}>Add to week {week}</Button></DialogFooter>
+              <DialogFooter><Button onClick={applyTemplate} disabled={!tplPick || busy}>{t('auto.k37')} {week}</Button></DialogFooter>
             </>
           )}
         </DialogContent>

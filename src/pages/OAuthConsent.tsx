@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Dumbbell, Shield } from "lucide-react";
 
+import { useTranslation } from 'react-i18next';
 // Narrow local typing for the Supabase auth.oauth beta namespace.
 type OAuthNs = {
   getAuthorizationDetails: (id: string) => Promise<{ data: any; error: any }>;
@@ -20,6 +21,7 @@ function safeNext(path: string | null): string {
 }
 
 export default function OAuthConsent() {
+  const { t } = useTranslation();
   const [params] = useSearchParams();
   const authorizationId = params.get("authorization_id") ?? "";
   const [details, setDetails] = useState<any>(null);
@@ -77,7 +79,7 @@ export default function OAuthConsent() {
           <div className="h-16 w-16 rounded-2xl gradient-hyrox flex items-center justify-center mb-4 shadow-lg">
             <Dumbbell className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-display font-bold tracking-tight">Hybrid Athletics</h1>
+          <h1 className="text-2xl font-display font-bold tracking-tight">{t('auto.k247')}</h1>
         </div>
         <Card className="glass">{children}</Card>
       </div>
@@ -88,7 +90,7 @@ export default function OAuthConsent() {
     return (
       <Shell>
         <CardHeader>
-          <CardTitle className="text-lg">Authorization error</CardTitle>
+          <CardTitle className="text-lg">{t('auto.k72')}</CardTitle>
           <CardDescription>{error}</CardDescription>
         </CardHeader>
       </Shell>
@@ -98,7 +100,7 @@ export default function OAuthConsent() {
   if (!details) {
     return (
       <Shell>
-        <CardContent className="p-8 text-center">Loading…</CardContent>
+        <CardContent className="p-8 text-center">{t('auto.k282')}</CardContent>
       </Shell>
     );
   }

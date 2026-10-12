@@ -3,6 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Button } from '@/components/ui/button';
 import { Target, ChevronRight, Heart, Gauge, Zap, Footprints } from 'lucide-react';
 
+import { useTranslation } from 'react-i18next';
 interface TargetsPanelProps {
   targets: any[];
 }
@@ -25,6 +26,7 @@ function getIcon(type: string) {
 }
 
 export default function TargetsPanel({ targets }: TargetsPanelProps) {
+  const { t } = useTranslation();
   if (!targets || targets.length === 0) return null;
 
   return (
@@ -39,7 +41,8 @@ export default function TargetsPanel({ targets }: TargetsPanelProps) {
         <SheetHeader>
           <SheetTitle className="font-display flex items-center gap-2">
             <Target className="h-5 w-5 text-primary" />
-            Training Targets
+            
+            {t('auto.k594')}
           </SheetTitle>
         </SheetHeader>
         <div className="space-y-3 mt-4 pb-6">

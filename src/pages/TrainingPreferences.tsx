@@ -16,6 +16,7 @@ import { ArrowLeft, Loader2, Save, AlertCircle, Sparkles } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
+import { useTranslation } from 'react-i18next';
 const DAYS = [
   { v: 1, l: 'Mon' }, { v: 2, l: 'Tue' }, { v: 3, l: 'Wed' },
   { v: 4, l: 'Thu' }, { v: 5, l: 'Fri' }, { v: 6, l: 'Sat' }, { v: 7, l: 'Sun' },
@@ -101,6 +102,7 @@ interface PresetRow {
 }
 
 export default function TrainingPreferences() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, currentOrg } = useAuth();
 
@@ -127,7 +129,7 @@ export default function TrainingPreferences() {
         .eq('athlete_id', user.id)
         .maybeSingle();
       if (error) {
-        toast.error('Failed to load preferences');
+        toast.error(t('auto.k191'));
       } else if (data) {
         setAvailableDays(data.available_days || [1, 3, 5]);
         setSessionLength(data.session_length_min || 60);
@@ -216,7 +218,7 @@ export default function TrainingPreferences() {
   const normalize = () => {
     const total = RUN_TYPES.reduce((s, k) => s + (weights[k] || 0), 0);
     if (total <= 0) {
-      toast.error('Set at least one run type above 0% before normalizing.');
+      toast.error(t('auto.k509'));
       return;
     }
     // Round to nearest 1% and fix any rounding drift on the largest bucket.
@@ -243,7 +245,7 @@ export default function TrainingPreferences() {
     const found = validate();
     setErrors(found);
     if (Object.keys(found).length > 0) {
-      toast.error('Please fix the highlighted fields before saving.');
+      toast.error(t('auto.k409'));
       return;
     }
 
@@ -272,7 +274,7 @@ export default function TrainingPreferences() {
     setStrengthInput(String(data.strength_sessions_per_week));
     setMobilityInput(String(data.mobility_technique_sessions_per_week));
     setEquipment((data.equipment as Record<string, boolean>) || {});
-    toast.success('Training preferences saved');
+    toast.success(t('auto.k593'));
   };
 
   const errorList = Object.values(errors);
@@ -284,9 +286,10 @@ export default function TrainingPreferences() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Training Preferences</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t('auto.k592')}</h1>
           <p className="text-sm text-muted-foreground">
-            Tell your AI coach how you train. Used when generating and adjusting plans.
+            
+            {t('auto.k545')}
           </p>
         </div>
       </div>
@@ -302,7 +305,7 @@ export default function TrainingPreferences() {
           {submitted && errorList.length > 0 && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Fix the following before saving</AlertTitle>
+              <AlertTitle>{t('auto.k206')}</AlertTitle>
               <AlertDescription>
                 <ul className="list-disc pl-5 mt-1 space-y-1">
                   {errorList.map((e) => <li key={e}>{e}</li>)}
@@ -316,16 +319,18 @@ export default function TrainingPreferences() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-primary" />
-                  Coach presets
+                  
+                  {t('auto.k113')}
                 </CardTitle>
                 <CardDescription>
-                  Apply a coach-built preset to auto-fill your equipment and run-type mix. You can still tweak before saving.
+                  
+                  {t('auto.k60')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col sm:flex-row gap-3 sm:items-center">
                 <Select value={appliedPresetId} onValueChange={applyPreset}>
                   <SelectTrigger className="sm:w-[280px]">
-                    <SelectValue placeholder="Choose a preset…" />
+                    <SelectValue placeholder={t('auto.k106')} />
                   </SelectTrigger>
                   <SelectContent>
                     {presets.map((p) => (
@@ -340,7 +345,8 @@ export default function TrainingPreferences() {
                     size="sm"
                     onClick={() => setAppliedPresetId('')}
                   >
-                    Clear selection
+                    
+                    {t('auto.k109')}
                   </Button>
                 )}
               </CardContent>
@@ -350,14 +356,14 @@ export default function TrainingPreferences() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Available training days</CardTitle>
-              <CardDescription>Pick the days you can train each week.</CardDescription>
+              <CardTitle>{t('auto.k73')}</CardTitle>
+              <CardDescription>{t('auto.k392')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div
                 className="flex flex-wrap gap-2"
                 role="group"
-                aria-label="Available training days"
+                aria-label={t('auto.k73')}
                 aria-invalid={!!errors.available_days}
                 aria-describedby={errors.available_days ? 'days-error' : undefined}
               >
@@ -390,9 +396,10 @@ export default function TrainingPreferences() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Session length</CardTitle>
+              <CardTitle>{t('auto.k498')}</CardTitle>
               <CardDescription>
-                Average minutes you have per session ({SESSION_MIN}–{SESSION_MAX} min).
+                
+                {t('auto.k74')}{SESSION_MIN}–{SESSION_MAX}  {t('auto.k303')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -404,7 +411,7 @@ export default function TrainingPreferences() {
                 min={SESSION_MIN} max={SESSION_MAX} step={5}
                 value={[sessionLength]}
                 onValueChange={(v) => setSessionLength(v[0])}
-                aria-label="Session length in minutes"
+                aria-label={t('auto.k499')}
               />
               {errors.session_length_min && (
                 <p className="text-sm text-destructive">{errors.session_length_min}</p>
@@ -414,9 +421,10 @@ export default function TrainingPreferences() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Run type mix</CardTitle>
+              <CardTitle>{t('auto.k465')}</CardTitle>
               <CardDescription>
-                Distribute your weekly running focus. Total must equal 100%.
+                
+                {t('auto.k154')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
@@ -450,7 +458,8 @@ export default function TrainingPreferences() {
                   )}
                 </span>
                 <Button type="button" variant="outline" size="sm" onClick={normalize}>
-                  Normalize to 100%
+                  
+                  {t('auto.k355')}
                 </Button>
               </div>
               {errors.run_type_weights && (
@@ -461,12 +470,12 @@ export default function TrainingPreferences() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Strength & mobility</CardTitle>
-              <CardDescription>Sessions per week (0–7), outside of runs.</CardDescription>
+              <CardTitle>{t('auto.k524')}</CardTitle>
+              <CardDescription>{t('auto.k507')}</CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="strength">Strength sessions</Label>
+                <Label htmlFor="strength">{t('auto.k525')}</Label>
                 <Input
                   id="strength"
                   type="number"
@@ -485,7 +494,7 @@ export default function TrainingPreferences() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="mobility">Mobility / technique</Label>
+                <Label htmlFor="mobility">{t('auto.k306')}</Label>
                 <Input
                   id="mobility"
                   type="number"
@@ -510,8 +519,8 @@ export default function TrainingPreferences() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Muscle focus</CardTitle>
-              <CardDescription>Optional — areas you want to emphasize.</CardDescription>
+              <CardTitle>{t('auto.k311')}</CardTitle>
+              <CardDescription>{t('auto.k368')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
@@ -539,9 +548,10 @@ export default function TrainingPreferences() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Equipment available</CardTitle>
+              <CardTitle>{t('auto.k175')}</CardTitle>
               <CardDescription>
-                Check everything you can access. If you train with nothing, pick "none".
+                
+                {t('auto.k105')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -577,7 +587,8 @@ export default function TrainingPreferences() {
           <div className="flex justify-end sticky bottom-4">
             <Button onClick={onSave} disabled={saving || !isValid} size="lg">
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-              Save preferences
+              
+              {t('auto.k473')}
             </Button>
           </div>
         </>

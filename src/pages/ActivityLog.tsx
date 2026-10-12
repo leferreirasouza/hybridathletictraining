@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import StravaInbox from '@/components/strava/StravaInbox';
 
+import { useTranslation } from 'react-i18next';
 const ACTION_META: Record<string, { label: string; icon: typeof Activity; color: string }> = {
   'session.completed': { label: 'Session Logged', icon: Dumbbell, color: 'text-success' },
   'session.deleted': { label: 'Session Deleted', icon: Dumbbell, color: 'text-destructive' },
@@ -29,6 +30,7 @@ const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { st
 const item = { hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } };
 
 export default function ActivityLog() {
+  const { t } = useTranslation();
   const { user, effectiveRole } = useAuth();
   const isCoachOrAdmin = effectiveRole === 'coach' || effectiveRole === 'admin' || effectiveRole === 'master_admin';
 
@@ -86,7 +88,7 @@ export default function ActivityLog() {
     <div className="page-container py-6">
       <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
         <motion.div variants={item}>
-          <h1 className="text-xl font-display font-bold">Activity Log</h1>
+          <h1 className="text-xl font-display font-bold">{t('auto.k26')}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {isCoachOrAdmin ? 'All team activity' : 'Your recent activity'}
           </p>
@@ -102,7 +104,7 @@ export default function ActivityLog() {
             <Card className="glass">
               <CardContent className="p-8 text-center space-y-2">
                 <Activity className="h-10 w-10 mx-auto text-muted-foreground" />
-                <p className="font-display font-bold">No Activity Yet</p>
+                <p className="font-display font-bold">{t('auto.k331')}</p>
                 <p className="text-sm text-muted-foreground">Actions will appear here as you use the app.</p>
               </CardContent>
             </Card>

@@ -8,7 +8,9 @@ import { Flag, MapPin, Target, ChevronRight } from 'lucide-react';
 import { differenceInDays, differenceInWeeks, format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
+import { useTranslation } from 'react-i18next';
 export default function GoalRaceCard() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -35,8 +37,8 @@ export default function GoalRaceCard() {
             <Flag className="h-5 w-5 text-primary" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-display font-bold">Set Your Goal Race</p>
-            <p className="text-xs text-muted-foreground">Add a target race to power your countdown & plan</p>
+            <p className="text-sm font-display font-bold">{t('auto.k511')}</p>
+            <p className="text-xs text-muted-foreground">{t('auto.k28')}</p>
           </div>
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </CardContent>
@@ -77,7 +79,7 @@ export default function GoalRaceCard() {
             <div className="flex items-center gap-1.5">
               <Flag className="h-3.5 w-3.5 text-primary shrink-0" />
               <p className="text-sm font-display font-bold truncate">
-                {profile.goal_race_name || 'Goal Race'}
+                {profile.goal_race_name || t('auto.k226')}
               </p>
             </div>
             {profile.goal_race_location && (
@@ -89,7 +91,7 @@ export default function GoalRaceCard() {
               {format(raceDateObj, 'EEEE, MMMM d, yyyy')}
             </p>
             <Badge variant="secondary" className="mt-1.5 text-[10px] bg-primary/10 text-primary border-0">
-              {weeksUntil} weeks to go
+              {weeksUntil}  {t('auto.k626')}
             </Badge>
           </div>
         </div>

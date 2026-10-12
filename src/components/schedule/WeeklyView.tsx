@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { StravaDayItems, useStravaRange } from './StravaWeekItems';
 import { activityDate } from '@/lib/stravaLink';
 
+import { useTranslation } from 'react-i18next';
 interface WeeklyViewProps {
   sessions: any[];
   weekNumber: number;
@@ -17,6 +18,7 @@ interface WeeklyViewProps {
 }
 
 export default function WeeklyView({ sessions, weekNumber, weeklySummary, completedSessions = [], substitutionMap = {} }: WeeklyViewProps) {
+  const { t } = useTranslation();
   const weekSessions = sessions.filter(s => s.week_number === weekNumber);
 
   const completedPlanIds = useMemo(
@@ -103,7 +105,7 @@ export default function WeeklyView({ sessions, weekNumber, weeklySummary, comple
           <CardContent className="p-3 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold flex items-center gap-1.5">
-                <TrendingUp className="h-3.5 w-3.5 text-primary" /> Planned vs done
+                <TrendingUp className="h-3.5 w-3.5 text-primary" />  {t('auto.k405')}
               </span>
               {adherence.pct !== null && (
                 <Badge variant={adherence.pct >= 70 ? 'outline' : 'destructive'} className="text-[10px]">
@@ -148,7 +150,7 @@ export default function WeeklyView({ sessions, weekNumber, weeklySummary, comple
                   <div className="flex items-center gap-1.5 text-xs">
                     <Bike className="h-3.5 w-3.5 text-emerald-500" />
                     <span className="font-medium">{weeklySummary.bike_z2_min_target}′</span>
-                    <span className="text-muted-foreground">bike Z2</span>
+                    <span className="text-muted-foreground">{t('auto.k97')}</span>
                   </div>
                 )}
               </div>
@@ -207,7 +209,7 @@ export default function WeeklyView({ sessions, weekNumber, weeklySummary, comple
       })}
 
       {weekSessions.length === 0 && (
-        <p className="text-center text-muted-foreground py-12 text-sm">No sessions this week.</p>
+        <p className="text-center text-muted-foreground py-12 text-sm">{t('auto.k353')}</p>
       )}
     </motion.div>
   );

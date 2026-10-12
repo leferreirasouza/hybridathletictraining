@@ -113,7 +113,8 @@ export default function Dashboard() {
                 onClick={() => navigate('/athletes')}
               >
                 <Users className="h-3.5 w-3.5" />
-                Coach Dashboard
+                
+                {t('auto.k112')}
                 <ChevronRight className="h-3.5 w-3.5" />
               </Button>
               <Button

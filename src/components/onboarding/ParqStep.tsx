@@ -49,10 +49,11 @@ export default function ParqStep({ answers, onChange, onNext, onBack }: ParqStep
     <Card className="glass">
       <CardHeader>
         <CardTitle className="text-lg font-display flex items-center gap-2">
-          <HeartPulse className="h-5 w-5 text-primary" /> Health Screening (PAR-Q)
+          <HeartPulse className="h-5 w-5 text-primary" />  {t('auto.k235')}
         </CardTitle>
         <CardDescription>
-          Please answer the following 7 questions honestly. This helps us ensure your training plan is safe.
+          
+          {t('auto.k406')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -80,11 +81,11 @@ export default function ParqStep({ answers, onChange, onNext, onBack }: ParqStep
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs">Additional medical notes (optional)</Label>
+          <Label className="text-xs">{t('auto.k44')}</Label>
           <Textarea
             value={answers.medical_notes}
             onChange={e => onChange({ ...answers, medical_notes: e.target.value })}
-            placeholder="Any relevant medical conditions, allergies, medications..."
+            placeholder={t('auto.k58')}
             rows={2}
             className="text-sm"
           />
@@ -93,10 +94,10 @@ export default function ParqStep({ answers, onChange, onNext, onBack }: ParqStep
         {hasRisks && (
           <Alert variant="default" className="border-amber-500 bg-amber-500/10">
             <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <AlertTitle className="text-amber-700 dark:text-amber-400 text-sm">Health Risk Identified</AlertTitle>
+            <AlertTitle className="text-amber-700 dark:text-amber-400 text-sm">{t('auto.k234')}</AlertTitle>
             <AlertDescription className="text-xs text-amber-600 dark:text-amber-300">
-              Based on your answers, we recommend consulting a qualified healthcare professional before starting an intense training program.
-              You can still proceed, but please exercise caution and inform your coach about these concerns.
+              
+              {t('auto.k91')}
             </AlertDescription>
           </Alert>
         )}
@@ -109,7 +110,8 @@ export default function ParqStep({ answers, onChange, onNext, onBack }: ParqStep
               className="mt-0.5"
             />
             <p className="text-xs leading-relaxed">
-              I acknowledge the health risks identified above. I understand that I should consult a healthcare professional before beginning this training program. I choose to proceed at my own risk.
+              
+              {t('auto.k249')}
             </p>
           </label>
         )}
@@ -117,9 +119,10 @@ export default function ParqStep({ answers, onChange, onNext, onBack }: ParqStep
         {!hasRisks && (
           <Alert className="border-emerald-500/30 bg-emerald-500/5">
             <ShieldCheck className="h-4 w-4 text-emerald-600" />
-            <AlertTitle className="text-emerald-700 dark:text-emerald-400 text-sm">No Risk Flags</AlertTitle>
+            <AlertTitle className="text-emerald-700 dark:text-emerald-400 text-sm">{t('auto.k348')}</AlertTitle>
             <AlertDescription className="text-xs">
-              Great! No health concerns identified. You're cleared for standard training.
+              
+              {t('auto.k230')}
             </AlertDescription>
           </Alert>
         )}

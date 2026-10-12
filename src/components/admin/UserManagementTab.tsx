@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { UserPlus, Users, Trash2, ShieldCheck, Search, X, UserX } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
+import { useTranslation } from 'react-i18next';
 type AppRole = Database['public']['Enums']['app_role'];
 
 interface Props {
@@ -49,6 +50,7 @@ const rolePriority: Record<AppRole, number> = {
 };
 
 export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [email, setEmail] = useState('');
@@ -198,11 +200,11 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
   const handleCreateAssignment = async () => {
     const targetOrgId = currentOrgId || orgId;
     if (!targetOrgId) {
-      toast.error('Select an organization first');
+      toast.error(t('auto.k485'));
       return;
     }
     if (!assignmentCoachId || !assignmentAthleteId) {
-      toast.error('Select both coach and athlete');
+      toast.error(t('auto.k490'));
       return;
     }
 
@@ -227,7 +229,7 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
           .update({ coach_type: assignmentCoachType })
           .eq('id', existing.id);
         if (error) throw error;
-        toast.success('Assignment updated');
+        toast.success(t('auto.k68'));
       } else {
         const { error } = await supabase.from('coach_athlete_assignments').insert({
           organization_id: targetOrgId,
@@ -255,17 +257,17 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
       toast.error(error.message);
       return;
     }
-    toast.success('Assignment removed');
+    toast.success(t('auto.k67'));
     fetchAssignments();
   };
 
   const handleInvite = async () => {
     if (!email.trim()) {
-      toast.error('Email is required');
+      toast.error(t('auto.k172'));
       return;
     }
     if (!orgId) {
-      toast.error('Select an organization');
+      toast.error(t('auto.k484'));
       return;
     }
 
@@ -288,7 +290,7 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
 
   const handleChangeRole = async (memberId: string, newRole: AppRole) => {
     const { error } = await supabase.from('user_roles').update({ role: newRole }).eq('id', memberId);
-    error ? toast.error(error.message) : toast.success('Role updated');
+    error ? toast.error(error.message) : toast.success(t('auto.k455'));
     if (!error) {
       await fetchMembers();
       await fetchAssignments();
@@ -297,7 +299,7 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
 
   const handleRemoveMember = async (memberId: string) => {
     const { error } = await supabase.from('user_roles').delete().eq('id', memberId);
-    error ? toast.error(error.message) : toast.success('Member removed');
+    error ? toast.error(error.message) : toast.success(t('auto.k296'));
     if (!error) {
       await fetchMembers();
       await fetchAssignments();
@@ -391,7 +393,7 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
         <CardTitle className="flex items-center gap-2 text-lg">
-          <Users className="h-5 w-5 text-primary" /> Team Members
+          <Users className="h-5 w-5 text-primary" />  {t('auto.k543')}
         </CardTitle>
         <div className="flex items-center gap-2">
           {hasSelection && (
@@ -402,16 +404,16 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
               <Dialog open={bulkRoleDialogOpen} onOpenChange={setBulkRoleDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-1.5">
-                    <ShieldCheck className="h-3.5 w-3.5" /> Change Role
+                    <ShieldCheck className="h-3.5 w-3.5" />  {t('auto.k102')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Change Role for {selectedIds.size} Member(s)</DialogTitle>
+                    <DialogTitle>{t('auto.k103')} {selectedIds.size}  {t('auto.k297')}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 pt-2">
                     <div className="space-y-2">
-                      <Label>New Role</Label>
+                      <Label>{t('auto.k323')}</Label>
                       <Select value={bulkRole} onValueChange={v => setBulkRole(v as AppRole)}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -437,9 +439,10 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Remove {selectedIds.size} member(s)?</AlertDialogTitle>
+                    <AlertDialogTitle>Remove {selectedIds.size}  {t('auto.k298')}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will remove all selected users from their organizations. They will lose access immediately.
+                      
+                      {t('auto.k565')}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -455,14 +458,15 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="outline" size="sm" className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10">
-                      <UserX className="h-3.5 w-3.5" /> Delete Accounts
+                      <UserX className="h-3.5 w-3.5" />  {t('auto.k141')}
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Permanently delete {selectedIds.size} account(s)?</AlertDialogTitle>
+                      <AlertDialogTitle>{t('auto.k382')} {selectedIds.size}  {t('auto.k21')}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will permanently delete all selected user accounts and all their data. This cannot be undone.
+                        
+                        {t('auto.k563')}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -508,12 +512,12 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1.5">
-                <UserPlus className="h-4 w-4" /> Add User
+                <UserPlus className="h-4 w-4" />  {t('auto.k38')}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add Team Member</DialogTitle>
+                <DialogTitle>{t('auto.k34')}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-2">
                 <div className="space-y-2">
@@ -521,8 +525,8 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
                   <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="user@example.com" type="email" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Full Name</Label>
-                  <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="John Doe" />
+                  <Label>{t('auto.k214')}</Label>
+                  <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder={t('auto.k265')} />
                 </div>
                 <div className="space-y-2">
                   <Label>Role</Label>
@@ -539,7 +543,7 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
                   <div className="space-y-2">
                     <Label>Organization</Label>
                     <Select value={orgId} onValueChange={setOrgId}>
-                      <SelectTrigger><SelectValue placeholder="Select org" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder={t('auto.k492')} /></SelectTrigger>
                       <SelectContent>
                         {orgs.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
                       </SelectContent>
@@ -562,7 +566,7 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
             <Input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search by name, user ID, or org..."
+              placeholder={t('auto.k478')}
               className="pl-9 h-9"
             />
             {searchQuery && (
@@ -573,10 +577,10 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
           </div>
           <Select value={roleFilter} onValueChange={setRoleFilter}>
             <SelectTrigger className="w-[140px] h-9">
-              <SelectValue placeholder="All roles" />
+              <SelectValue placeholder={t('auto.k55')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
+              <SelectItem value="all">{t('auto.k56')}</SelectItem>
               {assignableRoles.map(r => (
                 <SelectItem key={r} value={r} className="capitalize">{r.replace('_', ' ')}</SelectItem>
               ))}
@@ -598,11 +602,11 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
                   <Checkbox
                     checked={selectedIds.size === filteredMembers.length && filteredMembers.length > 0}
                     onCheckedChange={toggleSelectAll}
-                    aria-label="Select all"
+                    aria-label={t('auto.k483')}
                   />
                 </TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>User ID</TableHead>
+                <TableHead>{t('auto.k603')}</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Organization</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -644,9 +648,10 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Remove member?</AlertDialogTitle>
+                          <AlertDialogTitle>{t('auto.k446')}</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This will remove the user's role from this organization. They will lose access immediately.
+                            
+                            {t('auto.k566')}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -661,15 +666,16 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
                     {isMasterAdmin && m.user_id !== user?.id && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-destructive/60 hover:text-destructive hover:bg-destructive/10" title="Permanently delete account">
+                          <Button variant="ghost" size="icon" className="text-destructive/60 hover:text-destructive hover:bg-destructive/10" title={t('auto.k383')}>
                             <UserX className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Permanently delete account?</AlertDialogTitle>
+                            <AlertDialogTitle>{t('auto.k384')}</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This will <strong>permanently delete</strong> {m.profiles?.full_name || 'this user'}'s account and all their data. This cannot be undone.
+                              
+                              {t('auto.k561')} <strong>{t('auto.k381')}</strong> {m.profiles?.full_name || 'this user'}'s account and all their data. This cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -678,7 +684,8 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
                               onClick={() => handleDeleteUser(m.user_id, m.profiles?.full_name || 'User')}
                               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                             >
-                              Delete Permanently
+                              
+                              {t('auto.k146')}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
@@ -693,19 +700,19 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
 
         <div className="pt-4 border-t border-border space-y-3">
           <div>
-            <p className="text-sm font-semibold">Coach assignments</p>
-            <p className="text-xs text-muted-foreground">Assign one coach to a specific athlete, including yourself for self-coaching.</p>
+            <p className="text-sm font-semibold">{t('auto.k111')}</p>
+            <p className="text-xs text-muted-foreground">{t('auto.k65')}</p>
           </div>
 
           {!currentOrgId ? (
-            <p className="text-xs text-muted-foreground">Pick an organization first to manage assignments.</p>
+            <p className="text-xs text-muted-foreground">{t('auto.k390')}</p>
           ) : (
             <>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
                 <div className="space-y-1">
                   <Label className="text-xs">Coach</Label>
                   <Select value={assignmentCoachId} onValueChange={setAssignmentCoachId}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder="Select coach" /></SelectTrigger>
+                    <SelectTrigger className="h-9"><SelectValue placeholder={t('auto.k491')} /></SelectTrigger>
                     <SelectContent>
                       {coachOptions.map((option) => (
                         <SelectItem key={option.userId} value={option.userId}>
@@ -719,7 +726,7 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
                 <div className="space-y-1">
                   <Label className="text-xs">Athlete</Label>
                   <Select value={assignmentAthleteId} onValueChange={setAssignmentAthleteId}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder="Select athlete" /></SelectTrigger>
+                    <SelectTrigger className="h-9"><SelectValue placeholder={t('auto.k488')} /></SelectTrigger>
                     <SelectContent>
                       {athleteSelectionOptions.map((option) => (
                         <SelectItem key={option.userId} value={option.userId}>
@@ -751,7 +758,7 @@ export default function UserManagementTab({ isMasterAdmin, currentOrgId }: Props
               {loadingAssignments ? (
                 <div className="flex justify-center py-4"><div className="h-5 w-5 rounded-md gradient-hyrox animate-pulse" /></div>
               ) : assignments.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-2">No coach-athlete assignments yet.</p>
+                <p className="text-xs text-muted-foreground py-2">{t('auto.k333')}</p>
               ) : (
                 <div className="space-y-2">
                   {assignments.map((assignment) => {

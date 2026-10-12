@@ -21,6 +21,7 @@ import {
 } from '../wizardTypes';
 import { StepShell } from './_shared';
 
+import { useTranslation } from 'react-i18next';
 interface Props {
   answers: WizardAnswers;
   update: (p: Partial<WizardAnswers>) => void;
@@ -35,6 +36,7 @@ interface Props {
  * (passing athleteId when coach is generating on someone else's behalf).
  */
 export default function ReviewStep({ answers, update, onGenerated, onEditStep }: Props) {
+  const { t } = useTranslation();
   const { user, currentOrg } = useAuth();
   const [prediction, setPrediction] = useState<any>(null);
   const [loadingPrediction, setLoadingPrediction] = useState(false);
@@ -117,7 +119,7 @@ export default function ReviewStep({ answers, update, onGenerated, onEditStep }:
       err?.name === 'FunctionsFetchError' ||
       err?.name === 'TypeError' ||
       /fetch|network|failed to connect/i.test(msg);
-    if (looksLikeNetworkFailure) return "Couldn't reach the server — check your connection and try again.";
+    if (looksLikeNetworkFailure) return t('auto.k124');
     return msg || fallback;
   };
 
@@ -145,7 +147,7 @@ export default function ReviewStep({ answers, update, onGenerated, onEditStep }:
 
   const handleGenerate = async () => {
     if (!user || !currentOrg) {
-      toast.error('Not signed in');
+      toast.error(t('auto.k358'));
       return;
     }
     setGenerating(true);
@@ -182,7 +184,7 @@ export default function ReviewStep({ answers, update, onGenerated, onEditStep }:
   }
 
   return (
-    <StepShell title="Review and generate" subtitle="Double-check your inputs, then generate the plan.">
+    <StepShell title={t('auto.k454')} subtitle={t('auto.k156')}>
       <div className="space-y-4">
         {/* Summary */}
         <Card className="glass overflow-hidden">
@@ -193,24 +195,24 @@ export default function ReviewStep({ answers, update, onGenerated, onEditStep }:
               onEdit={onEditStep && (() => onEditStep('goalType'))}
             />
             <SummaryRow
-              label="Running ability"
+              label={t('auto.k467')}
               value={answers.runAbility ? ABILITY_LABELS[answers.runAbility] : '—'}
               onEdit={onEditStep && (() => onEditStep('runAbility'))}
             />
             {answers.raceTimeSeconds && (
               <SummaryRow
-                label="Race PR"
+                label={t('auto.k439')}
                 value={`${fmtTime(answers.raceTimeSeconds)} (${DISTANCE_LABELS[answers.raceDistance ?? '10k']})`}
                 onEdit={onEditStep && (() => onEditStep('raceTime'))}
               />
             )}
             <SummaryRow
-              label="Run days"
+              label={t('auto.k458')}
               value={`${answers.runDaysPerWeek ?? 0} / week · ${(answers.runDays ?? []).map((d) => DAY_LABELS[d]).join(', ') || '—'}`}
               onEdit={onEditStep && (() => onEditStep('runDaysCount'))}
             />
             <SummaryRow
-              label="Current volume"
+              label={t('auto.k131')}
               value={`${answers.currentRunDaysPerWeek ?? 0} days · ${answers.currentWeeklyKm ?? 0} km / week`}
               onEdit={onEditStep && (() => onEditStep('runDaysCount'))}
             />
@@ -230,7 +232,7 @@ export default function ReviewStep({ answers, update, onGenerated, onEditStep }:
             />
             {(answers.mobilitySessionsPerWeek ?? 0) > 0 && Object.keys(answers.mobilityWeights ?? {}).length > 0 && (
               <SummaryRow
-                label="Mobility focus"
+                label={t('auto.k307')}
                 value={Object.entries(answers.mobilityWeights ?? {})
                   .map(([k, v]) => `${MOBILITY_FOCUS_LABELS[k] ?? k} (${v})`)
                   .join(', ')}
@@ -253,13 +255,13 @@ export default function ReviewStep({ answers, update, onGenerated, onEditStep }:
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <Target className="h-4 w-4 text-primary" />
-                <Label className="font-display font-bold text-sm">Age Group Reference</Label>
+                <Label className="font-display font-bold text-sm">{t('auto.k49')}</Label>
               </div>
               <p className="text-xs text-muted-foreground">
                 Used as a fallback target if you don't have prior HYROX race history.
               </p>
               <div className="space-y-1.5">
-                <Label className="text-xs">Your Age Group</Label>
+                <Label className="text-xs">{t('auto.k650')}</Label>
                 <Select value={ageGroup} onValueChange={(v) => update({ ageGroup: v })}>
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -272,11 +274,11 @@ export default function ReviewStep({ answers, update, onGenerated, onEditStep }:
               {ageGroupRef && (
                 <div className="grid grid-cols-2 gap-2 text-center">
                   <div className="bg-primary/5 rounded-lg p-2 border border-primary/10">
-                    <p className="text-[10px] text-muted-foreground">Avg Total Time</p>
+                    <p className="text-[10px] text-muted-foreground">{t('auto.k84')}</p>
                     <p className="text-sm font-mono font-bold text-primary">{fmtTime(ageGroupRef.total)}</p>
                   </div>
                   <div className="bg-primary/5 rounded-lg p-2 border border-primary/10">
-                    <p className="text-[10px] text-muted-foreground">Avg Run Pace</p>
+                    <p className="text-[10px] text-muted-foreground">{t('auto.k80')}</p>
                     <p className="text-sm font-mono font-bold text-primary">{fmtTime(ageGroupRef.runPerKm)}/km</p>
                   </div>
                 </div>
@@ -302,7 +304,7 @@ export default function ReviewStep({ answers, update, onGenerated, onEditStep }:
         </Card>
 
         <Button onClick={handleGenerate} disabled={generating} className="w-full" size="lg">
-          {generating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating…</> : 'Generate plan'}
+          {generating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t('auto.k223')}</> : 'Generate plan'}
         </Button>
       </div>
     </StepShell>
@@ -342,6 +344,7 @@ function GeneratedPlanPreview({
   plan: { planId: string; planName: string; totalWeeks: number; sessionsCreated: number };
   onContinue: () => void;
 }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [sessions, setSessions] = useState<PreviewSession[]>([]);
 
@@ -393,15 +396,15 @@ function GeneratedPlanPreview({
   }, [plan.planId]);
 
   return (
-    <StepShell title="Plan created" subtitle={`"${plan.planName}" · ${plan.totalWeeks} weeks · ${plan.sessionsCreated} sessions`}>
+    <StepShell title={t('auto.k396')} subtitle={`"${plan.planName}" · ${plan.totalWeeks} weeks · ${plan.sessionsCreated} sessions`}>
       <div className="space-y-4">
         <Card className="glass border-success/30 overflow-hidden">
           <div className="h-1 bg-success" />
           <CardContent className="p-4 flex items-center gap-3">
             <CheckCircle2 className="h-8 w-8 text-success shrink-0" />
             <div>
-              <p className="font-display font-bold text-sm">Your plan is ready</p>
-              <p className="text-xs text-muted-foreground">Here's a preview of week 1 before you head to your schedule.</p>
+              <p className="font-display font-bold text-sm">{t('auto.k657')}</p>
+              <p className="text-xs text-muted-foreground">{t('auto.k237')}</p>
             </div>
           </CardContent>
         </Card>
@@ -409,7 +412,7 @@ function GeneratedPlanPreview({
         <div className="space-y-2">
           <div className="flex items-center gap-2 px-1">
             <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Week 1</Label>
+            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('auto.k617')}</Label>
           </div>
 
           {loading ? (
@@ -417,7 +420,7 @@ function GeneratedPlanPreview({
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : sessions.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">Preview unavailable — your full schedule is ready to view.</p>
+            <p className="text-sm text-muted-foreground text-center py-4">{t('auto.k418')}</p>
           ) : (
             sessions.map((s) => {
               const disc = getDiscipline(s.discipline);
@@ -448,7 +451,8 @@ function GeneratedPlanPreview({
         </div>
 
         <Button onClick={onContinue} className="w-full gradient-hyrox" size="lg">
-          View full schedule
+          
+          {t('auto.k609')}
         </Button>
       </div>
     </StepShell>
@@ -491,6 +495,7 @@ function riskStyles(level?: string) {
 }
 
 function PredictionView({ prediction }: { prediction: any }) {
+  const { t } = useTranslation();
   // Fallback for plain-string predictions
   if (typeof prediction === 'string') {
     return <p className="text-sm text-foreground whitespace-pre-wrap">{prediction}</p>;
@@ -517,7 +522,7 @@ function PredictionView({ prediction }: { prediction: any }) {
         <div className="grid grid-cols-2 gap-2">
           {predictedTime && (
             <div className="bg-primary/5 rounded-lg p-3 border border-primary/10">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Predicted Time</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('auto.k414')}</p>
               <p className="text-lg font-mono font-bold text-primary">{predictedTime}</p>
             </div>
           )}
@@ -544,14 +549,14 @@ function PredictionView({ prediction }: { prediction: any }) {
 
       {targetFeedback && (
         <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-1">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Target Feedback</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('auto.k540')}</p>
           <p className="text-sm leading-relaxed">{targetFeedback}</p>
         </div>
       )}
 
       {injuryRisk && (
         <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-1">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Injury Risk</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('auto.k260')}</p>
           <p className="text-sm leading-relaxed">{injuryRisk}</p>
         </div>
       )}

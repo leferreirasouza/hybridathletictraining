@@ -7,7 +7,9 @@ import { Progress } from '@/components/ui/progress';
 import { UserCircle, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+import { useTranslation } from 'react-i18next';
 export default function ProfileCompletionCard() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -31,9 +33,9 @@ export default function ProfileCompletionCard() {
     { label: 'Name', filled: !!profile.full_name },
     { label: 'Age', filled: !!profile.age },
     { label: 'Weight', filled: !!profile.weight_kg },
-    { label: 'Max HR', filled: !!profile.max_hr },
-    { label: 'Fitness Level', filled: !!profile.fitness_level },
-    { label: 'Goal Race', filled: !!profile.goal_race_date },
+    { label: t('auto.k291'), filled: !!profile.max_hr },
+    { label: t('auto.k205'), filled: !!profile.fitness_level },
+    { label: t('auto.k226'), filled: !!profile.goal_race_date },
   ];
 
   const filledCount = fields.filter(f => f.filled).length;
@@ -49,9 +51,9 @@ export default function ProfileCompletionCard() {
             <UserCircle className="h-5 w-5 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-display font-bold">Complete Your Profile</p>
+            <p className="text-sm font-display font-bold">{t('auto.k119')}</p>
             <p className="text-xs text-muted-foreground">
-              {filledCount}/{fields.length} fields — better data = better plans
+              {filledCount}/{fields.length}  {t('auto.k198')}
             </p>
           </div>
           <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />

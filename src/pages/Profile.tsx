@@ -117,7 +117,7 @@ export default function Profile() {
       fitness_level: bioForm.fitness_level,
     } as any).eq('id', user!.id);
     setSaving(false);
-    if (error) { toast.error('Failed to save'); return; }
+    if (error) { toast.error(t('auto.k194')); return; }
     toast.success(t('profile.profileUpdated'));
     setEditingBio(false);
     queryClient.invalidateQueries({ queryKey: ['profile-full'] });
@@ -155,7 +155,7 @@ export default function Profile() {
       goal_race_id: goalForm.goal_race_id || null,
     } as any).eq('id', user!.id);
     setSaving(false);
-    if (error) { toast.error('Failed to save'); return; }
+    if (error) { toast.error(t('auto.k194')); return; }
     toast.success(t('profile.goalRaceUpdated'));
     setEditingGoal(false);
     queryClient.invalidateQueries({ queryKey: ['profile-full'] });
@@ -164,7 +164,7 @@ export default function Profile() {
   };
 
   const handleSaveName = async () => {
-    if (!fullName.trim()) { toast.error('Name cannot be empty'); return; }
+    if (!fullName.trim()) { toast.error(t('auto.k316')); return; }
     setSaving(true);
     const { error: authError } = await supabase.auth.updateUser({ data: { full_name: fullName.trim() } });
     if (!authError) {
@@ -180,8 +180,8 @@ export default function Profile() {
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    if (!file.type.startsWith('image/')) { toast.error('Please select an image file'); return; }
-    if (file.size > 2 * 1024 * 1024) { toast.error('Image must be under 2MB'); return; }
+    if (!file.type.startsWith('image/')) { toast.error(t('auto.k411')); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error(t('auto.k255')); return; }
     setUploadingAvatar(true);
     const ext = file.name.split('.').pop();
     const filePath = `${user.id}/avatar.${ext}`;
@@ -192,7 +192,7 @@ export default function Profile() {
     const avatarUrl = urlData.publicUrl + '?t=' + Date.now();
     const { error: updateError } = await supabase.from('profiles').update({ avatar_url: avatarUrl } as any).eq('id', user.id);
     setUploadingAvatar(false);
-    if (updateError) { toast.error('Failed to save avatar'); return; }
+    if (updateError) { toast.error(t('auto.k195')); return; }
     toast.success(t('profile.avatarUpdated'));
     queryClient.invalidateQueries({ queryKey: ['profile-full'] });
     queryClient.invalidateQueries({ queryKey: ['profile-completion'] });
@@ -228,7 +228,7 @@ export default function Profile() {
       .from('coach_context')
       .upsert({ user_id: user.id, context_text: contextDraft }, { onConflict: 'user_id' });
     setSaving(false);
-    if (error) { toast.error('Failed to save'); return; }
+    if (error) { toast.error(t('auto.k194')); return; }
     toast.success(t('profile.profileUpdated'));
     setEditingContext(false);
     queryClient.invalidateQueries({ queryKey: ['coach-context'] });
@@ -382,7 +382,7 @@ export default function Profile() {
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">{t('onboarding.location')}</Label>
-                    <Input value={goalForm.goal_race_location} onChange={e => setGoalForm(f => ({ ...f, goal_race_location: e.target.value }))} className="h-8" placeholder="Munich, DE" />
+                    <Input value={goalForm.goal_race_location} onChange={e => setGoalForm(f => ({ ...f, goal_race_location: e.target.value }))} className="h-8" placeholder={t('auto.k310')} />
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -456,8 +456,8 @@ export default function Profile() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-xs text-muted-foreground">
-              Notes you add here are private to you and are sent to the AI model with every AI coach
-              conversation, so it can tailor its answers. Leave it empty for generic coaching.
+              
+              {t('auto.k361')}
             </p>
             {editingContext ? (
               <div className="space-y-3">
@@ -467,7 +467,7 @@ export default function Profile() {
                   rows={8}
                   maxLength={20000}
                   className="text-sm"
-                  placeholder="Goals, training constraints, equipment, preferences…"
+                  placeholder={t('auto.k227')}
                 />
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => setEditingContext(false)}>{t('profile.cancel')}</Button>
@@ -480,7 +480,7 @@ export default function Profile() {
               <p className="text-sm whitespace-pre-wrap">
                 {coachContext?.context_text?.trim()
                   ? coachContext.context_text
-                  : <span className="text-muted-foreground">No context added yet.</span>}
+                  : <span className="text-muted-foreground">{t('auto.k334')}</span>}
               </p>
             )}
           </CardContent>
@@ -512,12 +512,14 @@ export default function Profile() {
             </Button>
             <Button variant="ghost" className="w-full justify-start h-11" onClick={() => navigate('/training-preferences')}>
               <Activity className="h-4 w-4 mr-3 text-muted-foreground" />
-              Training Preferences
+              
+              {t('auto.k592')}
             </Button>
             {(effectiveRole === 'coach' || effectiveRole === 'admin' || effectiveRole === 'master_admin') && (
               <Button variant="ghost" className="w-full justify-start h-11" onClick={() => navigate('/equipment-presets')}>
                 <Activity className="h-4 w-4 mr-3 text-muted-foreground" />
-                Equipment Presets
+                
+                {t('auto.k176')}
               </Button>
             )}
             <Button variant="ghost" className="w-full justify-start h-11" onClick={() => navigate('/activity')}>

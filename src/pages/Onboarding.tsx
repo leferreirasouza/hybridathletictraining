@@ -380,7 +380,7 @@ export default function Onboarding() {
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t('onboarding.location')}</Label>
-                  <Input value={goalRaceLocation} onChange={e => setGoalRaceLocation(e.target.value)} placeholder="Munich, DE" className="h-9" />
+                  <Input value={goalRaceLocation} onChange={e => setGoalRaceLocation(e.target.value)} placeholder={t('auto.k310')} className="h-9" />
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">{t('onboarding.skipHint')}</p>

@@ -1,6 +1,7 @@
 import type { WizardAnswers } from '../wizardTypes';
 import { ChoiceCard, StepShell } from './_shared';
 
+import { useTranslation } from 'react-i18next';
 const OPTIONS = [
   { value: 30 as const, title: '30 minutes', description: 'Quick, focused. Great if you train at lunch.' },
   { value: 45 as const, title: '45 minutes', description: 'Sweet spot for most athletes.', badge: 'Most popular' },
@@ -8,8 +9,9 @@ const OPTIONS = [
 ];
 
 export default function SessionLengthStep({ answers, update }: { answers: WizardAnswers; update: (p: Partial<WizardAnswers>) => void }) {
+  const { t } = useTranslation();
   return (
-    <StepShell title="How long should each strength session be?" subtitle="Sets your default cap — individual sessions can vary.">
+    <StepShell title={t('auto.k241')} subtitle={t('auto.k512')}>
       <div className="grid gap-3">
         {OPTIONS.map((o) => (
           <ChoiceCard

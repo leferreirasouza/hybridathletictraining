@@ -23,6 +23,7 @@ import {
 } from 'recharts';
 import { motion } from 'framer-motion';
 
+import { useTranslation } from 'react-i18next';
 const STATIONS = [
   'SkiErg', 'Sled Push', 'Sled Pull', 'Burpee BJ',
   'Rowing', 'Farmers', 'SB Lunges', 'Wall Balls',
@@ -68,6 +69,7 @@ interface Props {
 }
 
 export default function RaceComparisonChart({ races }: Props) {
+  const { t } = useTranslation();
   const [selected, setSelected] = useState<string[]>(() =>
     races.slice(0, Math.min(3, races.length)).map((r: any) => r.id)
   );
@@ -148,7 +150,7 @@ export default function RaceComparisonChart({ races }: Props) {
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base font-display flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-primary" /> Race Comparison
+              <BarChart3 className="h-4 w-4 text-primary" />  {t('auto.k429')}
             </CardTitle>
             {improvement && (
               <Badge
@@ -182,7 +184,7 @@ export default function RaceComparisonChart({ races }: Props) {
             ))}
           </div>
           {selected.length < 2 && (
-            <p className="text-[11px] text-muted-foreground">Select at least 2 races to compare</p>
+            <p className="text-[11px] text-muted-foreground">{t('auto.k486')}</p>
           )}
         </CardContent>
       </Card>
@@ -254,7 +256,8 @@ export default function RaceComparisonChart({ races }: Props) {
                   </BarChart>
                 </ResponsiveContainer>
                 <p className="text-[10px] text-muted-foreground text-center mt-1">
-                  Lighter = Run · Darker = Station (stacked per race)
+                  
+                  {t('auto.k281')}
                 </p>
               </CardContent>
             </Card>
@@ -288,7 +291,8 @@ export default function RaceComparisonChart({ races }: Props) {
                   </RadarChart>
                 </ResponsiveContainer>
                 <p className="text-[10px] text-muted-foreground text-center mt-1">
-                  Combined run + station time per segment (smaller = faster)
+                  
+                  {t('auto.k116')}
                 </p>
               </CardContent>
             </Card>
@@ -337,7 +341,8 @@ export default function RaceComparisonChart({ races }: Props) {
                   </LineChart>
                 </ResponsiveContainer>
                 <p className="text-[10px] text-muted-foreground text-center mt-1">
-                  Total time progression across selected races
+                  
+                  {t('auto.k581')}
                 </p>
               </CardContent>
             </Card>

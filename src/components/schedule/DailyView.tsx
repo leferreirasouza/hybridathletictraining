@@ -3,6 +3,7 @@ import { dayLabelsFull } from './config';
 import { motion } from 'framer-motion';
 import { useMemo } from 'react';
 
+import { useTranslation } from 'react-i18next';
 interface DailyViewProps {
   sessions: any[];
   weekNumber: number;
@@ -12,6 +13,7 @@ interface DailyViewProps {
 }
 
 export default function DailyView({ sessions, weekNumber, dayOfWeek, completedSessions = [], substitutionMap = {} }: DailyViewProps) {
+  const { t } = useTranslation();
   const daySessions = sessions.filter(
     s => s.week_number === weekNumber && s.day_of_week === dayOfWeek
   );
@@ -37,8 +39,8 @@ export default function DailyView({ sessions, weekNumber, dayOfWeek, completedSe
 
       {daySessions.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-sm text-muted-foreground">Rest Day 🧘</p>
-          <p className="text-xs text-muted-foreground mt-1">No sessions scheduled</p>
+          <p className="text-sm text-muted-foreground">{t('auto.k451')}</p>
+          <p className="text-xs text-muted-foreground mt-1">{t('auto.k352')}</p>
         </div>
       ) : (
         <div className="space-y-2">

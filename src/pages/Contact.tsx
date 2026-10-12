@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
 
+import { useTranslation } from 'react-i18next';
 const contactSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(100),
   email: z.string().trim().email('Invalid email').max(255),
@@ -20,6 +21,7 @@ const contactSchema = z.object({
 });
 
 export default function Contact() {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [category, setCategory] = useState<string>('support');
@@ -45,9 +47,9 @@ export default function Contact() {
       });
       if (error) throw error;
       setSent(true);
-      toast.success('Message sent! We\'ll get back to you soon.');
+      toast.success(t('auto.k300'));
     } catch {
-      toast.error('Failed to send message. Please try again.');
+      toast.error(t('auto.k196'));
     } finally {
       setLoading(false);
     }
@@ -60,10 +62,10 @@ export default function Contact() {
           <div className="h-14 w-14 rounded-2xl gradient-hyrox flex items-center justify-center mx-auto">
             <Send className="h-7 w-7 text-primary-foreground" />
           </div>
-          <h2 className="text-xl font-display font-bold">Message Sent!</h2>
-          <p className="text-muted-foreground text-sm max-w-xs mx-auto">Thank you for reaching out. We'll respond within 24 hours.</p>
+          <h2 className="text-xl font-display font-bold">{t('auto.k299')}</h2>
+          <p className="text-muted-foreground text-sm max-w-xs mx-auto">{t('auto.k549')}</p>
           <Button variant="outline" asChild>
-            <Link to="/auth">← Back to Login</Link>
+            <Link to="/auth">{t('auto.k2')}</Link>
           </Button>
         </motion.div>
       </div>
@@ -77,48 +79,48 @@ export default function Contact() {
           <div className="h-10 w-10 rounded-xl gradient-hyrox flex items-center justify-center">
             <Dumbbell className="h-5 w-5 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-display font-bold">Contact Us</h1>
+          <h1 className="text-2xl font-display font-bold">{t('auto.k122')}</h1>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Get in Touch</CardTitle>
-            <CardDescription>Send us a message for support, feedback, or bug reports.</CardDescription>
+            <CardTitle className="text-lg">{t('auto.k224')}</CardTitle>
+            <CardDescription>{t('auto.k495')}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Your name" required maxLength={100} />
+                <Label htmlFor="name">{t('exerciseLibrary.name')}</Label>
+                <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder={t('auto.k656')} required maxLength={100} />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('auth.email')}</Label>
                 <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required maxLength={255} />
               </div>
 
               <div className="space-y-2">
-                <Label>Category</Label>
+                <Label>{t('raceResults.category')}</Label>
                 <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="support">Support</SelectItem>
-                    <SelectItem value="feedback">Feedback</SelectItem>
-                    <SelectItem value="bug">Bug Report</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="support">{t('contact.support')}</SelectItem>
+                    <SelectItem value="feedback">{t('contact.feedback')}</SelectItem>
+                    <SelectItem value="bug">{t('auto.k100')}</SelectItem>
+                    <SelectItem value="other">{t('coachDashboard.other')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="message">Message</Label>
-                <Textarea id="message" value={message} onChange={e => setMessage(e.target.value)} placeholder="How can we help?" rows={5} required minLength={10} maxLength={2000} />
+                <Label htmlFor="message">{t('contact.message')}</Label>
+                <Textarea id="message" value={message} onChange={e => setMessage(e.target.value)} placeholder={t('auto.k239')} rows={5} required minLength={10} maxLength={2000} />
               </div>
 
               <Button type="submit" className="w-full gradient-hyrox" disabled={loading}>
-                {loading ? 'Sending…' : 'Send Message'}
+                {loading ? t('auth.sending') : t('contact.sendMessage')}
               </Button>
             </form>
           </CardContent>
@@ -126,10 +128,10 @@ export default function Contact() {
 
         <div className="flex gap-3">
           <Button variant="outline" asChild>
-            <Link to="/auth">← Back to Login</Link>
+            <Link to="/auth">{t('auto.k2')}</Link>
           </Button>
           <Button variant="outline" asChild>
-            <Link to="/faq">View FAQ</Link>
+            <Link to="/faq">{t('auto.k608')}</Link>
           </Button>
         </div>
       </motion.div>

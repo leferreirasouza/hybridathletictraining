@@ -136,7 +136,7 @@ export default function ExerciseLibrary() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Exercise deleted');
+      toast.success(t('auto.k180'));
       queryClient.invalidateQueries({ queryKey: ['exercise-library'] });
     },
   });
@@ -264,8 +264,8 @@ export default function ExerciseLibrary() {
                 <ScrollArea className="flex-1 pr-4">
                   <div className="space-y-3 pb-4">
                     <div>
-                      <Label className="text-xs">Name *</Label>
-                      <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Barbell Back Squat" />
+                      <Label className="text-xs">{t('auto.k315')}</Label>
+                      <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder={t('auto.k162')} />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
@@ -303,37 +303,37 @@ export default function ExerciseLibrary() {
                       </div>
                     </div>
                     <div>
-                      <Label className="text-xs">Muscle Groups (comma-separated)</Label>
-                      <Input value={form.muscle_groups} onChange={e => setForm(f => ({ ...f, muscle_groups: e.target.value }))} placeholder="quads, glutes, core" />
+                      <Label className="text-xs">{t('auto.k312')}</Label>
+                      <Input value={form.muscle_groups} onChange={e => setForm(f => ({ ...f, muscle_groups: e.target.value }))} placeholder={t('auto.k425')} />
                     </div>
                     <div>
-                      <Label className="text-xs">Equipment Required (comma-separated)</Label>
-                      <Input value={form.equipment_required} onChange={e => setForm(f => ({ ...f, equipment_required: e.target.value }))} placeholder="barbell, rack" />
+                      <Label className="text-xs">{t('auto.k177')}</Label>
+                      <Input value={form.equipment_required} onChange={e => setForm(f => ({ ...f, equipment_required: e.target.value }))} placeholder={t('auto.k90')} />
                     </div>
                     <div>
                       <Label className="text-xs">Description</Label>
                       <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} />
                     </div>
                     <div>
-                      <Label className="text-xs">Coaching Cues</Label>
-                      <Textarea value={form.coaching_cues} onChange={e => setForm(f => ({ ...f, coaching_cues: e.target.value }))} rows={2} placeholder="Key form points..." />
+                      <Label className="text-xs">{t('auto.k115')}</Label>
+                      <Textarea value={form.coaching_cues} onChange={e => setForm(f => ({ ...f, coaching_cues: e.target.value }))} rows={2} placeholder={t('auto.k270')} />
                     </div>
                     <div>
                       <Label className="text-xs flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-destructive" /> Contraindications</Label>
-                      <Textarea value={form.contraindications} onChange={e => setForm(f => ({ ...f, contraindications: e.target.value }))} rows={2} placeholder="Avoid if knee pain, lower back issues..." />
+                      <Textarea value={form.contraindications} onChange={e => setForm(f => ({ ...f, contraindications: e.target.value }))} rows={2} placeholder={t('auto.k85')} />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label className="text-xs">Progression From</Label>
-                        <Input value={form.progression_from} onChange={e => setForm(f => ({ ...f, progression_from: e.target.value }))} placeholder="Goblet Squat" />
+                        <Label className="text-xs">{t('auto.k422')}</Label>
+                        <Input value={form.progression_from} onChange={e => setForm(f => ({ ...f, progression_from: e.target.value }))} placeholder={t('auto.k228')} />
                       </div>
                       <div>
-                        <Label className="text-xs">Progression To</Label>
-                        <Input value={form.progression_to} onChange={e => setForm(f => ({ ...f, progression_to: e.target.value }))} placeholder="Front Squat" />
+                        <Label className="text-xs">{t('auto.k423')}</Label>
+                        <Input value={form.progression_to} onChange={e => setForm(f => ({ ...f, progression_to: e.target.value }))} placeholder={t('auto.k211')} />
                       </div>
                     </div>
                     <div>
-                      <Label className="text-xs">Video URL</Label>
+                      <Label className="text-xs">{t('auto.k607')}</Label>
                       <Input value={form.video_url} onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))} placeholder="https://..." />
                     </div>
                   </div>

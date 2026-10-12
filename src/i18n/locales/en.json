@@ -4,6 +4,12 @@
     "tagline": "Train smarter. Race faster.",
     "version": "Hybrid Athletics v1.0 — Built for performance"
   },
+  "contact": {
+    "support": "Support",
+    "feedback": "Feedback",
+    "message": "Message",
+    "sendMessage": "Send Message"
+  },
   "nav": {
     "today": "Today",
     "plan": "Plan",

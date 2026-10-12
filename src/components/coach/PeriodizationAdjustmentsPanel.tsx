@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { logAudit } from '@/lib/auditLog';
 
+import { useTranslation } from 'react-i18next';
 const adjustmentTypeLabels: Record<string, string> = {
   interference_spacing: 'Concurrent-training conflict',
   tsb_intensity_reduction: 'Fatigue-driven reduction',
@@ -17,6 +18,7 @@ const adjustmentTypeLabels: Record<string, string> = {
 };
 
 export default function PeriodizationAdjustmentsPanel() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -67,7 +69,7 @@ export default function PeriodizationAdjustmentsPanel() {
     if (error) { toast.error('Failed to approve: ' + error.message); return; }
 
     logAudit('periodization.approved', 'periodization_adjustment', adj.id, { adjustment_type: adj.adjustment_type });
-    toast.success('Adjustment approved ✅');
+    toast.success(t('auto.k45'));
     queryClient.invalidateQueries({ queryKey: ['coach-pending-periodization-adjustments'] });
   };
 
@@ -76,10 +78,10 @@ export default function PeriodizationAdjustmentsPanel() {
       .from('periodization_adjustments')
       .update({ status: 'cancelled' })
       .eq('id', adj.id);
-    if (error) { toast.error('Failed to reject'); return; }
+    if (error) { toast.error(t('auto.k193')); return; }
 
     logAudit('periodization.rejected', 'periodization_adjustment', adj.id, { adjustment_type: adj.adjustment_type });
-    toast.success('Adjustment rejected');
+    toast.success(t('auto.k46'));
     queryClient.invalidateQueries({ queryKey: ['coach-pending-periodization-adjustments'] });
   };
 
@@ -90,7 +92,7 @@ export default function PeriodizationAdjustmentsPanel() {
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-display flex items-center gap-2">
-            <Activity className="h-4 w-4 text-amber-500" /> Periodization Adjustments
+            <Activity className="h-4 w-4 text-amber-500" />  {t('auto.k380')}
           </CardTitle>
           <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 text-xs">
             {pendingAdjustments.length} pending

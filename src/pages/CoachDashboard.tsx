@@ -104,13 +104,13 @@ function SwapRequestsPanel() {
       .eq('id', swap.id);
     setSaving(false);
     if (error) { toast.error('Failed to approve: ' + error.message); }
-    else { toast.success('Swap approved! ✅'); setApproveDialog(null); setWorkoutDetails(''); queryClient.invalidateQueries({ queryKey: ['coach-pending-swaps'] }); }
+    else { toast.success(t('auto.k532')); setApproveDialog(null); setWorkoutDetails(''); queryClient.invalidateQueries({ queryKey: ['coach-pending-swaps'] }); }
   };
 
   const handleReject = async (swapId: string) => {
     const { error } = await supabase.from('session_substitutions' as any).update({ status: 'cancelled' }).eq('id', swapId);
-    if (error) { toast.error('Failed to reject'); }
-    else { toast.success('Swap rejected'); queryClient.invalidateQueries({ queryKey: ['coach-pending-swaps'] }); }
+    if (error) { toast.error(t('auto.k193')); }
+    else { toast.success(t('auto.k533')); queryClient.invalidateQueries({ queryKey: ['coach-pending-swaps'] }); }
   };
 
   if (isLoading || !pendingSwaps?.length) return null;
@@ -172,7 +172,7 @@ function SwapRequestsPanel() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">{t('coachDashboard.substituteWorkout')}</Label>
-                <Textarea value={workoutDetails} onChange={e => setWorkoutDetails(e.target.value)} placeholder="Write the substitute workout here..." rows={4} />
+                <Textarea value={workoutDetails} onChange={e => setWorkoutDetails(e.target.value)} placeholder={t('auto.k641')} rows={4} />
                 <p className="text-[10px] text-muted-foreground">{t('coachDashboard.substituteHint')}</p>
               </div>
               <Button className="w-full gradient-hyrox" onClick={() => handleApprove(approveDialog)} disabled={saving}>
@@ -285,7 +285,7 @@ export default function CoachDashboard() {
             <p className="text-sm text-muted-foreground">{t('coachDashboard.athletes', { count: athleteCount })}</p>
           </div>
           <Button size="sm" className="gradient-hyrox" onClick={() => setAssignDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Assign Athlete
+            <Plus className="h-4 w-4 mr-1" />  {t('auto.k64')}
           </Button>
         </motion.div>
 
@@ -335,7 +335,8 @@ export default function CoachDashboard() {
                 </div>
               ) : !athletes?.length ? (
                 <p className="text-center text-sm text-muted-foreground py-6">
-                  No athletes assigned yet. Assign yourself or athletes via the Admin Panel.
+                  
+                  {t('auto.k332')}
                 </p>
               ) : (
                 athletes.map(athlete => (
@@ -360,7 +361,7 @@ export default function CoachDashboard() {
                             </Badge>
                           )}
                         </div>
-                        <span className="text-xs text-muted-foreground">{athlete.sessionsThisWeek} sessions · {athlete.lastActive}</span>
+                        <span className="text-xs text-muted-foreground">{athlete.sessionsThisWeek}  {t('auto.k504')} {athlete.lastActive}</span>
                       </div>
                     </button>
                     <div className="flex items-center gap-1 shrink-0">
@@ -434,18 +435,19 @@ export default function CoachDashboard() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="font-display flex items-center gap-2">
-              <Trash2 className="h-5 w-5 text-destructive" /> Delete athlete?
+              <Trash2 className="h-5 w-5 text-destructive" />  {t('auto.k142')}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3 pt-1">
                 <p>
-                  This will <strong className="text-destructive">permanently delete</strong>{' '}
+                  
+                  {t('auto.k561')} <strong className="text-destructive">{t('auto.k381')}</strong>{' '}
                   <strong className="text-foreground">{deleteTarget?.name}</strong> and all related
                   data: sessions, plans, assignments, messages, AI chats, race results, assessments,
                   wearable connections, and role memberships. This cannot be undone.
                 </p>
                 <p className="text-xs">
-                  Type <code className="px-1 py-0.5 rounded bg-muted text-foreground font-mono">DELETE</code> to confirm.
+                  Type <code className="px-1 py-0.5 rounded bg-muted text-foreground font-mono">DELETE</code>  {t('auto.k570')}
                 </p>
                 <Input
                   value={confirmText}
@@ -463,7 +465,7 @@ export default function CoachDashboard() {
               disabled={confirmText !== 'DELETE' || deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete permanently'}
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : t('auto.k145')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

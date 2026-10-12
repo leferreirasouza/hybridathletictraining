@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
+import '@/i18n';
 
 /**
  * HYROX Coach OS — Component Render Tests

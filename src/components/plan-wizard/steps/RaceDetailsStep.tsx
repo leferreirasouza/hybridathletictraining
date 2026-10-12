@@ -9,16 +9,18 @@ import { cn } from '@/lib/utils';
 import type { WizardAnswers } from '../wizardTypes';
 import { StepShell } from './_shared';
 
+import { useTranslation } from 'react-i18next';
 export default function RaceDetailsStep({ answers, update }: { answers: WizardAnswers; update: (p: Partial<WizardAnswers>) => void }) {
+  const { t } = useTranslation();
   const date = answers.raceDate ? new Date(answers.raceDate + 'T00:00:00') : undefined;
   const weeks = date ? differenceInWeeks(date, new Date()) : null;
   const tooFar = weeks !== null && weeks > 20;
 
   return (
-    <StepShell title="When and where is your race?" subtitle="We'll periodize the plan to peak you on race day.">
+    <StepShell title={t('auto.k632')} subtitle={t('auto.k613')}>
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label>Race name (optional)</Label>
+          <Label>{t('auto.k436')}</Label>
           <Input
             value={answers.raceName ?? ''}
             onChange={(e) => update({ raceName: e.target.value })}
@@ -26,7 +28,7 @@ export default function RaceDetailsStep({ answers, update }: { answers: WizardAn
           />
         </div>
         <div className="space-y-2">
-          <Label>Race date</Label>
+          <Label>{t('auto.k430')}</Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -55,7 +57,8 @@ export default function RaceDetailsStep({ answers, update }: { answers: WizardAn
             <p className="flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
               <span>
-                That's {weeks} weeks away — beyond a typical 12–16 week build. We can start with a base/interim block now and switch to a peak block closer to race day.
+                
+                {t('auto.k550')} {weeks}  {t('auto.k625')}
               </span>
             </p>
           </div>

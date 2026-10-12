@@ -13,6 +13,7 @@ import {
 import type { AbilityLevel, WizardAnswers } from '../wizardTypes';
 import { ChoiceCard, StepShell } from './_shared';
 
+import { useTranslation } from 'react-i18next';
 const LEVELS: { value: AbilityLevel; title: string; description: string }[] = [
   { value: 'beginner', title: 'Beginner', description: 'New to running, or coming back. 5K feels long; pace by feel.' },
   { value: 'intermediate', title: 'Intermediate', description: 'Comfortable with 10K; have completed structured training before.' },
@@ -21,6 +22,7 @@ const LEVELS: { value: AbilityLevel; title: string; description: string }[] = [
 ];
 
 export default function RunAbilityStep({ answers, update }: { answers: WizardAnswers; update: (p: Partial<WizardAnswers>) => void }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const athleteId = (answers as any).athleteId || user?.id;
   const [prefilled, setPrefilled] = useState(false);
@@ -47,42 +49,42 @@ export default function RunAbilityStep({ answers, update }: { answers: WizardAns
   const layoff = isReturnFromLayoff(recent);
 
   return (
-    <StepShell title="How would you rate your running?" subtitle="Pick the tier that fits today — not what you used to be.">
+    <StepShell title={t('auto.k245')} subtitle={t('auto.k393')}>
       {recent?.hasData && (
         <div className="rounded-lg border border-primary/25 bg-primary/5 p-3 space-y-2">
           <p className="text-xs font-semibold flex items-center gap-1.5">
-            <Activity className="h-3.5 w-3.5 text-primary" /> From your last 8 weeks
+            <Activity className="h-3.5 w-3.5 text-primary" />  {t('auto.k210')}
           </p>
           <div className="grid grid-cols-2 gap-y-1.5 gap-x-4 text-xs">
             <div>
-              <span className="text-muted-foreground">Avg run volume</span>
+              <span className="text-muted-foreground">{t('auto.k81')}</span>
               <p className="font-medium">{recent.avgRunKm8w} km/week</p>
             </div>
             <div>
-              <span className="text-muted-foreground">Last 4 weeks</span>
+              <span className="text-muted-foreground">{t('auto.k275')}</span>
               <p className="font-medium">{recent.avgRunKm4w} km/week</p>
             </div>
             <div>
-              <span className="text-muted-foreground">Longest run</span>
+              <span className="text-muted-foreground">{t('auto.k286')}</span>
               <p className="font-medium">{recent.longestRunKm} km</p>
             </div>
             <div>
-              <span className="text-muted-foreground">Avg run pace</span>
+              <span className="text-muted-foreground">{t('auto.k79')}</span>
               <p className="font-medium">
                 {recent.avgRunPaceSecPerKm ? `${formatPaceSeconds(recent.avgRunPaceSecPerKm)}/km` : '—'}
               </p>
             </div>
             <div>
-              <span className="text-muted-foreground">Avg run HR</span>
+              <span className="text-muted-foreground">{t('auto.k78')}</span>
               <p className="font-medium">{recent.avgRunHr ? `${recent.avgRunHr} bpm` : '—'}</p>
             </div>
             <div>
-              <span className="text-muted-foreground">Days since last run</span>
+              <span className="text-muted-foreground">{t('auto.k136')}</span>
               <p className="font-medium">{recent.daysSinceLastRun ?? '—'}</p>
             </div>
           </div>
           <div className="space-y-1 pt-1">
-            <Label className="text-xs text-muted-foreground">Weekly running volume to plan from (km)</Label>
+            <Label className="text-xs text-muted-foreground">{t('auto.k622')}</Label>
             <Input
               type="number"
               min={0}
@@ -95,7 +97,8 @@ export default function RunAbilityStep({ answers, update }: { answers: WizardAns
               }
             />
             <p className="text-[11px] text-muted-foreground">
-              Prefilled from your logged training. You can change it — week 1 is still capped at 1.10× your last 4 weeks.
+              
+              {t('auto.k415')}
             </p>
           </div>
         </div>
@@ -105,8 +108,8 @@ export default function RunAbilityStep({ answers, update }: { answers: WizardAns
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 flex gap-2">
           <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
           <p className="text-xs">
-            No run logged in the last {LAYOFF_DAYS_THRESHOLD} days. Your plan will start with a return-to-running
-            block: easier paces and a shorter long run for the first two weeks.
+            
+            {t('auto.k349')} {LAYOFF_DAYS_THRESHOLD}  {t('auto.k137')}
           </p>
         </div>
       )}

@@ -13,6 +13,7 @@ import {
 import { disciplineConfig } from '@/components/schedule/config';
 import { useTrainingLoad } from '@/hooks/useTrainingLoad';
 
+import { useTranslation } from 'react-i18next';
 const DISCIPLINE_COLORS: Record<string, string> = {
   run: 'hsl(217, 91%, 60%)',
   bike: 'hsl(160, 84%, 39%)',
@@ -69,6 +70,7 @@ function getISOWeekLabel(dateStr: string): string {
 }
 
 export default function Analytics() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [volumeMetric, setVolumeMetric] = useState<'duration' | 'distance'>('duration');
 
@@ -197,17 +199,17 @@ export default function Analytics() {
       <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
         <motion.div variants={item}>
           <h1 className="text-xl font-display font-bold">Analytics</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Your training volume &amp; intensity trends</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{t('auto.k658')}</p>
         </motion.div>
 
         {/* Summary cards */}
         <motion.div variants={item} className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {[
-            { label: 'Total Sessions', value: totals.sessions, icon: TrendingUp },
-            { label: 'Total Duration', value: `${Math.round(totals.duration)} min`, icon: Clock },
-            { label: 'Run Distance', value: `${totals.runDistance.toFixed(1)} km`, icon: MapPin },
-            { label: 'Bike Distance', value: `${totals.bikeDistance.toFixed(1)} km`, icon: MapPin },
-            { label: 'Avg RPE', value: totals.avgRpe > 0 ? totals.avgRpe.toFixed(1) : '—', icon: Flame },
+            { label: t('auto.k580'), value: totals.sessions, icon: TrendingUp },
+            { label: t('auto.k577'), value: `${Math.round(totals.duration)} min`, icon: Clock },
+            { label: t('auto.k460'), value: `${totals.runDistance.toFixed(1)} km`, icon: MapPin },
+            { label: t('auto.k95'), value: `${totals.bikeDistance.toFixed(1)} km`, icon: MapPin },
+            { label: t('auto.k76'), value: totals.avgRpe > 0 ? totals.avgRpe.toFixed(1) : '—', icon: Flame },
           ].map(stat => (
             <Card key={stat.label} className="glass">
               <CardContent className="p-3 flex items-center gap-3">
@@ -228,7 +230,7 @@ export default function Analytics() {
           <motion.div variants={item}>
             <Card className="glass">
               <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-sm font-display">Weekly Volume</CardTitle>
+                <CardTitle className="text-sm font-display">{t('auto.k623')}</CardTitle>
                 <Tabs value={volumeMetric} onValueChange={(v) => setVolumeMetric(v as 'duration' | 'distance')}>
                   <TabsList className="h-7">
                     <TabsTrigger value="duration" className="text-[10px] px-2 h-5">Minutes</TabsTrigger>
@@ -288,7 +290,7 @@ export default function Analytics() {
                     <Tooltip
                       contentStyle={tooltipStyle}
                       labelStyle={{ color: 'hsl(var(--foreground))' }}
-                      formatter={(value: number) => [value, 'Avg RPE']}
+                      formatter={(value: number) => [value, t('auto.k76')]}
                     />
                     <Line
                       type="monotone"
@@ -313,7 +315,8 @@ export default function Analytics() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-display flex items-center gap-1.5">
                   <Gauge className="h-3.5 w-3.5 text-primary" />
-                  Training Load (Fitness / Fatigue / Form)
+                  
+                  {t('auto.k590')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="pb-3">
@@ -346,7 +349,7 @@ export default function Analytics() {
           <motion.div variants={item}>
             <Card className="glass">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-display">Discipline Breakdown Over Time</CardTitle>
+                <CardTitle className="text-sm font-display">{t('auto.k152')}</CardTitle>
               </CardHeader>
               <CardContent className="pb-3">
                 <ResponsiveContainer width="100%" height={220}>
@@ -388,7 +391,7 @@ export default function Analytics() {
           <motion.div variants={item}>
             <Card className="glass">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-display">Total Volume by Discipline</CardTitle>
+                <CardTitle className="text-sm font-display">{t('auto.k582')}</CardTitle>
               </CardHeader>
               <CardContent className="pb-3">
                 <ResponsiveContainer width="100%" height={Math.max(120, disciplineBreakdown.length * 36)}>
@@ -478,7 +481,8 @@ export default function Analytics() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-display flex items-center gap-1.5">
                   <Heart className="h-3.5 w-3.5 text-destructive" />
-                  Zone Trend Over Weeks
+                  
+                  {t('auto.k659')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="pb-3">
@@ -516,8 +520,8 @@ export default function Analytics() {
             <Card className="glass">
               <CardContent className="p-8 text-center space-y-2">
                 <TrendingUp className="h-10 w-10 mx-auto text-muted-foreground" />
-                <p className="font-display font-bold">No Data Yet</p>
-                <p className="text-sm text-muted-foreground">Log completed sessions to see your training analytics here.</p>
+                <p className="font-display font-bold">{t('auto.k336')}</p>
+                <p className="text-sm text-muted-foreground">{t('auto.k283')}</p>
               </CardContent>
             </Card>
           </motion.div>

@@ -1,6 +1,7 @@
 import type { StrengthGoal, WizardAnswers } from '../wizardTypes';
 import { ChoiceCard, StepShell } from './_shared';
 
+import { useTranslation } from 'react-i18next';
 const OPTIONS: { value: StrengthGoal; title: string; description: string; badge?: string }[] = [
   {
     value: 'running_focus',
@@ -16,8 +17,9 @@ const OPTIONS: { value: StrengthGoal; title: string; description: string; badge?
 ];
 
 export default function StrengthGoalStep({ answers, update }: { answers: WizardAnswers; update: (p: Partial<WizardAnswers>) => void }) {
+  const { t } = useTranslation();
   return (
-    <StepShell title="What's your strength goal?" subtitle="Drives muscle-group emphasis and rep schemes.">
+    <StepShell title={t('auto.k631')} subtitle={t('auto.k157')}>
       <div className="grid gap-3">
         {OPTIONS.map((o) => (
           <ChoiceCard
