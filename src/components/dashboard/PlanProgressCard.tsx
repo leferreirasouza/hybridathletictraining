@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Check, ChevronDown, CalendarRange } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getDiscipline, dayLabels } from '@/components/schedule/config';
+import PlanSuggestions from '@/components/dashboard/PlanSuggestions';
 import { buildWeekProgress, type ProgressSession, type ProgressCompletion, type WeekProgress } from '@/lib/planProgress';
 
 interface Props {
@@ -127,6 +128,7 @@ export default function PlanProgressCard({ planName, sessions, completions }: Pr
           </p>
           {planName && <h3 className="font-display font-bold text-lg leading-tight mt-1">{planName}</h3>}
         </div>
+        <PlanSuggestions sessions={sessions as any} />
         <Segments count={weeks.length} filled={weeksDone} partial={!!current} />
         <div className="flex justify-between">
           <div>
