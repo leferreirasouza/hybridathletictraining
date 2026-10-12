@@ -138,7 +138,32 @@
     "aiCoachDesc": "Obtenha conselhos de treino personalizados e ajustes de sessão",
     "firstPlanTitle": "Obtenha Seu Primeiro Plano de Treino",
     "firstPlanDesc": "Gere um plano IA personalizado baseado no seu perfil e corrida alvo, ou importe um do seu treinador.",
-    "import": "Importar"
+    "import": "Importar",
+    "trainingLoad": "Condicionamento & fadiga",
+    "recentHistory": "Sessões recentes",
+    "bandFresh": "Fresco",
+    "bandNeutral": "Neutro",
+    "bandFatigued": "Fadigado",
+    "bandHighRisk": "Risco alto",
+    "fitnessCtl": "Condicionamento (CTL)",
+    "fatigueAtl": "Fadiga (ATL)",
+    "formTsb": "Forma (TSB)",
+    "trainingLoadEmpty": "Registre ou sincronize alguns treinos e seu condicionamento (CTL), fadiga (ATL) e forma (TSB) aparecerão aqui.",
+    "noCompletedSessions": "Nenhuma sessão concluída ainda.",
+    "sourceManual": "Manual",
+    "disciplines": {
+      "run": "Corrida",
+      "bike": "Bike",
+      "rowing": "Remo",
+      "skierg": "SkiErg",
+      "stairs": "Escadas",
+      "hyrox_station": "Estação HYROX",
+      "strength": "Força",
+      "mobility": "Mobilidade",
+      "prehab": "Prehab",
+      "accessories": "Acessórios",
+      "custom": "Personalizado"
+    }
   },
   "schedule": {
     "title": "Agenda",

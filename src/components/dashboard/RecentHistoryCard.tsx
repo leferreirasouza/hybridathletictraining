@@ -41,17 +41,23 @@ export default function RecentHistoryCard() {
         {isLoading ? (
           <div className="h-24 animate-pulse rounded-lg bg-muted/30" />
         ) : data.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No completed sessions yet.</p>
+          <p className="text-sm text-muted-foreground">
+            {t('dashboard.noCompletedSessions', { defaultValue: 'No completed sessions yet.' })}
+          </p>
         ) : (
           data.map((s) => (
             <div key={s.id} className="flex items-center justify-between text-sm border-b border-border/40 pb-2 last:border-0">
               <div>
-                <p className="font-medium capitalize">{s.discipline.replace('_', ' ')}</p>
-                <p className="text-[11px] text-muted-foreground">{s.date} · {s.source}</p>
+                <p className="font-medium capitalize">
+                  {t(`dashboard.disciplines.${s.discipline}`, { defaultValue: s.discipline.replace('_', ' ') })}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {s.date} · {s.source === 'manual' ? t('dashboard.sourceManual', { defaultValue: 'Manual' }) : s.source}
+                </p>
               </div>
               <p className="text-xs text-muted-foreground text-right">
-                {s.actual_distance_km ? `${Number(s.actual_distance_km).toFixed(1)} km · ` : ''}
-                {s.actual_duration_min ? `${Math.round(Number(s.actual_duration_min))} min` : ''}
+                {s.actual_distance_km ? `${Number(s.actual_distance_km).toFixed(1)} ${t('common.km')} · ` : ''}
+                {s.actual_duration_min ? `${Math.round(Number(s.actual_duration_min))} ${t('common.min')}` : ''}
                 {s.rpe ? ` · RPE ${s.rpe}` : ''}
               </p>
             </div>
