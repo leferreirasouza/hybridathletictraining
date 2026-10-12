@@ -119,6 +119,7 @@ function ExercisePicker({
   orgId?: string;
   onSelect: (exercise: { id: string; name: string; category: string; discipline: string }) => void;
 }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
