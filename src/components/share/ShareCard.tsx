@@ -101,7 +101,7 @@ export default function ShareCard({ data, style, size, metrics, showName, showDa
       )}
 
       <div className="relative">
-        <div className={`grid gap-4 ${stats.length > 2 ? 'grid-cols-2' : 'grid-cols-' + Math.max(1, stats.length)}`}>
+        <div className={`grid gap-4 ${stats.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
           {stats.map(s => (
             <div key={s.label}>
               <p className="text-[10px] uppercase tracking-widest" style={{ color: th.sub }}>{s.label}</p>
