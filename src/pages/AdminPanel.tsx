@@ -16,6 +16,7 @@ import UserManagementTab from '@/components/admin/UserManagementTab';
 import AdminActivityTab from '@/components/admin/AdminActivityTab';
 import KnowledgeLibraryTab from '@/components/admin/KnowledgeLibraryTab';
 import CronJobsTab from '@/components/admin/CronJobsTab';
+import AthleteSyncTab from '@/components/admin/AthleteSyncTab';
 import { useTranslation } from 'react-i18next';
 
 interface Organization {
@@ -58,6 +59,7 @@ export default function AdminPanel() {
         <TabsList>
           {isMasterAdmin && <TabsTrigger value="orgs">{t('admin.organizations')}</TabsTrigger>}
           <TabsTrigger value="users">{t('admin.userManagement')}</TabsTrigger>
+          <TabsTrigger value="athletes">Athletes & Strava</TabsTrigger>
           {isMasterAdmin && <TabsTrigger value="knowledge" className="gap-1.5"><BookOpen className="h-3.5 w-3.5" /> Knowledge</TabsTrigger>}
           {isMasterAdmin && <TabsTrigger value="cron" className="gap-1.5"><Clock className="h-3.5 w-3.5" /> Cron</TabsTrigger>}
           <TabsTrigger value="activity">{t('admin.activityLogTab')}</TabsTrigger>
@@ -69,6 +71,9 @@ export default function AdminPanel() {
         )}
         <TabsContent value="users">
           <UserManagementTab isMasterAdmin={isMasterAdmin} currentOrgId={currentOrg?.id} />
+        </TabsContent>
+        <TabsContent value="athletes">
+          <AthleteSyncTab />
         </TabsContent>
         {isMasterAdmin && (
           <TabsContent value="knowledge">
