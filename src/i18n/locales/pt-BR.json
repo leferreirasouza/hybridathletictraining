@@ -520,7 +520,7 @@
       "Enviar lembretes de treino e notificações (com seu consentimento)"
     ],
     "s3title": "3. Compartilhamento de Dados",
-    "s3body": "Seus dados de treino são compartilhados apenas com treinadores da sua organização. Não vendemos informações pessoais a terceiros. Podemos compartilhar dados anonimizados e agregados para fins de pesquisa.",
+    "s3body": "Seus dados de treino são compartilhados com treinadores da sua organização, e com provedores terceiros de serviços de IA (incluindo modelos da Google e da OpenAI, por meio da nossa infraestrutura de IA) que os processam para gerar planos de treino personalizados e viabilizar o treinador de IA. Não vendemos informações pessoais a terceiros. Podemos compartilhar dados anonimizados e agregados para fins de pesquisa.",
     "s4title": "4. Armazenamento e Segurança de Dados",
     "s4body": "Seus dados são armazenados com segurança usando criptografia padrão da indústria. Usamos segurança em nível de linha para garantir que você só acesse seus próprios dados (ou dados aos quais você tem acesso como treinador).",
     "s5title": "5. Seus Direitos",
