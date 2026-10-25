@@ -55,7 +55,7 @@ export default function MileageHistory() {
       if (!user) return [];
       const { data, error } = await supabase
         .from('completed_sessions')
-        .select('date, discipline, actual_distance_km')
+        .select('date, discipline, actual_distance_km, data_flags')
         .eq('athlete_id', user.id)
         .order('date', { ascending: true });
       return error ? [] : data || [];
@@ -80,7 +80,8 @@ export default function MileageHistory() {
       if (s.discipline === 'run') {
         bucket.run += dist;
         totalRun += dist;
-      } else if (s.discipline === 'bike') {
+      } else if (s.discipline === 'bike' && !(s.data_flags ?? []).includes('distance_estimated')) {
+        // Indoor-trainer bike "km" isn't distance (see _shared/activityQuality.ts).
         bucket.bike += dist;
         totalBike += dist;
       }

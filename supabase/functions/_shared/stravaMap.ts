@@ -5,6 +5,16 @@
 // identical and matched by the same rules. Everything here is idempotent:
 // re-running over the same activity never produces a second completion.
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import {
+  activityFlags,
+  effectiveDurationSec,
+  HR_FLAGS,
+  isHyroxEffort,
+  isHyroxRaceImport,
+  isSameEffort,
+  recordedSpanSec,
+  unionFlags,
+} from "./activityQuality.ts";
 
 /** Activities shorter than this are stored but never become completions. */
 export const MIN_COMPLETION_SECONDS = 5 * 60;
@@ -12,7 +22,10 @@ export const MIN_COMPLETION_SECONDS = 5 * 60;
 /** Cross-source dedup window against Garmin-sourced data. */
 const CROSS_SOURCE_WINDOW_MS = 10 * 60 * 1000;
 
-const HYROX_NAME_HINT = /hyrox|brick|sled|wall\s*ball|sandbag/i;
+const HYROX_NAME_HINT = /hyrox|simulad|brick|sled|wall\s*ball|sandbag/i;
+
+/** How far either side of an activity to look for a second recording of it. */
+const DUPLICATE_SEARCH_WINDOW_MS = 36 * 60 * 60 * 1000;
 
 export interface StravaActivityLike {
   id?: number;
@@ -28,6 +41,10 @@ export interface StravaActivityLike {
   max_heartrate?: number;
   average_speed?: number;
   total_elevation_gain?: number;
+  external_id?: string | null;
+  workout_type?: number | null;
+  trainer?: boolean;
+  manual?: boolean;
   [key: string]: unknown;
 }
 
@@ -40,6 +57,7 @@ export function mapStravaDiscipline(activity: StravaActivityLike): string | null
   const sport = (activity.sport_type || activity.type || "").trim();
   if (!sport) return null;
   const name = activity.name || "";
+  if (isHyroxEffort(activity)) return "hyrox_station";
 
   switch (sport) {
     case "Run":
@@ -115,12 +133,20 @@ export interface MappedStravaRow {
   avg_pace_min_per_km: number | null;
   elevation_gain_m: number | null;
   discipline: string | null;
+  data_flags: string[];
   raw: StravaActivityLike;
 }
 
-/** Single source of truth for the strava_activities row shape. */
-export function mapStravaActivityRow(userId: string, a: StravaActivityLike): MappedStravaRow {
-  const duration = a.moving_time ?? a.elapsed_time ?? null;
+/**
+ * Single source of truth for the strava_activities row shape. athleteMaxHr
+ * (profiles.max_hr) tightens the HR plausibility check when known.
+ */
+export function mapStravaActivityRow(
+  userId: string,
+  a: StravaActivityLike,
+  athleteMaxHr: number | null = null,
+): MappedStravaRow {
+  const duration = effectiveDurationSec(a);
   return {
     user_id: userId,
     strava_activity_id: Number(a.id),
@@ -137,6 +163,7 @@ export function mapStravaActivityRow(userId: string, a: StravaActivityLike): Map
     avg_pace_min_per_km: a.average_speed && a.average_speed > 0 ? 1000 / a.average_speed / 60 : null,
     elevation_gain_m: a.total_elevation_gain ?? null,
     discipline: mapStravaDiscipline(a),
+    data_flags: activityFlags(a, athleteMaxHr),
     raw: a,
   };
 }
@@ -155,14 +182,30 @@ export interface MatchResult {
   completedSessionId: string | null;
 }
 
-/** Fills only the NULL columns of an existing completion. */
+const COMPLETION_COLUMNS =
+  "id, source, discipline, avg_hr, max_hr, actual_duration_min, actual_distance_km, avg_pace, data_flags";
+
+/**
+ * Fills only the NULL columns of an existing completion and carries the
+ * incoming recording's quality flags across — HR flags travel only with the
+ * HR values they describe. A HYROX race import is additionally authoritative
+ * on discipline and duration, but only over values another Strava import
+ * wrote, never over manual or Garmin data.
+ */
 function enrichmentPatch(
-  existing: Record<string, unknown>,
+  existing: Record<string, any>,
   row: MappedStravaRow,
 ): Record<string, unknown> {
   const patch: Record<string, unknown> = {};
-  if (existing.avg_hr === null && row.avg_hr !== null) patch.avg_hr = row.avg_hr;
-  if (existing.max_hr === null && row.max_hr !== null) patch.max_hr = row.max_hr;
+  const carried = row.data_flags.filter((f) => !(HR_FLAGS as readonly string[]).includes(f));
+  if (existing.avg_hr === null && row.avg_hr !== null) {
+    patch.avg_hr = row.avg_hr;
+    if (row.data_flags.includes("hr_artifact")) carried.push("hr_artifact");
+  }
+  if (existing.max_hr === null && row.max_hr !== null) {
+    patch.max_hr = row.max_hr;
+    if (row.data_flags.includes("max_hr_artifact")) carried.push("max_hr_artifact");
+  }
   if (existing.actual_duration_min === null && row.duration_sec)
     patch.actual_duration_min = Math.round(row.duration_sec / 60);
   if (existing.actual_distance_km === null && row.distance_m)
@@ -171,7 +214,37 @@ function enrichmentPatch(
     const label = paceLabel(row.distance_m ?? undefined, row.duration_sec ?? undefined);
     if (label) patch.avg_pace = label;
   }
+  if (existing.source === "strava") {
+    if (isHyroxRaceImport(row.raw) && row.duration_sec) {
+      patch.actual_duration_min = Math.round(row.duration_sec / 60);
+    }
+    if (row.discipline === "hyrox_station" && existing.discipline === "run") {
+      patch.discipline = "hyrox_station";
+    }
+  }
+  const before = unionFlags(existing.data_flags);
+  const after = unionFlags(existing.data_flags, carried);
+  if (after.length !== before.length) patch.data_flags = after;
   return patch;
+}
+
+/** Inserted completion shape for a recording that starts a new completion. */
+function newCompletion(userId: string, plannedSessionId: string | null, localDate: string, row: MappedStravaRow) {
+  return {
+    athlete_id: userId,
+    planned_session_id: plannedSessionId,
+    date: localDate,
+    discipline: row.discipline,
+    source: "strava",
+    actual_duration_min: Math.round((row.duration_sec ?? 0) / 60),
+    actual_distance_km: row.distance_m ? Number((row.distance_m / 1000).toFixed(2)) : null,
+    avg_hr: row.avg_hr,
+    max_hr: row.max_hr,
+    avg_pace: paceLabel(row.distance_m ?? undefined, row.duration_sec ?? undefined),
+    notes: row.name ?? null,
+    completed_at: row.start_date_utc ?? new Date().toISOString(),
+    data_flags: row.data_flags,
+  };
 }
 
 /**
@@ -206,9 +279,47 @@ export async function matchStravaActivity(
       .eq("id", stravaActivityRowId);
   };
 
-  // 1) Cross-source dedup: the same workout may already have arrived from
-  // Garmin. Prefer linking to it over creating a second completion.
+  // 1) Same effort recorded twice on Strava (watch + ROXFIT / Peloton /
+  // Runna import, usually seconds apart): join the completion the other
+  // recording already created instead of double-counting the load.
   if (!Number.isNaN(startMs)) {
+    const { data: siblings } = await service
+      .from("strava_activities")
+      .select("id, start_date_utc, duration_sec, elapsed_time:raw->elapsed_time, completed_session_id, duplicate_of")
+      .eq("user_id", userId)
+      .neq("id", stravaActivityRowId)
+      .not("completed_session_id", "is", null)
+      .gte("start_date_utc", new Date(startMs - DUPLICATE_SEARCH_WINDOW_MS).toISOString())
+      .lte("start_date_utc", new Date(startMs + DUPLICATE_SEARCH_WINDOW_MS).toISOString());
+
+    const span = recordedSpanSec(row.raw);
+    const sibling = (siblings ?? []).find((s: Record<string, any>) => {
+      if (!s.start_date_utc) return false;
+      const siblingSpan = Math.max(Number(s.duration_sec ?? 0), Number(s.elapsed_time ?? 0));
+      return isSameEffort(startMs, span, Date.parse(s.start_date_utc), siblingSpan);
+    }) as Record<string, any> | undefined;
+
+    if (sibling) {
+      const { data: existing } = await service
+        .from("completed_sessions")
+        .select(COMPLETION_COLUMNS)
+        .eq("id", sibling.completed_session_id)
+        .maybeSingle();
+      if (existing) {
+        const patch = enrichmentPatch(existing as Record<string, any>, row);
+        if (Object.keys(patch).length > 0) {
+          await service.from("completed_sessions").update(patch).eq("id", (existing as any).id);
+        }
+        await service
+          .from("strava_activities")
+          .update({ completed_session_id: (existing as any).id, duplicate_of: sibling.duplicate_of ?? sibling.id })
+          .eq("id", stravaActivityRowId);
+        return { outcome: "linked_existing", completedSessionId: (existing as any).id };
+      }
+    }
+
+    // 2) Cross-source dedup: the same workout may already have arrived from
+    // Garmin. Prefer linking to it over creating a second completion.
     const { data: garminActs } = await service
       .from("garmin_activities")
       .select("start_time_utc, discipline, completed_session_id")
@@ -241,7 +352,7 @@ export async function matchStravaActivity(
     }
   }
 
-  // 2) Candidate planned sessions on the same local date, closest planned
+  // 3) Candidate planned sessions on the same local date, closest planned
   // duration first, then plan order.
   const { data: candidates } = await service
     .from("planned_sessions")
@@ -261,7 +372,7 @@ export async function matchStravaActivity(
   for (const candidate of ordered) {
     const { data: existing } = await service
       .from("completed_sessions")
-      .select("id, avg_hr, max_hr, actual_duration_min, actual_distance_km, avg_pace")
+      .select(COMPLETION_COLUMNS)
       .eq("planned_session_id", (candidate as any).id)
       .limit(1)
       .maybeSingle();
@@ -269,20 +380,7 @@ export async function matchStravaActivity(
     if (!existing) {
       const { data: created } = await service
         .from("completed_sessions")
-        .insert({
-          athlete_id: userId,
-          planned_session_id: (candidate as any).id,
-          date: localDate,
-          discipline: row.discipline,
-          source: "strava",
-          actual_duration_min: Math.round(row.duration_sec / 60),
-          actual_distance_km: row.distance_m ? Number((row.distance_m / 1000).toFixed(2)) : null,
-          avg_hr: row.avg_hr,
-          max_hr: row.max_hr,
-          avg_pace: paceLabel(row.distance_m ?? undefined, row.duration_sec ?? undefined),
-          notes: row.name ?? null,
-          completed_at: row.start_date_utc ?? new Date().toISOString(),
-        })
+        .insert(newCompletion(userId, (candidate as any).id, localDate, row))
         .select("id")
         .maybeSingle();
       if (created?.id) {
@@ -304,7 +402,7 @@ export async function matchStravaActivity(
     if (owner?.id) continue;
 
     // Enrich in place — only NULL fields, never the source or manual values.
-    const patch = enrichmentPatch(existing as Record<string, unknown>, row);
+    const patch = enrichmentPatch(existing as Record<string, any>, row);
     if (Object.keys(patch).length > 0) {
       await service.from("completed_sessions").update(patch).eq("id", (existing as any).id);
     }
@@ -312,24 +410,11 @@ export async function matchStravaActivity(
     return { outcome: "enriched", completedSessionId: (existing as any).id };
   }
 
-  // 3) No planned session to attach to — still record it so history and
+  // 4) No planned session to attach to — still record it so history and
   // training load see the work.
   const { data: unplanned } = await service
     .from("completed_sessions")
-    .insert({
-      athlete_id: userId,
-      planned_session_id: null,
-      date: localDate,
-      discipline: row.discipline,
-      source: "strava",
-      actual_duration_min: Math.round(row.duration_sec / 60),
-      actual_distance_km: row.distance_m ? Number((row.distance_m / 1000).toFixed(2)) : null,
-      avg_hr: row.avg_hr,
-      max_hr: row.max_hr,
-      avg_pace: paceLabel(row.distance_m ?? undefined, row.duration_sec ?? undefined),
-      notes: row.name ?? null,
-      completed_at: row.start_date_utc ?? new Date().toISOString(),
-    })
+    .insert(newCompletion(userId, null, localDate, row))
     .select("id")
     .maybeSingle();
 
@@ -340,16 +425,26 @@ export async function matchStravaActivity(
   return { outcome: "unmatched", completedSessionId: null };
 }
 
+/** profiles.max_hr, used for HR plausibility; null when not set. */
+export async function fetchAthleteMaxHr(service: SupabaseClient, userId: string): Promise<number | null> {
+  const { data } = await service.from("profiles").select("max_hr").eq("id", userId).maybeSingle();
+  const value = Number((data as any)?.max_hr);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
 /**
  * Upserts the activity and runs the matcher. Returns the match result so
- * webhook and sync can share identical behaviour.
+ * webhook and sync can share identical behaviour. Pass athleteMaxHr when
+ * ingesting a batch to avoid re-reading the profile per activity.
  */
 export async function ingestStravaActivity(
   service: SupabaseClient,
   userId: string,
   activity: StravaActivityLike,
+  athleteMaxHr?: number | null,
 ): Promise<MatchResult> {
-  const row = mapStravaActivityRow(userId, activity);
+  const maxHr = athleteMaxHr === undefined ? await fetchAthleteMaxHr(service, userId) : athleteMaxHr;
+  const row = mapStravaActivityRow(userId, activity, maxHr);
   const { data: saved, error } = await service
     .from("strava_activities")
     .upsert(row, { onConflict: "user_id,strava_activity_id" })

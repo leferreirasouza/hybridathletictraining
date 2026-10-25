@@ -44,6 +44,23 @@ function speedToPaceMinPerKm(mps?: number): number | null {
   return 1000 / mps / 60;
 }
 
+/**
+ * completed_sessions.avg_pace is an "M:SS" label everywhere else (Strava
+ * import, manual log) and recentTraining parses only that shape — a decimal
+ * like "4.53" was silently dropped from pace averages.
+ */
+function speedToPaceLabel(mps?: number): string | null {
+  const pace = speedToPaceMinPerKm(mps);
+  if (pace === null) return null;
+  let mins = Math.floor(pace);
+  let secs = Math.round((pace - mins) * 60);
+  if (secs === 60) {
+    mins += 1;
+    secs = 0;
+  }
+  return `${mins}:${String(secs).padStart(2, "0")}`;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method === "GET") return new Response("ok", { headers: corsHeaders, status: 200 });
@@ -214,7 +231,7 @@ serve(async (req) => {
           actual_distance_km: a.distanceInMeters ? Number((a.distanceInMeters / 1000).toFixed(2)) : null,
           avg_hr: a.averageHeartRateInBeatsPerMinute ?? null,
           max_hr: a.maxHeartRateInBeatsPerMinute ?? null,
-          avg_pace: speedToPaceMinPerKm(a.averageSpeedInMetersPerSecond)?.toFixed(2) ?? null,
+          avg_pace: speedToPaceLabel(a.averageSpeedInMetersPerSecond),
           notes: `Auto-imported from Garmin (${a.activityType ?? "activity"})`,
           completed_at: startUtc ?? new Date().toISOString(),
         };

@@ -18,6 +18,21 @@ const LEGAL_DISCLAIMER = `
 
 const GENERIC_PROMPT = `You are the HYROX Coach AI — an expert assistant for HYROX athletes and coaches. You have deep knowledge of the HYROX race format, training periodization, HR zone training, strength programming for HYROX, recovery, race strategy, and pacing. Be concise and actionable. Never give medical advice. Use conservative progression principles.`;
 
+/**
+ * Plain-language note for completed_sessions/strava_activities.data_flags
+ * (see _shared/activityQuality.ts), so the coach doesn't read treadmill
+ * distance or a strap spike as measured fact.
+ */
+function qualityNote(flags: string[] | null | undefined): string {
+  const f = flags ?? [];
+  const notes: string[] = [];
+  if (f.includes("race")) notes.push("race");
+  if (f.includes("distance_estimated")) notes.push("indoor, distance/pace estimated");
+  if (f.includes("hr_artifact")) notes.push("HR unreliable");
+  else if (f.includes("max_hr_artifact")) notes.push("max HR is a sensor spike");
+  return notes.length ? ` [${notes.join("; ")}]` : "";
+}
+
 const APPEND_RULES = `
 
 ADDITIONAL RULES:
@@ -127,7 +142,7 @@ ${contextText.slice(0, 20000)}
 
       const { data: recent } = await serviceClient
         .from("completed_sessions")
-        .select("date, session_name, discipline, actual_distance_km, rpe, notes")
+        .select("date, discipline, actual_distance_km, rpe, notes, data_flags, planned_sessions(session_name)")
         .eq("athlete_id", userId)
         .order("date", { ascending: false })
         .limit(5);
@@ -147,7 +162,7 @@ ${contextText.slice(0, 20000)}
         : "Rest day";
 
       const fmtRecent = (recent && recent.length > 0)
-        ? recent.map((s: any) => `- ${s.date}: ${s.session_name || s.discipline} (${s.discipline}${s.actual_distance_km ? `, ${s.actual_distance_km}km` : ""}${s.rpe ? `, RPE ${s.rpe}` : ""})${s.notes ? ` — ${s.notes}` : ""}`).join("\n")
+        ? recent.map((s: any) => `- ${s.date}: ${s.planned_sessions?.session_name || s.discipline} (${s.discipline}${s.actual_distance_km ? `, ${s.actual_distance_km}km` : ""}${s.rpe ? `, RPE ${s.rpe}` : ""})${qualityNote(s.data_flags)}${s.notes ? ` — ${s.notes}` : ""}`).join("\n")
         : "No recent sessions logged.";
 
       athleteContext = `\n\n---\nATHLETE PROFILE CONTEXT:\nAge: ${profile?.age ?? "—"} | Weight: ${profile?.weight_kg ?? "—"}kg | Goal Race: ${profile?.goal_race_name ?? "—"} on ${profile?.goal_race_date ?? "—"}\n\nTODAY'S PLANNED SESSIONS:\n${fmtPlanned}\n\nRECENT COMPLETED SESSIONS (last 5):\n${fmtRecent}`;
@@ -182,7 +197,7 @@ ${contextText.slice(0, 20000)}
       const { data: acts } = await serviceClient
         .from("strava_activities")
         .select(
-          "id, start_date_local, sport_type, name, discipline, distance_m, duration_sec, avg_hr, max_hr, avg_pace_min_per_km, completed_session_id, raw",
+          "id, start_date_local, sport_type, name, discipline, distance_m, duration_sec, avg_hr, max_hr, avg_pace_min_per_km, completed_session_id, data_flags, duplicate_of, raw",
         )
         .eq("user_id", userId)
         .gte("start_date_local", since14.toISOString())
@@ -205,8 +220,10 @@ ${contextText.slice(0, 20000)}
 
       const sections: string[] = [];
 
-      if (acts && acts.length > 0) {
-        const lines = acts.map((a: any) => {
+      // A second recording of the same effort adds nothing for the coach.
+      const distinctActs = (acts ?? []).filter((a: any) => !a.duplicate_of);
+      if (distinctActs.length > 0) {
+        const lines = distinctActs.map((a: any) => {
           const km = a.distance_m ? `${(Number(a.distance_m) / 1000).toFixed(1)}km` : "—";
           const min = a.duration_sec ? `${Math.round(Number(a.duration_sec) / 60)}min` : "—";
           const hr = a.avg_hr ? ` | HR ${a.avg_hr}${a.max_hr ? `/${a.max_hr}` : ""}` : "";
@@ -216,7 +233,7 @@ ${contextText.slice(0, 20000)}
               ? "matched a planned session"
               : "logged as unplanned";
           }
-          return `- ${String(a.start_date_local ?? "").slice(0, 10)}: ${a.discipline ?? a.sport_type} | ${km} | ${min}${hr}${fmtPace(a.avg_pace_min_per_km)} | ${link}`;
+          return `- ${String(a.start_date_local ?? "").slice(0, 10)}: ${a.discipline ?? a.sport_type} | ${km} | ${min}${hr}${fmtPace(a.avg_pace_min_per_km)} | ${link}${qualityNote(a.data_flags)}`;
         });
         sections.push(`SYNCED ACTIVITIES (last 14 days):\n${lines.join("\n")}`);
       }
@@ -224,21 +241,32 @@ ${contextText.slice(0, 20000)}
       // Trailing 4-week rollup per discipline, from logged completions.
       const { data: comps } = await serviceClient
         .from("completed_sessions")
-        .select("date, discipline, actual_duration_min, actual_distance_km, avg_hr")
+        .select("date, discipline, actual_duration_min, actual_distance_km, avg_hr, data_flags")
         .eq("athlete_id", userId)
         .gte("date", isoDay(since28));
 
       if (comps && comps.length > 0) {
-        const buckets = new Map<string, { n: number; h: number; km: number; hrSum: number; hrN: number }>();
+        const buckets = new Map<string, { n: number; h: number; km: number; estKm: number; hrSum: number; hrN: number }>();
         let totalHours = 0;
         for (const c of comps as any[]) {
           const key = c.discipline ?? "custom";
-          const b = buckets.get(key) ?? { n: 0, h: 0, km: 0, hrSum: 0, hrN: 0 };
+          const b = buckets.get(key) ?? { n: 0, h: 0, km: 0, estKm: 0, hrSum: 0, hrN: 0 };
           const minutes = Number(c.actual_duration_min ?? 0) || 0;
+          const flags: string[] = c.data_flags ?? [];
+          const km = Number(c.actual_distance_km ?? 0) || 0;
           b.n++;
           b.h += minutes / 60;
-          b.km += Number(c.actual_distance_km ?? 0) || 0;
-          if (c.avg_hr) {
+          // Indoor bike "km" is a trainer estimate, not distance — never summed.
+          // Treadmill run km stays (trend-useful) but is reported separately.
+          if (flags.includes("distance_estimated")) {
+            if (key !== "bike") {
+              b.km += km;
+              b.estKm += km;
+            }
+          } else {
+            b.km += km;
+          }
+          if (c.avg_hr && !flags.includes("hr_artifact")) {
             b.hrSum += Number(c.avg_hr);
             b.hrN++;
           }
@@ -249,7 +277,7 @@ ${contextText.slice(0, 20000)}
           .sort((a, b) => b[1].h - a[1].h)
           .map(
             ([d, b]) =>
-              `- ${d}: ${b.n} sessions | ${(Math.round(b.h * 10) / 10)} h | ${(Math.round(b.km * 10) / 10)} km${b.hrN > 0 ? ` | avg HR ${Math.round(b.hrSum / b.hrN)}` : ""}`,
+              `- ${d}: ${b.n} sessions | ${(Math.round(b.h * 10) / 10)} h | ${(Math.round(b.km * 10) / 10)} km${b.estKm > 0 ? ` (${Math.round(b.estKm * 10) / 10} km indoor-estimated)` : ""}${b.hrN > 0 ? ` | avg HR ${Math.round(b.hrSum / b.hrN)}` : ""}`,
           );
         sections.push(
           `TRAILING 4-WEEK ROLLUP (${(Math.round((totalHours / 4) * 10) / 10)} h/week):\n${rows.join("\n")}`,

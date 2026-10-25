@@ -12,10 +12,11 @@ export interface StravaActivityLite {
   avg_hr: number | null;
   max_hr: number | null;
   completed_session_id: string | null;
+  data_flags?: string[] | null;
 }
 
 export const STRAVA_SELECT =
-  'id, name, sport_type, discipline, start_date_local, start_date_utc, duration_sec, distance_m, avg_hr, max_hr, completed_session_id';
+  'id, name, sport_type, discipline, start_date_local, start_date_utc, duration_sec, distance_m, avg_hr, max_hr, completed_session_id, data_flags';
 
 export const activityDate = (a: StravaActivityLite) => (a.start_date_local ?? a.start_date_utc ?? '').slice(0, 10);
 
@@ -61,6 +62,7 @@ export async function linkStravaActivity(userId: string, a: StravaActivityLite, 
       max_hr: a.max_hr,
       notes: a.name,
       completed_at: a.start_date_utc ?? new Date().toISOString(),
+      data_flags: a.data_flags ?? [],
     })
     .select('id')
     .maybeSingle();
@@ -69,11 +71,24 @@ export async function linkStravaActivity(userId: string, a: StravaActivityLite, 
   return data.id as string;
 }
 
-/** Unlink: detaches the Strava activity and removes only a Strava-sourced completion (never manual logs). */
+/**
+ * Unlink: detaches the Strava activity and removes only a Strava-sourced
+ * completion (never manual logs) — and only when no other recording of the
+ * same effort still points at it.
+ */
 export async function unlinkStravaActivity(userId: string, a: StravaActivityLite) {
   const completionId = a.completed_session_id;
-  await supabase.from('strava_activities' as any).update({ completed_session_id: null }).eq('id', a.id);
+  await supabase
+    .from('strava_activities' as any)
+    .update({ completed_session_id: null, duplicate_of: null })
+    .eq('id', a.id);
   if (completionId) {
+    const { data: others } = await supabase
+      .from('strava_activities' as any)
+      .select('id')
+      .eq('completed_session_id', completionId)
+      .limit(1);
+    if (others?.length) return;
     await supabase
       .from('completed_sessions')
       .delete()
