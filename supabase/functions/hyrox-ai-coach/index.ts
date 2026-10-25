@@ -6,6 +6,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { tsbAdjustmentFactor } from "../_shared/interferenceRules.ts";
 import { decomposeRace, describeDecomposition, divisionKeyOf, isRelayKey } from "../_shared/raceDecomposition.ts";
+import { formatNewSince, NEW_SINCE_LIMIT, type NewSinceItem } from "../_shared/newSince.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -90,6 +91,47 @@ serve(async (req) => {
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
+    // --- Conversation memory: one coach thread per user, user turns only ---
+    // The client sends the whole conversation each time; only its newest user
+    // turn is stored. Stored turns drive the hourly limit below and the
+    // "new since your last conversation" context. Failures are logged and
+    // never block the chat.
+    let threadId: string | null = null;
+    let prevUserAt: string | null = null;
+    try {
+      const { data: thread, error: threadErr } = await serviceClient
+        .from("ai_threads")
+        .select("id")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (threadErr) throw threadErr;
+      if (thread?.id) {
+        threadId = thread.id;
+        const { data: last, error: lastErr } = await serviceClient
+          .from("ai_messages")
+          .select("created_at")
+          .eq("thread_id", threadId)
+          .eq("role", "user")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (lastErr) throw lastErr;
+        prevUserAt = (last as any)?.created_at ?? null;
+      } else {
+        const { data: created, error: createErr } = await serviceClient
+          .from("ai_threads")
+          .insert({ user_id: userId, title: "AI coach" })
+          .select("id")
+          .single();
+        if (createErr) throw createErr;
+        threadId = (created as any).id;
+      }
+    } catch (threadErr) {
+      console.error("AI coach thread lookup/create failed (non-fatal):", threadErr);
+    }
+
     // Per-user abuse limit: 30 requests per rolling hour.
     try {
       const sinceIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
@@ -115,6 +157,14 @@ serve(async (req) => {
       }
     } catch (rateErr) {
       console.error("Rate limit check failed (non-fatal):", rateErr);
+    }
+
+    const latestUserTurn = [...messages].reverse().find((m: any) => m.role === "user");
+    if (threadId && latestUserTurn) {
+      const { error: msgErr } = await serviceClient
+        .from("ai_messages")
+        .insert({ thread_id: threadId, role: "user", content: latestUserTurn.content });
+      if (msgErr) console.error("ai_messages insert failed (rate limit + new-since depend on it):", msgErr);
     }
 
     // --- Base prompt + per-user coaching context + athlete context ---
@@ -427,6 +477,53 @@ ${contextText.slice(0, 20000)}
       console.error("Training load / race history context (non-fatal):", loadErr);
     }
 
+    // --- What happened since the athlete's previous message ---
+    let newSinceContext = "";
+    if (prevUserAt) {
+      try {
+        const [{ data: fresh, count: freshCount }, { data: manual, count: manualCount }] = await Promise.all([
+          serviceClient
+            .from("strava_activities")
+            .select("start_date_local, discipline, sport_type, duration_sec, distance_m, data_flags", { count: "exact" })
+            .eq("user_id", userId)
+            .eq("ignored", false)
+            .is("duplicate_of", null)
+            .gt("created_at", prevUserAt)
+            .order("start_date_local", { ascending: false })
+            .limit(NEW_SINCE_LIMIT),
+          serviceClient
+            .from("completed_sessions")
+            .select("date, discipline, actual_duration_min, actual_distance_km", { count: "exact" })
+            .eq("athlete_id", userId)
+            .eq("source", "manual")
+            .gt("completed_at", prevUserAt)
+            .order("completed_at", { ascending: false })
+            .limit(NEW_SINCE_LIMIT),
+        ]);
+        const items: NewSinceItem[] = [
+          ...((fresh ?? []) as any[]).map((a) => ({
+            date: String(a.start_date_local ?? "").slice(0, 10),
+            discipline: a.discipline ?? a.sport_type ?? "activity",
+            minutes: a.duration_sec ? Number(a.duration_sec) / 60 : null,
+            km: a.distance_m ? Number(a.distance_m) / 1000 : null,
+            source: "strava" as const,
+            note: qualityNote(a.data_flags),
+          })),
+          ...((manual ?? []) as any[]).map((c) => ({
+            date: String(c.date),
+            discipline: c.discipline ?? "session",
+            minutes: c.actual_duration_min != null ? Number(c.actual_duration_min) : null,
+            km: c.actual_distance_km != null ? Number(c.actual_distance_km) : null,
+            source: "manual" as const,
+          })),
+        ];
+        const text = formatNewSince(prevUserAt, items, (freshCount ?? 0) + (manualCount ?? 0));
+        if (text) newSinceContext = `\n\n---\n${text}`;
+      } catch (newErr) {
+        console.error("New-since context (non-fatal):", newErr);
+      }
+    }
+
     // --- RAG: Retrieve relevant knowledge chunks ---
     let knowledgeContext = "";
     try {
@@ -481,7 +578,7 @@ ${contextText.slice(0, 20000)}
       console.error("RAG retrieval error (non-fatal):", ragErr);
     }
 
-    const systemPrompt = basePrompt + APPEND_RULES + athleteContext + stravaContext + loadContext + knowledgeContext;
+    const systemPrompt = basePrompt + APPEND_RULES + athleteContext + stravaContext + newSinceContext + loadContext + knowledgeContext;
 
     // Build messages array with system prompt as first message (OpenAI-compatible format)
     const apiMessages = [

@@ -383,7 +383,9 @@
     "suggestion1": "Qual é uma boa estratégia para HYROX?",
     "suggestion2": "Posso trocar a corrida de hoje por bike?",
     "suggestion3": "Como devo dosificar o SkiErg?",
-    "suggestion4": "Sugira uma sessão de recuperação"
+    "suggestion4": "Sugira uma sessão de recuperação",
+    "newSince_one": "{{count}} nova sessão sincronizada desde a sua última conversa — o seu coach já a vê.",
+    "newSince_other": "{{count}} novas sessões sincronizadas desde a sua última conversa — o seu coach já as vê."
   },
   "reports": {
     "title": "Relatórios Semanais",
@@ -533,9 +535,9 @@
   },
   "privacy": {
     "title": "Política de Privacidade",
-    "lastUpdated": "Última atualização: Março 2026",
+    "lastUpdated": "Última atualização: Outubro 2026",
     "s1title": "1. Informações que Coletamos",
-    "s1body": "Coletamos informações que você fornece diretamente: nome, endereço de e-mail, dados de treino (registros de treino, resultados de corrida, notas de sessão) e preferências. Também coletamos dados de uso, como interações com o app e informações do dispositivo.",
+    "s1body": "Coletamos informações que você fornece diretamente: nome, endereço de e-mail, dados de treino (registros de treino, resultados de corrida, notas de sessão), preferências e as mensagens que você envia ao coach de IA (armazenadas com a sua conta para aplicar limites de uso e dar contexto ao coach, e excluídas junto com a sua conta). Também coletamos dados de uso, como interações com o app e informações do dispositivo.",
     "s2title": "2. Como Usamos Suas Informações",
     "s2items": [
       "Fornecer, manter e melhorar a plataforma de treino",
