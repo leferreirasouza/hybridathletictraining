@@ -1093,6 +1093,7 @@ export type Database = {
           duration_min: number | null
           id: string
           intensity: Database["public"]["Enums"]["intensity_level"] | null
+          library_session_id: string | null
           notes: string | null
           order_index: number
           plan_version_id: string
@@ -1110,6 +1111,7 @@ export type Database = {
           duration_min?: number | null
           id?: string
           intensity?: Database["public"]["Enums"]["intensity_level"] | null
+          library_session_id?: string | null
           notes?: string | null
           order_index?: number
           plan_version_id: string
@@ -1127,6 +1129,7 @@ export type Database = {
           duration_min?: number | null
           id?: string
           intensity?: Database["public"]["Enums"]["intensity_level"] | null
+          library_session_id?: string | null
           notes?: string | null
           order_index?: number
           plan_version_id?: string
@@ -1135,6 +1138,13 @@ export type Database = {
           workout_details?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "planned_sessions_library_session_id_fkey"
+            columns: ["library_session_id"]
+            isOneToOne: false
+            referencedRelation: "session_library"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "planned_sessions_plan_version_id_fkey"
             columns: ["plan_version_id"]
@@ -1456,6 +1466,86 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "planned_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_library: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          code: string
+          contraindications: string | null
+          created_at: string
+          created_by: string | null
+          discipline: Database["public"]["Enums"]["discipline"]
+          evidence_refs: string[]
+          execution: string
+          id: string
+          intensity: string
+          is_approved: boolean
+          name: string
+          objective: string
+          organization_id: string | null
+          progression: string | null
+          rationale: string
+          slot_type: string
+          status: string
+          subtype: string | null
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          code: string
+          contraindications?: string | null
+          created_at?: string
+          created_by?: string | null
+          discipline: Database["public"]["Enums"]["discipline"]
+          evidence_refs?: string[]
+          execution: string
+          id?: string
+          intensity: string
+          is_approved?: boolean
+          name: string
+          objective: string
+          organization_id?: string | null
+          progression?: string | null
+          rationale: string
+          slot_type: string
+          status?: string
+          subtype?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          code?: string
+          contraindications?: string | null
+          created_at?: string
+          created_by?: string | null
+          discipline?: Database["public"]["Enums"]["discipline"]
+          evidence_refs?: string[]
+          execution?: string
+          id?: string
+          intensity?: string
+          is_approved?: boolean
+          name?: string
+          objective?: string
+          organization_id?: string | null
+          progression?: string | null
+          rationale?: string
+          slot_type?: string
+          status?: string
+          subtype?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_library_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -2088,6 +2178,14 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_org_admin: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_org_staff: {
+        Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
       list_active_organizations: {
