@@ -12,6 +12,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { getValidStravaAccessToken } from "../_shared/stravaToken.ts";
 import { fetchAthleteMaxHr, ingestStravaActivity, type StravaActivityLike } from "../_shared/stravaMap.ts";
+import { upsertRoxfitRaceResult } from "../_shared/roxfitRaceResult.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,6 +30,8 @@ const DETAIL_FETCH_COUNT = 30;
  * that carries the official splits; refresh a few of them per run.
  */
 const RACE_DETAIL_REFRESH_COUNT = 5;
+/** Stored race imports whose result isn't in race_results yet, per run. */
+const RACE_RESULT_CATCHUP_COUNT = 10;
 /** Stop before the function's wall clock runs out and resume next run. */
 const SOFT_DEADLINE_MS = 90_000;
 /** Leave headroom so a sync never consumes the account's whole quota. */
@@ -156,6 +159,28 @@ async function syncUser(svc: SupabaseClient, userId: string): Promise<SyncCounts
   }
 
   const athleteMaxHr = await fetchAthleteMaxHr(svc, userId);
+
+  // Race imports stored before race results were extracted (or whose
+  // extraction failed) get another pass from the stored payload — no API call.
+  {
+    const { data: races } = await svc
+      .from("strava_activities")
+      .select("strava_activity_id, raw")
+      .eq("user_id", userId)
+      .eq("ignored", false)
+      .ilike("raw->>external_id", "roxfit-hyrox-%")
+      .not("raw->>description", "is", null);
+    const { data: recorded } = await svc
+      .from("race_results")
+      .select("strava_activity_id")
+      .eq("athlete_id", userId)
+      .not("strava_activity_id", "is", null);
+    const done = new Set((recorded ?? []).map((r: any) => Number(r.strava_activity_id)));
+    const pending = (races ?? []).filter((r: any) => !done.has(Number(r.strava_activity_id)));
+    for (const r of pending.slice(0, RACE_RESULT_CATCHUP_COUNT)) {
+      await upsertRoxfitRaceResult(svc, userId, (r as any).raw);
+    }
+  }
 
   // Activities already stored and resolved don't need re-processing — this
   // keeps a resumed backfill from redoing work it finished last run.

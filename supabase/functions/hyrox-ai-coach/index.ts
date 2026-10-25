@@ -5,6 +5,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { tsbAdjustmentFactor } from "../_shared/interferenceRules.ts";
+import { decomposeRace, describeDecomposition, divisionKeyOf, isRelayKey } from "../_shared/raceDecomposition.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -384,25 +385,43 @@ ${contextText.slice(0, 20000)}
 
       const { data: races } = await serviceClient
         .from("race_results")
-        .select("race_name, race_date, total_time_seconds")
+        .select("*")
         .eq("athlete_id", userId)
         .not("total_time_seconds", "is", null)
         .order("race_date", { ascending: false });
+      // Goal rows are targets, not results.
+      const results = ((races ?? []) as any[]).filter((r) => r.input_method !== "goal");
 
-      if (races && races.length > 0) {
+      if (results.length > 0) {
         const fmtRaceTime = (s: number) => {
           const h = Math.floor(s / 3600);
           const m = Math.floor((s % 3600) / 60);
           const sec = s % 60;
           return `${h > 0 ? `${h}:${String(m).padStart(2, "0")}` : m}:${String(sec).padStart(2, "0")}`;
         };
-        const best = races.reduce((b: any, r: any) => (r.total_time_seconds < b.total_time_seconds ? r : b), races[0]);
-        const mostRecent = races[0] as any;
-        let pbLine = `\n\n---\nRACE HISTORY (${races.length} logged):\nBest: ${fmtRaceTime(best.total_time_seconds)} at "${best.race_name ?? "unnamed race"}" on ${best.race_date}`;
-        if (mostRecent.race_date !== best.race_date) {
-          pbLine += `\nMost recent: ${fmtRaceTime(mostRecent.total_time_seconds)} at "${mostRecent.race_name ?? "unnamed race"}" on ${mostRecent.race_date}`;
+        // Bests are per division: a doubles or relay time is a team result
+        // and must never read as a singles PB.
+        const byDivision = new Map<string, any[]>();
+        for (const r of results) {
+          const key = divisionKeyOf(r) ?? "unspecified";
+          byDivision.set(key, [...(byDivision.get(key) ?? []), r]);
         }
-        loadContext += pbLine;
+        const lines = [...byDivision.entries()].map(([key, rs]) => {
+          const best = rs.reduce((b, r) => (r.total_time_seconds < b.total_time_seconds ? r : b), rs[0]);
+          const recent = rs[0];
+          let line = `- ${key.replace(/_/g, " ")}${isRelayKey(key) ? " (relay — team time)" : ""}: best ${fmtRaceTime(best.total_time_seconds)} at "${best.race_name ?? "unnamed race"}" on ${best.race_date}`;
+          if (recent.id !== best.id) {
+            line += `; most recent ${fmtRaceTime(recent.total_time_seconds)} on ${recent.race_date}`;
+          }
+          return line + ` (${rs.length} race${rs.length === 1 ? "" : "s"})`;
+        });
+        let raceBlock = `\n\n---\nRACE HISTORY (${results.length} results, by division — compare races only within a division):\n${lines.join("\n")}`;
+        const latest = results[0];
+        const breakdown = describeDecomposition(decomposeRace(latest, results));
+        if (breakdown) {
+          raceBlock += `\nLatest race breakdown (${latest.race_date}, ${String(divisionKeyOf(latest) ?? "").replace(/_/g, " ")}):\n${breakdown}`;
+        }
+        loadContext += raceBlock;
       }
     } catch (loadErr) {
       console.error("Training load / race history context (non-fatal):", loadErr);

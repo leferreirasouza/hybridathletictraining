@@ -15,6 +15,7 @@ import {
   recordedSpanSec,
   unionFlags,
 } from "./activityQuality.ts";
+import { upsertRoxfitRaceResult } from "./roxfitRaceResult.ts";
 
 /** Activities shorter than this are stored but never become completions. */
 export const MIN_COMPLETION_SECONDS = 5 * 60;
@@ -458,6 +459,9 @@ export async function ingestStravaActivity(
   if ((saved as any).ignored) {
     return { outcome: "already_linked", completedSessionId: (saved as any).completed_session_id ?? null };
   }
+
+  // A ROXFIT race import also carries the official result + splits.
+  await upsertRoxfitRaceResult(service, userId, activity);
 
   return await matchStravaActivity(
     service,
