@@ -693,7 +693,12 @@
     "r_missed_session": "Missed session",
     "r_harder_than_planned": "Harder than planned",
     "r_tsb_fatigue": "High fatigue",
-    "r_interference": "Training clash"
+    "r_interference": "Training clash",
+    "r_interference_spacing": "Hard sessions too close together",
+    "r_tsb_intensity_reduction": "High fatigue",
+    "r_slot_mismatch": "Plan doesn't match the week's structure",
+    "r_adherence_volume_reduction": "Plan bigger than what fits your weeks",
+    "r_readiness_downgrade": "Low readiness (sleep / HRV / resting HR)"
   },
   "sessionLibrary": {
     "tabExercises": "Exercises",
