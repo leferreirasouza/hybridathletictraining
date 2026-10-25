@@ -1515,8 +1515,8 @@ export type Database = {
           data_flags: string[]
           discipline: Database["public"]["Enums"]["discipline"] | null
           distance_m: number | null
-          duration_sec: number | null
           duplicate_of: string | null
+          duration_sec: number | null
           elevation_gain_m: number | null
           id: string
           ignored: boolean
@@ -1540,8 +1540,8 @@ export type Database = {
           data_flags?: string[]
           discipline?: Database["public"]["Enums"]["discipline"] | null
           distance_m?: number | null
-          duration_sec?: number | null
           duplicate_of?: string | null
+          duration_sec?: number | null
           elevation_gain_m?: number | null
           id?: string
           ignored?: boolean
@@ -1565,8 +1565,8 @@ export type Database = {
           data_flags?: string[]
           discipline?: Database["public"]["Enums"]["discipline"] | null
           distance_m?: number | null
-          duration_sec?: number | null
           duplicate_of?: string | null
+          duration_sec?: number | null
           elevation_gain_m?: number | null
           id?: string
           ignored?: boolean
@@ -1586,6 +1586,13 @@ export type Database = {
             columns: ["completed_session_id"]
             isOneToOne: false
             referencedRelation: "completed_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strava_activities_duplicate_of_fkey"
+            columns: ["duplicate_of"]
+            isOneToOne: false
+            referencedRelation: "strava_activities"
             referencedColumns: ["id"]
           },
         ]
