@@ -15,6 +15,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { Plus, Search, Sparkles, Check, X, Edit2, Trash2, Loader2, Dumbbell, ShieldCheck, AlertTriangle, BookOpen, Camera } from 'lucide-react';
 import ScreenshotParserDialog from '@/components/exercises/ScreenshotParserDialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import SessionLibraryTab from '@/components/library/SessionLibraryTab';
 import { useTranslation } from 'react-i18next';
 
 const CATEGORIES = ['strength', 'endurance', 'mobility', 'plyometric', 'station_specific', 'accessory', 'warmup', 'cooldown', 'general'];
@@ -232,6 +234,15 @@ export default function ExerciseLibrary() {
 
   return (
     <div className="p-4 pb-8 max-w-4xl mx-auto space-y-4">
+      <Tabs defaultValue="exercises" className="space-y-4">
+      <TabsList>
+        <TabsTrigger value="exercises">{t('sessionLibrary.tabExercises')}</TabsTrigger>
+        <TabsTrigger value="sessions">{t('sessionLibrary.tabSessions')}</TabsTrigger>
+      </TabsList>
+      <TabsContent value="sessions">
+        <SessionLibraryTab />
+      </TabsContent>
+      <TabsContent value="exercises" className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -429,6 +440,8 @@ export default function ExerciseLibrary() {
       )}
 
       <ScreenshotParserDialog open={screenshotOpen} onOpenChange={setScreenshotOpen} />
+      </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { decomposeHyroxTarget, estimateVDOT, paceZonesFromVDOT, formatPace } fro
 import { buildPhaseSchedule, formatPhaseTable } from "../_shared/phaseModel.ts";
 import { assignWeeklySlots, formatSlotTable, validateSlotCompliance, type RunTypeWeights } from "../_shared/sessionSlots.ts";
 import { buildRunVolumePlan, formatRunVolumeTable } from "../_shared/runVolumeProgression.ts";
+import { formatLibraryCatalogue, resolveLibraryCodes, type LibraryEntry } from "../_shared/sessionLibrary.ts";
 import {
   fetchRecentTraining,
   formatRecentTrainingTable,
@@ -33,6 +34,7 @@ TRAINING RULES:
 - A COMPUTED WEEKLY SESSION SLOT TABLE and PHASE TABLE will be provided below when available. These are deterministic, not suggestions — fill EXACTLY the category/count specified per week (run subtype, strength with its muscle focus, or mobility/technique with its subtype). You choose the specific workout content/exercises within each slot, but do not add, drop, or change the category counts. Map mobility/technique slots to discipline "mobility" or "prehab" as appropriate.
 - COMPUTED PACE ZONES, when provided, are derived mathematically from the athlete's target time — use them as the actual pace targets in workout_details for easy/tempo/interval/long runs. Do not invent your own pace numbers when this block is present.
 - The phase table's intensity cap and volume percentage for each week replace any freeform taper/progression guessing — follow it exactly, including which week(s) are the taper.
+- When a SESSION LIBRARY catalogue is provided, EVERY session must set "library_code" to one catalogue code whose slot type and subtype fit the slot it fills (run subtype, strength focus, mobility/technique subtype, or a HYROX-specific session). Follow that entry's structure and respect its contraindications (e.g. no full simulation in base phase or the final 10 days); you still adapt durations, paces and exercises to this athlete, the phase table and the run-volume targets. Never invent codes.
 
 VALID discipline values: "run", "bike", "stairs", "rowing", "skierg", "mobility", "strength", "accessories", "hyrox_station", "prehab", "custom"
 VALID intensity values: "easy", "moderate", "hard", "race_pace", "max_effort"
@@ -53,6 +55,7 @@ Respond with ONLY valid JSON (no markdown, no backticks) in this exact format:
       "day_of_week": number (1=Mon to 7=Sun),
       "discipline": "valid_discipline",
       "session_name": "string",
+      "library_code": "string (code from the SESSION LIBRARY catalogue, when provided)",
       "duration_min": number | null,
       "distance_km": number | null,
       "intensity": "valid_intensity" | null,
@@ -511,6 +514,25 @@ Current Running Volume: ${profile.currentWeeklyKm ?? 0} km/week across ${profile
     let deterministicSection = `\n\n📐 PHASE SCHEDULE (deterministic — follow exactly):\n${formatPhaseTable(phaseSchedule)}\n`;
     deterministicSection += `\n📋 WEEKLY SESSION SLOTS (deterministic — fill exactly these categories/counts per week):\n${formatSlotTable(slotPlan)}\n`;
     deterministicSection += `\n📊 VERIFIED RECENT TRAINING (from logged sessions — trust this over any self-reported figure):\n${formatRecentTrainingTable(recentTraining)}\n`;
+    // Session library: approved global entries plus this org's own.
+    let libraryEntries: LibraryEntry[] = [];
+    {
+      const { data: libRows, error: libErr } = await supabase
+        .from("session_library")
+        .select("id, organization_id, code, name, slot_type, subtype, intensity, objective")
+        .eq("is_approved", true)
+        // organizationId is interpolated into a PostgREST filter: accept it
+        // only as a UUID (a global master_admin passes membership with any value).
+        .or(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(organizationId))
+            ? `organization_id.is.null,organization_id.eq.${organizationId}`
+            : "organization_id.is.null",
+        );
+      if (libErr) console.error("session_library load failed (plan continues without catalogue):", libErr);
+      libraryEntries = (libRows ?? []) as LibraryEntry[];
+    }
+    const libraryCatalogue = formatLibraryCatalogue(libraryEntries);
+
     deterministicSection += `\n🏃 WEEKLY RUN VOLUME TARGETS (deterministic — derived from athlete's ${runVolumePlan.baselineKm} km/week baseline via the 10%-rule and phase multipliers). Each run session's distance_km MUST match its assigned per-slot km within ±10%. Do NOT exceed the week total.\n${formatRunVolumeTable(runVolumePlan)}\n`;
 
     // Equipment constraint — reads defensively since live rows may still use
@@ -548,6 +570,9 @@ Current Running Volume: ${profile.currentWeeklyKm ?? 0} km/week across ${profile
       deterministicSection += `  Easy: ${formatPace(z.easySecPerKm)} | Marathon/steady: ${formatPace(z.marathonSecPerKm)} | Threshold/tempo: ${formatPace(z.thresholdSecPerKm)} | Interval: ${formatPace(z.intervalSecPerKm)} | Repetition/sprint: ${formatPace(z.repetitionSecPerKm)}\n`;
     }
 
+    if (libraryCatalogue) {
+      deterministicSection += `\n📚 SESSION LIBRARY (every session must carry one of these codes as "library_code"):\n${libraryCatalogue}\n`;
+    }
     athleteDesc += deterministicSection;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -616,8 +641,20 @@ Current Running Volume: ${profile.currentWeeklyKm ?? 0} km/week across ${profile
     const validDisciplines = ["run", "bike", "stairs", "rowing", "skierg", "mobility", "strength", "accessories", "hyrox_station", "prehab", "custom"];
     const validIntensities = ["easy", "moderate", "hard", "race_pace", "max_effort"];
 
+    const library = resolveLibraryCodes(
+      planData.sessions.map((s: any) => s?.library_code),
+      libraryEntries,
+    );
+    if (libraryEntries.length > 0 && library.unmatched > 0) {
+      console.warn(
+        `generate-plan: ${library.unmatched}/${planData.sessions.length} sessions without a valid library_code`,
+        library.unknownCodes.slice(0, 10),
+      );
+    }
+
     const sessions = planData.sessions.map((s: any, idx: number) => ({
       plan_version_id: version.id,
+      library_session_id: library.ids[idx] ?? null,
       athlete_id: effectiveAthleteId,
       week_number: s.week_number || 1,
       day_of_week: s.day_of_week || 1,
@@ -786,6 +823,7 @@ Current Running Volume: ${profile.currentWeeklyKm ?? 0} km/week across ${profile
       planName: plan.name,
       totalWeeks: planData.total_weeks || Math.max(...sessions.map((s: any) => s.week_number)),
       sessionsCreated: sessions.length,
+      librarySessionsUnmatched: libraryEntries.length > 0 ? library.unmatched : null,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

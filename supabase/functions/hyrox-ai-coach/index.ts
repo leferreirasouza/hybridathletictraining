@@ -203,13 +203,18 @@ ${contextText.slice(0, 20000)}
       const dow = today.getDay();
       const { data: planned } = await serviceClient
         .from("planned_sessions")
-        .select("session_name, discipline, duration_min, intensity, workout_details, distance_km, date, day_of_week, week")
+        .select("session_name, discipline, duration_min, intensity, workout_details, distance_km, date, day_of_week, week, session_library(code, objective, rationale)")
         .eq("athlete_id", userId)
         .or(`date.eq.${todayStr},and(date.is.null,day_of_week.eq.${dow})`)
         .order("week", { ascending: true });
 
       const fmtPlanned = (planned && planned.length > 0)
-        ? planned.map((p: any) => `- ${p.session_name || p.discipline} (${p.discipline}${p.duration_min ? `, ${p.duration_min} min` : ""}${p.distance_km ? `, ${p.distance_km}km` : ""}${p.intensity ? `, ${p.intensity}` : ""})${p.workout_details ? ` — ${p.workout_details}` : ""}`).join("\n")
+        ? planned.map((p: any) => {
+            const lib = p.session_library;
+            // The library entry says why this session is in the plan.
+            const why = lib ? `\n  Library ${lib.code}: ${lib.objective} Why: ${lib.rationale}` : "";
+            return `- ${p.session_name || p.discipline} (${p.discipline}${p.duration_min ? `, ${p.duration_min} min` : ""}${p.distance_km ? `, ${p.distance_km}km` : ""}${p.intensity ? `, ${p.intensity}` : ""})${p.workout_details ? ` — ${p.workout_details}` : ""}${why}`;
+          }).join("\n")
         : "Rest day";
 
       const fmtRecent = (recent && recent.length > 0)

@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { getDiscipline, intensityConfig, dayLabelsFull } from './config';
-import { Clock, MapPin, ChevronRight, Flame, Check, CheckCircle2, CalendarPlus, ArrowLeftRight } from 'lucide-react';
+import { Clock, MapPin, ChevronRight, ChevronDown, Flame, Check, CheckCircle2, CalendarPlus, ArrowLeftRight, Lightbulb } from 'lucide-react';
 import { SwapSessionDialog } from './SwapSessionDialog';
 import { LinkStravaActivityButton } from './StravaWeekItems';
 import { addToCalendar, CalendarProvider } from '@/lib/calendarExport';
@@ -18,7 +18,7 @@ import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { useTranslation } from 'react-i18next';
@@ -219,6 +219,65 @@ function QuickLogButton({ session }: { session: Session }) {
   );
 }
 
+/**
+ * "Why this session": the session_library entry generate-plan picked for
+ * this slot (objective, rationale, how to execute, when not to). Fetched
+ * when the detail sheet opens; renders nothing for sessions without one.
+ */
+function SessionWhy({ sessionId }: { sessionId: string }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const { data: entry } = useQuery({
+    queryKey: ['session-library-entry', sessionId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('planned_sessions')
+        .select('session_library(code, name, objective, execution, progression, contraindications, rationale, evidence_refs, status)')
+        .eq('id', sessionId)
+        .maybeSingle();
+      return ((data as any)?.session_library ?? null) as null | {
+        code: string; name: string; objective: string; execution: string; progression: string | null;
+        contraindications: string | null; rationale: string; evidence_refs: string[]; status: string;
+      };
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  if (!entry) return null;
+
+  return (
+    <div className="rounded-xl border border-primary/20 bg-primary/5">
+      <button type="button" onClick={() => setOpen(!open)} className="w-full flex items-center justify-between gap-2 p-3 text-left">
+        <span className="flex items-center gap-2 text-xs font-semibold">
+          <Lightbulb className="h-3.5 w-3.5 text-primary" />
+          {t('sessionLibrary.whyThisSession')}
+        </span>
+        <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      <div className="px-3 pb-3 space-y-2 text-sm">
+        <p>{entry.objective}</p>
+        {open && (
+          <div className="space-y-2 text-[13px]">
+            <p className="text-muted-foreground">{entry.rationale}</p>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('sessionLibrary.execution')}</p>
+              <p>{entry.execution}</p>
+            </div>
+            {entry.contraindications && (
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('sessionLibrary.contraindications')}</p>
+                <p>{entry.contraindications}</p>
+              </div>
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              {entry.name} · {entry.code} · {t(`sessionLibrary.status_${entry.status}`, { defaultValue: entry.status })}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SessionDetailSheet({ session, isCompleted, substitution }: { session: Session; isCompleted?: boolean; substitution?: Substitution | null }) {
   const { t } = useTranslation();
   const disc = getDiscipline(session.discipline);
@@ -264,6 +323,8 @@ function SessionDetailSheet({ session, isCompleted, substitution }: { session: S
           </div>
         </div>
       )}
+
+      <SessionWhy sessionId={session.id} />
 
       {/* Notes */}
       {session.notes && (
