@@ -7,6 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { tsbAdjustmentFactor } from "../_shared/interferenceRules.ts";
 import { decomposeRace, describeDecomposition, divisionKeyOf, isRelayKey } from "../_shared/raceDecomposition.ts";
 import { formatNewSince, NEW_SINCE_LIMIT, type NewSinceItem } from "../_shared/newSince.ts";
+import { evaluateReadiness, mergeGarminDays } from "../_shared/readinessGates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -529,6 +530,26 @@ ${contextText.slice(0, 20000)}
       }
     }
 
+    // --- Readiness (Garmin sleep / HRV / resting HR), silent without data ---
+    let readinessContext = "";
+    try {
+      const since = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10);
+      const [{ data: dailies }, { data: sleeps }] = await Promise.all([
+        serviceClient.from("garmin_dailies").select("calendar_date, resting_hr, hrv_ms").eq("user_id", userId).gte("calendar_date", since),
+        serviceClient.from("garmin_sleep").select("calendar_date, duration_sec, avg_hrv_ms").eq("user_id", userId).gte("calendar_date", since),
+      ]);
+      if ((dailies?.length ?? 0) + (sleeps?.length ?? 0) > 0) {
+        const r = evaluateReadiness(mergeGarminDays(dailies ?? [], sleeps ?? []), new Date().toISOString().slice(0, 10));
+        if (r.status === "ok") {
+          readinessContext = `\n\n---\nREADINESS (from Garmin, latest ${r.latestDate}): ${
+            r.gates.length ? r.gates.map((g) => g.detail).join(" ") + " Suggest easing hard work today if relevant." : "no flags."
+          }`;
+        }
+      }
+    } catch (readyErr) {
+      console.error("Readiness context (non-fatal):", readyErr);
+    }
+
     // --- RAG: Retrieve relevant knowledge chunks ---
     let knowledgeContext = "";
     try {
@@ -583,7 +604,7 @@ ${contextText.slice(0, 20000)}
       console.error("RAG retrieval error (non-fatal):", ragErr);
     }
 
-    const systemPrompt = basePrompt + APPEND_RULES + athleteContext + stravaContext + newSinceContext + loadContext + knowledgeContext;
+    const systemPrompt = basePrompt + APPEND_RULES + athleteContext + stravaContext + newSinceContext + loadContext + readinessContext + knowledgeContext;
 
     // Build messages array with system prompt as first message (OpenAI-compatible format)
     const apiMessages = [

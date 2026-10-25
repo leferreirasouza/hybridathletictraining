@@ -693,7 +693,12 @@
     "r_missed_session": "Sessão perdida",
     "r_harder_than_planned": "Mais difícil que o planejado",
     "r_tsb_fatigue": "Fadiga alta",
-    "r_interference": "Conflito de treino"
+    "r_interference": "Conflito de treino",
+    "r_interference_spacing": "Sessões fortes muito próximas",
+    "r_tsb_intensity_reduction": "Fadiga alta",
+    "r_slot_mismatch": "Plano diferente da estrutura da semana",
+    "r_adherence_volume_reduction": "Plano maior do que cabe nas suas semanas",
+    "r_readiness_downgrade": "Prontidão baixa (sono / VFC / FC de repouso)"
   },
   "sessionLibrary": {
     "tabExercises": "Exercícios",
