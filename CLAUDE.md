@@ -155,6 +155,10 @@ When in doubt: if it's wrong and silently corrupts athlete safety data, it's han
 - Native watch apps (contractor track) — folds into the Garmin Training API blocker above.
 - Full i18n key extraction for the plan-creation wizard — every string is still hardcoded English while the rest of the app (including the 2026-10 additions) uses `react-i18next` throughout.
 
+## Lovable handover (2026-10-25)
+
+`docs/LOVABLE_HANDOVER.md` is the staged plan the owner runs directly in Lovable while Claude usage is paused (security rotation, AI usage logging/transparency, AI-provider decision, Stripe rollout, Lovable-safe product work, and a "wait for Claude" list). **When resuming, read its "For Claude on Friday" checklist and the GitHub commits on `main` since `a3e103e` first** — verify every stage Lovable reports as done against the live DB, and check nothing in the hand-coded list was modified.
+
 ## Full plan
 
 See `/root/.claude/plans/toasty-soaring-gosling.md` for the complete decision log, architecture detail, and the current prioritized backlog. See `.lovable/plan/plan-finish-pending-work-decisions-received-2026-10-12.md` for the most recent direct-Lovable-chat decision log (suggestion-rule ownership, athlete self-accept, no "in progress" label).
