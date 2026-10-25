@@ -2,7 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Bot, User, Sparkles } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Activity } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
@@ -18,6 +20,42 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/hyrox-ai-coa
 
 export default function AIChat() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+
+  // Sessions synced since the athlete's previous message — the coach sees
+  // the same list server-side (hyrox-ai-coach, "NEW SINCE…" block).
+  const { data: newSinceCount = 0 } = useQuery({
+    queryKey: ['ai-chat-new-since', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      if (!user) return 0;
+      const { data: thread } = await supabase
+        .from('ai_threads')
+        .select('id')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (!thread) return 0;
+      const { data: last } = await supabase
+        .from('ai_messages')
+        .select('created_at')
+        .eq('thread_id', thread.id)
+        .eq('role', 'user')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!last) return 0;
+      const { count } = await supabase
+        .from('strava_activities')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('ignored', false)
+        .is('duplicate_of', null)
+        .gt('created_at', last.created_at);
+      return count ?? 0;
+    },
+  });
 
   const suggestions = [
     t('aiChat.suggestion1'),
@@ -193,6 +231,13 @@ export default function AIChat() {
               </div>
             </div>
           </motion.div>
+        )}
+
+        {messages.length <= 1 && newSinceCount > 0 && (
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-2">
+            <Activity className="h-3 w-3 text-primary" />
+            {t('aiChat.newSince', { count: newSinceCount })}
+          </div>
         )}
 
         {messages.length <= 1 && (

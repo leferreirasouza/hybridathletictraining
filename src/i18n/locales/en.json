@@ -383,7 +383,9 @@
     "suggestion1": "What's a good HYROX race strategy?",
     "suggestion2": "Can I swap today's run for a bike?",
     "suggestion3": "How should I pace the SkiErg station?",
-    "suggestion4": "Suggest a recovery session"
+    "suggestion4": "Suggest a recovery session",
+    "newSince_one": "{{count}} new session synced since your last chat — your coach can see it.",
+    "newSince_other": "{{count}} new sessions synced since your last chat — your coach can see them."
   },
   "reports": {
     "title": "Weekly Reports",
@@ -533,9 +535,9 @@
   },
   "privacy": {
     "title": "Privacy Policy",
-    "lastUpdated": "Last updated: March 2026",
+    "lastUpdated": "Last updated: October 2026",
     "s1title": "1. Information We Collect",
-    "s1body": "We collect information you provide directly: name, email address, training data (workout logs, race results, session notes), and preferences. We also collect usage data such as app interactions and device information.",
+    "s1body": "We collect information you provide directly: name, email address, training data (workout logs, race results, session notes), preferences, and the messages you send to the AI coach (stored with your account to apply usage limits and give the coach context, and deleted with your account). We also collect usage data such as app interactions and device information.",
     "s2title": "2. How We Use Your Information",
     "s2items": [
       "Provide, maintain, and improve the training platform",
