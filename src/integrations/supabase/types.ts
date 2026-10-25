@@ -1214,12 +1214,16 @@ export type Database = {
       }
       race_results: {
         Row: {
+          age_group_rank: number | null
           athlete_id: string
           category: string | null
           created_at: string
+          division: string | null
+          division_key: string | null
           id: string
           input_method: string | null
           notes: string | null
+          overall_rank: number | null
           race_date: string
           race_location: string | null
           race_name: string | null
@@ -1240,16 +1244,21 @@ export type Database = {
           station_6_seconds: number | null
           station_7_seconds: number | null
           station_8_seconds: number | null
+          strava_activity_id: number | null
           total_time_seconds: number | null
           total_transition_seconds: number | null
         }
         Insert: {
+          age_group_rank?: number | null
           athlete_id: string
           category?: string | null
           created_at?: string
+          division?: string | null
+          division_key?: string | null
           id?: string
           input_method?: string | null
           notes?: string | null
+          overall_rank?: number | null
           race_date: string
           race_location?: string | null
           race_name?: string | null
@@ -1270,16 +1279,21 @@ export type Database = {
           station_6_seconds?: number | null
           station_7_seconds?: number | null
           station_8_seconds?: number | null
+          strava_activity_id?: number | null
           total_time_seconds?: number | null
           total_transition_seconds?: number | null
         }
         Update: {
+          age_group_rank?: number | null
           athlete_id?: string
           category?: string | null
           created_at?: string
+          division?: string | null
+          division_key?: string | null
           id?: string
           input_method?: string | null
           notes?: string | null
+          overall_rank?: number | null
           race_date?: string
           race_location?: string | null
           race_name?: string | null
@@ -1300,6 +1314,7 @@ export type Database = {
           station_6_seconds?: number | null
           station_7_seconds?: number | null
           station_8_seconds?: number | null
+          strava_activity_id?: number | null
           total_time_seconds?: number | null
           total_transition_seconds?: number | null
         }

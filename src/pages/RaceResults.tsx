@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +17,14 @@ import { motion } from 'framer-motion';
 import { Upload, Plus, Trophy, Clock, TrendingUp, Loader2, Camera, Trash2, ChevronDown, ChevronUp, X, ImagePlus, Images, Check } from 'lucide-react';
 import RaceComparisonChart from '@/components/races/RaceComparisonChart';
 import { useTranslation } from 'react-i18next';
+import {
+  decomposeRace,
+  divisionKeyOf,
+  formatDelta,
+  isRelayKey,
+  type RaceComparison,
+  type RaceDecomposition,
+} from '../../supabase/functions/_shared/raceDecomposition.ts';
 
 const STATIONS = [
   'SkiErg', 'Sled Push', 'Sled Pull', 'Burpee Broad Jumps',
@@ -124,7 +132,7 @@ export default function RaceResults() {
         <motion.div variants={container} initial="hidden" animate="show" className="space-y-3">
           <RaceComparisonChart races={races} />
           {races.map((race: any) => (
-            <RaceCard key={race.id} race={race} onDelete={() => queryClient.invalidateQueries({ queryKey: ['race-results'] })} />
+            <RaceCard key={race.id} race={race} history={races} onDelete={() => queryClient.invalidateQueries({ queryKey: ['race-results'] })} />
           ))}
         </motion.div>
       )}
@@ -132,10 +140,11 @@ export default function RaceResults() {
   );
 }
 
-function RaceCard({ race, onDelete }: { race: any; onDelete: () => void }) {
+function RaceCard({ race, history, onDelete }: { race: any; history: any[]; onDelete: () => void }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const { user } = useAuth();
+  const analysis = useMemo(() => decomposeRace(race, history), [race, history]);
 
   const runSplits = [race.run_1_seconds, race.run_2_seconds, race.run_3_seconds, race.run_4_seconds, race.run_5_seconds, race.run_6_seconds, race.run_7_seconds, race.run_8_seconds];
   const stationSplits = [race.station_1_seconds, race.station_2_seconds, race.station_3_seconds, race.station_4_seconds, race.station_5_seconds, race.station_6_seconds, race.station_7_seconds, race.station_8_seconds];
@@ -162,8 +171,22 @@ function RaceCard({ race, onDelete }: { race: any; onDelete: () => void }) {
                 {race.race_location && (
                   <span className="text-[11px] text-muted-foreground">· {race.race_location}</span>
                 )}
-                <Badge variant="outline" className="text-[9px] px-1 py-0 capitalize">{race.category}</Badge>
+                <Badge variant="outline" className="text-[9px] px-1 py-0 capitalize">{race.division || race.category}</Badge>
+                {race.input_method === 'roxfit' && (
+                  <Badge variant="secondary" className="text-[9px] px-1 py-0">{t('raceResults.analysis.roxfit')}</Badge>
+                )}
+                {analysis.isPersonalBest && (
+                  <Badge className="text-[9px] px-1 py-0 gradient-hyrox">{t('raceResults.analysis.personalBest')}</Badge>
+                )}
               </div>
+              {(race.overall_rank || race.age_group_rank) && (
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  {[
+                    race.overall_rank && t('raceResults.analysis.overallRank', { rank: race.overall_rank }),
+                    race.age_group_rank && t('raceResults.analysis.ageGroupRank', { rank: race.age_group_rank }),
+                  ].filter(Boolean).join(' · ')}
+                </p>
+              )}
             </div>
             <div className="text-right">
               <p className="text-lg font-display font-bold text-primary">{formatTime(race.total_time_seconds)}</p>
@@ -193,6 +216,7 @@ function RaceCard({ race, onDelete }: { race: any; onDelete: () => void }) {
 
           {expanded && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-3 space-y-2">
+              {race.input_method !== 'goal' && <RaceAnalysis race={race} analysis={analysis} />}
               {STATIONS.map((station, i) => (
                 <div key={i} className="grid grid-cols-[1fr_60px_60px] gap-2 items-center text-xs">
                   <span className="text-muted-foreground">{station}</span>
@@ -215,6 +239,81 @@ function RaceCard({ race, onDelete }: { race: any; onDelete: () => void }) {
         </CardContent>
       </Card>
     </motion.div>
+  );
+}
+
+const deltaClass = (seconds: number) =>
+  seconds < 0 ? 'text-emerald-500' : seconds > 0 ? 'text-destructive' : 'text-muted-foreground';
+
+// Race dates are calendar days; parse at midday so no timezone shifts them.
+const shortDate = (date: string) =>
+  new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+
+/** Where this race was won or lost vs the athlete's own races in the same division. */
+function RaceAnalysis({ race, analysis }: { race: any; analysis: RaceDecomposition }) {
+  const { t } = useTranslation();
+
+  if (isRelayKey(divisionKeyOf(race))) {
+    return <p className="text-[11px] text-muted-foreground">{t('raceResults.analysis.relayNotCompared')}</p>;
+  }
+  if (!analysis.comparable) {
+    return <p className="text-[11px] text-muted-foreground">{t('raceResults.analysis.incomplete')}</p>;
+  }
+
+  const comparisons: { label: string; c: RaceComparison }[] = [];
+  if (analysis.previous) {
+    comparisons.push({ label: t('raceResults.analysis.vsPrevious', { date: shortDate(analysis.previous.against.date) }), c: analysis.previous });
+  }
+  if (analysis.best) {
+    comparisons.push({ label: t('raceResults.analysis.vsBest', { date: shortDate(analysis.best.against.date) }), c: analysis.best });
+  }
+
+  return (
+    <div className="rounded-lg border border-border/50 p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-display font-bold">{t('raceResults.analysis.title')}</p>
+        <span className="text-[9px] text-muted-foreground">{t('raceResults.analysis.deltaHint')}</span>
+      </div>
+      {comparisons.length === 0 && (
+        <p className="text-[11px] text-muted-foreground">{t('raceResults.analysis.firstInDivision')}</p>
+      )}
+      {comparisons.map(({ label, c }) => (
+        <div key={label} className="space-y-1.5">
+          <p className="text-[11px] text-muted-foreground">{label}</p>
+          <div className="grid grid-cols-4 gap-1 text-center">
+            {([
+              ['total', c.totalDelta],
+              ['running', c.runningDelta],
+              ['stations', c.stationsDelta],
+              ['roxzone', c.roxzoneDelta],
+            ] as const).map(([key, value]) => (
+              <div key={key} className="rounded bg-muted/40 p-1">
+                <p className={`text-xs font-mono font-bold ${deltaClass(value)}`}>{formatDelta(value)}</p>
+                <p className="text-[9px] text-muted-foreground">{t(`raceResults.analysis.${key}`)}</p>
+              </div>
+            ))}
+          </div>
+          {c.biggestGain && (
+            <p className="text-[11px] text-emerald-500">
+              {t('raceResults.analysis.biggestGain', { station: c.biggestGain.name, delta: formatDelta(c.biggestGain.delta) })}
+            </p>
+          )}
+          {c.biggestLoss && (
+            <p className="text-[11px] text-destructive">
+              {t('raceResults.analysis.biggestLoss', { station: c.biggestLoss.name, delta: formatDelta(c.biggestLoss.delta) })}
+            </p>
+          )}
+          <p className="text-[11px]">{t(`raceResults.analysis.dominant_${c.dominant}`)}</p>
+        </div>
+      ))}
+      {analysis.runDecaySec !== null && (
+        <p className="text-[11px] text-muted-foreground">
+          {t('raceResults.analysis.runDecay', { delta: formatDelta(analysis.runDecaySec) })}
+          {' · '}
+          {t('raceResults.analysis.slowestRun', { delta: formatDelta(analysis.worstRunVsMedianSec ?? 0) })}
+        </p>
+      )}
+    </div>
   );
 }
 
