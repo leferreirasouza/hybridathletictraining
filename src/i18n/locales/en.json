@@ -738,5 +738,22 @@
     "unapprove": "Withdraw approval",
     "empty": "No sessions match.",
     "whyThisSession": "Why this session"
+  },
+  "maxHr": {
+    "title_use_estimate": "Set your max heart rate",
+    "title_raise": "Your max heart rate looks too low",
+    "title_enter": "Add your max heart rate",
+    "body_use_estimate_one": "It isn't set yet. Your highest recorded heart rates suggest about {{bpm}} bpm (from {{count}} session).",
+    "body_use_estimate_other": "It isn't set yet. Your highest recorded heart rates suggest about {{bpm}} bpm (from {{count}} sessions).",
+    "body_raise_one": "Your sessions regularly reach about {{bpm}} bpm, above the {{current}} bpm on your profile (from {{count}} session).",
+    "body_raise_other": "Your sessions regularly reach about {{bpm}} bpm, above the {{current}} bpm on your profile (from {{count}} sessions).",
+    "body_enter": "It makes your training load and heart-rate checks accurate. Use a recent all-out effort or a lab/field test.",
+    "why": "Estimated from your own sessions, ignoring one-off sensor spikes. Used for training load (updated overnight) and to spot faulty heart-rate readings.",
+    "use": "Use {{bpm}} bpm",
+    "update": "Update to {{bpm}} bpm",
+    "keep": "Keep {{bpm}} bpm",
+    "enterOwn": "Enter my own",
+    "saved": "Max heart rate set to {{bpm}} bpm",
+    "saveFailed": "Couldn't save your max heart rate"
   }
 }
