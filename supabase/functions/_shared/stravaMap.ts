@@ -16,6 +16,7 @@ import {
   unionFlags,
 } from "./activityQuality.ts";
 import { upsertRoxfitRaceResult } from "./roxfitRaceResult.ts";
+import { effectiveMaxHr, estimateMaxHr, MAX_HR_LOOKBACK_DAYS } from "./maxHrEstimate.ts";
 
 /** Activities shorter than this are stored but never become completions. */
 export const MIN_COMPLETION_SECONDS = 5 * 60;
@@ -426,11 +427,31 @@ export async function matchStravaActivity(
   return { outcome: "unmatched", completedSessionId: null };
 }
 
-/** profiles.max_hr, used for HR plausibility; null when not set. */
+/**
+ * Max HR to judge HR plausibility with: profiles.max_hr when the athlete set
+ * it, else an estimate from their own recorded sessions (maxHrEstimate.ts),
+ * else null (generic 220/200 ceilings apply).
+ */
 export async function fetchAthleteMaxHr(service: SupabaseClient, userId: string): Promise<number | null> {
   const { data } = await service.from("profiles").select("max_hr").eq("id", userId).maybeSingle();
   const value = Number((data as any)?.max_hr);
-  return Number.isFinite(value) && value > 0 ? value : null;
+  if (Number.isFinite(value) && value > 0) return value;
+
+  const since = new Date(Date.now() - MAX_HR_LOOKBACK_DAYS * 86400000).toISOString().slice(0, 10);
+  const { data: sessions, error } = await service
+    .from("completed_sessions")
+    .select("max_hr, data_flags")
+    .eq("athlete_id", userId)
+    .not("max_hr", "is", null)
+    .gte("date", since);
+  if (error) {
+    console.error("max HR estimate query failed", error);
+    return null;
+  }
+  const maxima = (sessions ?? [])
+    .filter((s: any) => !(s.data_flags ?? []).includes("max_hr_artifact"))
+    .map((s: any) => s.max_hr);
+  return effectiveMaxHr(null, estimateMaxHr(maxima));
 }
 
 /**

@@ -13,6 +13,7 @@ import { useScheduleData } from '@/hooks/useScheduleData';
 import { getDiscipline } from '@/components/schedule/config';
 import GoalRaceCard from '@/components/dashboard/GoalRaceCard';
 import ProfileCompletionCard from '@/components/dashboard/ProfileCompletionCard';
+import MaxHrCard from '@/components/dashboard/MaxHrCard';
 import CoachInfoCard from '@/components/dashboard/CoachInfoCard';
 import TrainingLoadCard from '@/components/dashboard/TrainingLoadCard';
 import RecentHistoryCard from '@/components/dashboard/RecentHistoryCard';
@@ -134,6 +135,9 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <motion.div variants={item}>
             <ProfileCompletionCard />
+          </motion.div>
+          <motion.div variants={item}>
+            <MaxHrCard />
           </motion.div>
           <motion.div variants={item}>
             <GoalRaceCard />

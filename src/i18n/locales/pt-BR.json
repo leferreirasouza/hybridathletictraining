@@ -738,5 +738,22 @@
     "unapprove": "Retirar aprovação",
     "empty": "Nenhuma sessão encontrada.",
     "whyThisSession": "Por que esta sessão"
+  },
+  "maxHr": {
+    "title_use_estimate": "Defina sua frequência cardíaca máxima",
+    "title_raise": "Sua FC máxima parece baixa",
+    "title_enter": "Adicione sua frequência cardíaca máxima",
+    "body_use_estimate_one": "Ainda não está definida. Suas frequências mais altas registradas indicam cerca de {{bpm}} bpm ({{count}} sessão).",
+    "body_use_estimate_other": "Ainda não está definida. Suas frequências mais altas registradas indicam cerca de {{bpm}} bpm ({{count}} sessões).",
+    "body_raise_one": "Suas sessões chegam com frequência a cerca de {{bpm}} bpm, acima dos {{current}} bpm do seu perfil ({{count}} sessão).",
+    "body_raise_other": "Suas sessões chegam com frequência a cerca de {{bpm}} bpm, acima dos {{current}} bpm do seu perfil ({{count}} sessões).",
+    "body_enter": "Ela deixa sua carga de treino e as verificações de frequência cardíaca precisas. Use um esforço máximo recente ou um teste de laboratório/campo.",
+    "why": "Estimada a partir das suas próprias sessões, ignorando picos isolados do sensor. Usada na carga de treino (atualizada durante a noite) e para identificar leituras de frequência cardíaca com erro.",
+    "use": "Usar {{bpm}} bpm",
+    "update": "Atualizar para {{bpm}} bpm",
+    "keep": "Manter {{bpm}} bpm",
+    "enterOwn": "Informar a minha",
+    "saved": "Frequência cardíaca máxima definida em {{bpm}} bpm",
+    "saveFailed": "Não foi possível salvar sua frequência cardíaca máxima"
   }
 }
