@@ -27,6 +27,7 @@ interface StravaActivity {
   distance_m: number | null;
   avg_hr: number | null;
   max_hr: number | null;
+  data_flags?: string[] | null;
 }
 
 interface PlannedOption {
@@ -75,7 +76,7 @@ export default function StravaInbox() {
       if (!user) return [];
       const { data, error } = await supabase
         .from('strava_activities' as any)
-        .select('id, name, sport_type, discipline, start_date_local, start_date_utc, duration_sec, distance_m, avg_hr, max_hr')
+        .select('id, name, sport_type, discipline, start_date_local, start_date_utc, duration_sec, distance_m, avg_hr, max_hr, data_flags')
         .eq('user_id', user.id)
         .eq('ignored', false)
         .is('completed_session_id', null)
@@ -130,6 +131,7 @@ export default function StravaInbox() {
     max_hr: a.max_hr,
     notes: a.name,
     completed_at: a.start_date_utc ?? new Date().toISOString(),
+    data_flags: a.data_flags ?? [],
   });
 
   const createCompletion = async (a: StravaActivity, plannedSessionId: string | null) => {

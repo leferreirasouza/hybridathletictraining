@@ -11,7 +11,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { getValidStravaAccessToken } from "../_shared/stravaToken.ts";
-import { ingestStravaActivity, type StravaActivityLike } from "../_shared/stravaMap.ts";
+import { fetchAthleteMaxHr, ingestStravaActivity, type StravaActivityLike } from "../_shared/stravaMap.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,6 +24,11 @@ const BACKFILL_DAYS = 180;
 const PER_PAGE = 100;
 const MAX_PAGES = 30;
 const DETAIL_FETCH_COUNT = 30;
+/**
+ * HYROX race imports stored from a summary-only fetch lack the description
+ * that carries the official splits; refresh a few of them per run.
+ */
+const RACE_DETAIL_REFRESH_COUNT = 5;
 /** Stop before the function's wall clock runs out and resume next run. */
 const SOFT_DEADLINE_MS = 90_000;
 /** Leave headroom so a sync never consumes the account's whole quota. */
@@ -150,12 +155,40 @@ async function syncUser(svc: SupabaseClient, userId: string): Promise<SyncCounts
     }
   }
 
+  const athleteMaxHr = await fetchAthleteMaxHr(svc, userId);
+
   // Activities already stored and resolved don't need re-processing — this
   // keeps a resumed backfill from redoing work it finished last run.
   const { data: existingRows } = await svc
     .from("strava_activities")
     .select("strava_activity_id, completed_session_id, ignored")
     .eq("user_id", userId);
+
+  if (!counts.rate_limited) {
+    const { data: staleRaces } = await svc
+      .from("strava_activities")
+      .select("strava_activity_id")
+      .eq("user_id", userId)
+      .ilike("raw->>external_id", "roxfit-hyrox-%")
+      .is("raw->>description", null)
+      .limit(RACE_DETAIL_REFRESH_COUNT);
+    for (const r of staleRaces ?? []) {
+      const id = Number((r as any).strava_activity_id);
+      const resp = await fetch(`https://www.strava.com/api/v3/activities/${id}`, {
+        headers: { Authorization: `Bearer ${token.accessToken}` },
+      });
+      if (resp.status === 429) {
+        counts.rate_limited = true;
+        break;
+      }
+      // Already linked, so this only refreshes the stored payload.
+      if (resp.ok) await ingestStravaActivity(svc, userId, (await resp.json()) as StravaActivityLike, athleteMaxHr);
+      if (rateLimitExhausted(resp)) {
+        counts.rate_limited = true;
+        break;
+      }
+    }
+  }
   const settled = new Set(
     (existingRows ?? [])
       .filter((r: any) => r.completed_session_id !== null || r.ignored === true)
@@ -180,7 +213,7 @@ async function syncUser(svc: SupabaseClient, userId: string): Promise<SyncCounts
     }
 
     const enriched = details.get(Number(activity.id)) ?? activity;
-    const result = await ingestStravaActivity(svc, userId, enriched);
+    const result = await ingestStravaActivity(svc, userId, enriched, athleteMaxHr);
     counts.stored++;
     lastProcessedStart = activity.start_date ?? lastProcessedStart;
 

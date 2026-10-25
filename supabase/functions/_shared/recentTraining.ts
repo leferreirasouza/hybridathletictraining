@@ -15,6 +15,8 @@ export interface CompletionRowLike {
   actual_distance_km: number | null;
   avg_hr: number | null;
   avg_pace: string | null;
+  /** completed_sessions.data_flags — see _shared/activityQuality.ts. */
+  data_flags?: string[] | null;
 }
 
 export interface RecentTrainingWeek {
@@ -98,12 +100,16 @@ export function computeRecentTraining(
     if (isRun) {
       weeks[idx].runKm += km;
       if (km > longestRunKm) longestRunKm = km;
-      const paceSec = parsePaceToSeconds(row.avg_pace);
+      // Treadmill/indoor distance is an estimate and race pace isn't training
+      // pace: both still count as km, neither feeds the average pace.
+      const flags = row.data_flags ?? [];
+      const paceTrusted = !flags.includes("distance_estimated") && !flags.includes("race");
+      const paceSec = paceTrusted ? parsePaceToSeconds(row.avg_pace) : null;
       if (paceSec) {
         paceSum += paceSec;
         paceCount++;
       }
-      if (row.avg_hr) {
+      if (row.avg_hr && !flags.includes("hr_artifact")) {
         hrSum += Number(row.avg_hr);
         hrCount++;
       }
@@ -152,7 +158,7 @@ export async function fetchRecentTraining(
     .slice(0, 10);
   const { data } = await client
     .from("completed_sessions")
-    .select("date, discipline, actual_duration_min, actual_distance_km, avg_hr, avg_pace")
+    .select("date, discipline, actual_duration_min, actual_distance_km, avg_hr, avg_pace, data_flags")
     .eq("athlete_id", athleteId)
     .gte("date", since)
     .order("date", { ascending: true });

@@ -82,7 +82,7 @@ export default function Analytics() {
       if (!user) return [];
       const { data, error } = await supabase
         .from('completed_sessions')
-        .select('date, discipline, actual_duration_min, actual_distance_km, rpe, avg_hr, max_hr')
+        .select('date, discipline, actual_duration_min, actual_distance_km, rpe, avg_hr, max_hr, data_flags')
         .eq('athlete_id', user.id)
         .order('date', { ascending: true });
       return error ? [] : data || [];
@@ -103,20 +103,26 @@ export default function Analytics() {
     // HR zone tracking
     const zoneCounts = [0, 0, 0, 0, 0];
     const weekZoneMap = new Map<string, number[]>();
-    // Estimate max HR from data or use 190 as default
-    const allMaxHr = completedSessions.filter(s => s.max_hr).map(s => s.max_hr!);
+    // Estimate max HR from data or use 190 as default. Flagged strap spikes
+    // (see _shared/activityQuality.ts) would inflate the estimate.
+    const flagsOf = (s: { data_flags?: string[] | null }) => s.data_flags ?? [];
+    const allMaxHr = completedSessions
+      .filter(s => s.max_hr && !flagsOf(s).includes('max_hr_artifact'))
+      .map(s => s.max_hr!);
     const estimatedMaxHr = allMaxHr.length > 0 ? Math.max(...allMaxHr) : 190;
 
     for (const s of completedSessions) {
       const weekKey = getISOWeekLabel(s.date);
       const dur = Number(s.actual_duration_min) || 0;
       const dist = Number(s.actual_distance_km) || 0;
+      // Indoor-trainer bike "km" isn't distance; treadmill run km stays.
+      const bikeDist = flagsOf(s).includes('distance_estimated') ? 0 : dist;
 
       const existing = weekMap.get(weekKey) || { week: weekKey, duration: 0, distance: 0, runDistance: 0, bikeDistance: 0, sessions: 0, rpeSum: 0, rpeCount: 0 };
       existing.duration += dur;
       existing.distance += dist;
       if (s.discipline === 'run') existing.runDistance += dist;
-      if (s.discipline === 'bike') existing.bikeDistance += dist;
+      if (s.discipline === 'bike') existing.bikeDistance += bikeDist;
       existing.sessions += 1;
       if (s.rpe) { existing.rpeSum += s.rpe; existing.rpeCount += 1; }
       weekMap.set(weekKey, existing);
@@ -133,7 +139,7 @@ export default function Analytics() {
       allDiscs.add(s.discipline);
 
       // HR zone classification
-      if (s.avg_hr && s.avg_hr > 0) {
+      if (s.avg_hr && s.avg_hr > 0 && !flagsOf(s).includes('hr_artifact')) {
         const zi = estimateZone(s.avg_hr, estimatedMaxHr);
         zoneCounts[zi] += 1;
         const wz = weekZoneMap.get(weekKey) || [0, 0, 0, 0, 0];
@@ -143,7 +149,7 @@ export default function Analytics() {
 
       totalDuration += dur;
       if (s.discipline === 'run') totalRunDistance += dist;
-      if (s.discipline === 'bike') totalBikeDistance += dist;
+      if (s.discipline === 'bike') totalBikeDistance += bikeDist;
       if (s.rpe) { totalRpe += s.rpe; rpeCount += 1; }
     }
 

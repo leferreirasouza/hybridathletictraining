@@ -158,6 +158,7 @@ export type Database = {
           avg_hr: number | null
           avg_pace: string | null
           completed_at: string
+          data_flags: string[]
           date: string
           discipline: Database["public"]["Enums"]["discipline"]
           id: string
@@ -177,6 +178,7 @@ export type Database = {
           avg_hr?: number | null
           avg_pace?: string | null
           completed_at?: string
+          data_flags?: string[]
           date?: string
           discipline?: Database["public"]["Enums"]["discipline"]
           id?: string
@@ -196,6 +198,7 @@ export type Database = {
           avg_hr?: number | null
           avg_pace?: string | null
           completed_at?: string
+          data_flags?: string[]
           date?: string
           discipline?: Database["public"]["Enums"]["discipline"]
           id?: string
@@ -1509,9 +1512,11 @@ export type Database = {
           avg_speed_mps: number | null
           completed_session_id: string | null
           created_at: string
+          data_flags: string[]
           discipline: Database["public"]["Enums"]["discipline"] | null
           distance_m: number | null
           duration_sec: number | null
+          duplicate_of: string | null
           elevation_gain_m: number | null
           id: string
           ignored: boolean
@@ -1532,9 +1537,11 @@ export type Database = {
           avg_speed_mps?: number | null
           completed_session_id?: string | null
           created_at?: string
+          data_flags?: string[]
           discipline?: Database["public"]["Enums"]["discipline"] | null
           distance_m?: number | null
           duration_sec?: number | null
+          duplicate_of?: string | null
           elevation_gain_m?: number | null
           id?: string
           ignored?: boolean
@@ -1555,9 +1562,11 @@ export type Database = {
           avg_speed_mps?: number | null
           completed_session_id?: string | null
           created_at?: string
+          data_flags?: string[]
           discipline?: Database["public"]["Enums"]["discipline"] | null
           distance_m?: number | null
           duration_sec?: number | null
+          duplicate_of?: string | null
           elevation_gain_m?: number | null
           id?: string
           ignored?: boolean
