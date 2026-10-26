@@ -1,0 +1,31 @@
+name: CI
+
+# Runs on every PR and on main: type-check, unit tests, production build.
+# Deploy jobs (supabase db push / functions deploy, Cloudflare Pages) are
+# added once the project runs on its own Supabase project; see
+# docs/MIGRATION_OFF_LOVABLE.md.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # package-lock.json is out of sync with package.json (Lovable edits
+      # dependencies without it), so `npm ci` fails. A single lockfile is
+      # picked at the cutover; until then install from package.json.
+      - run: npm install --no-audit --no-fund --package-lock=false
+      - run: npx tsc --noEmit -p tsconfig.app.json
+      - run: npx vitest run
+      - run: npm run build

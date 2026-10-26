@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { lovable } from '@/integrations/lovable/index';
+import { signInWithOAuth } from '@/lib/oauthSignIn';
 import { storeCredential, retrieveCredential } from '@/hooks/useBiometricCredentials';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -111,11 +111,9 @@ export default function AuthPage() {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: oauthRedirect,
-    });
+    const result = await signInWithOAuth("google", oauthRedirect);
     if (result.error) {
-      toast.error('Google sign-in failed: ' + (result.error as Error).message);
+      toast.error('Google sign-in failed: ' + result.error.message);
       setLoading(false);
       return;
     }
@@ -125,11 +123,9 @@ export default function AuthPage() {
 
   const handleAppleSignIn = async () => {
     setLoading(true);
-    const result = await lovable.auth.signInWithOAuth("apple", {
-      redirect_uri: oauthRedirect,
-    });
+    const result = await signInWithOAuth("apple", oauthRedirect);
     if (result.error) {
-      toast.error('Apple sign-in failed: ' + (result.error as Error).message);
+      toast.error('Apple sign-in failed: ' + result.error.message);
       setLoading(false);
       return;
     }

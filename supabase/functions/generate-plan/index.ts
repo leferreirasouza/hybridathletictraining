@@ -11,6 +11,7 @@ import {
   formatRecentTrainingTable,
   isReturnFromLayoff,
 } from "../_shared/recentTraining.ts";
+import { aiConfigured, aiFetch } from "../_shared/aiClient.ts";
 
 const PLAN_GEN_PROMPT = `You are a HYROX and running race training plan generator. Given an athlete's profile, produce a structured multi-week training plan in JSON.
 
@@ -206,8 +207,7 @@ serve(async (req) => {
       }
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    if (!aiConfigured()) throw new Error("AI provider not configured (GEMINI_API_KEY or LOVABLE_API_KEY)");
 
     const raceType = profile.raceType || "hyrox";
     const stationNames = ["SkiErg", "Sled Push", "Sled Pull", "Burpee Broad Jumps", "Rowing", "Farmers Carry", "Sandbag Lunges", "Wall Balls"];
@@ -322,10 +322,9 @@ Current Running Volume: ${profile.currentWeeklyKm ?? 0} km/week across ${profile
 
     // ---- PREDICTION ONLY MODE ----
     if (predictionOnly) {
-      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const aiResponse = await aiFetch("generate-plan", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -575,10 +574,9 @@ Current Running Volume: ${profile.currentWeeklyKm ?? 0} km/week across ${profile
     }
     athleteDesc += deterministicSection;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResponse = await aiFetch("generate-plan", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

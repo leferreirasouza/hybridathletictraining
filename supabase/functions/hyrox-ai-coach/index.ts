@@ -1,5 +1,6 @@
 // Required secrets (set in Project Settings → Edge Functions → Secrets):
-//   LOVABLE_API_KEY      — auto-provisioned by Lovable Cloud
+//   GEMINI_API_KEY       — optional; when set, AI calls go straight to Google (see _shared/aiClient.ts)
+//   LOVABLE_API_KEY      — auto-provisioned by Lovable Cloud (used when GEMINI_API_KEY is unset)
 //   STRAVA_CLIENT_ID     — from strava.com/settings/api
 //   STRAVA_CLIENT_SECRET — from strava.com/settings/api
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -8,6 +9,7 @@ import { tsbAdjustmentFactor } from "../_shared/interferenceRules.ts";
 import { decomposeRace, describeDecomposition, divisionKeyOf, isRelayKey } from "../_shared/raceDecomposition.ts";
 import { formatNewSince, NEW_SINCE_LIMIT, type NewSinceItem } from "../_shared/newSince.ts";
 import { evaluateReadiness, mergeGarminDays } from "../_shared/readinessGates.ts";
+import { aiConfigured, aiFetch } from "../_shared/aiClient.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -614,13 +616,11 @@ ${contextText.slice(0, 20000)}
         .map((m: any) => ({ role: m.role, content: m.content })),
     ];
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    if (!aiConfigured()) throw new Error("AI provider not configured (GEMINI_API_KEY or LOVABLE_API_KEY)");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await aiFetch("hyrox-ai-coach", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

@@ -115,6 +115,7 @@ const App = () => (
               <Route path="/faq" element={<FAQ />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+              <Route path="/oauth/consent" element={<OAuthConsent />} />
               <Route path="/strava/callback" element={<StravaCallback />} />
               <Route path="/garmin/callback" element={<ProtectedRoute><GarminCallback /></ProtectedRoute>} />
               <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />

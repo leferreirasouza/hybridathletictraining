@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { aiConfigured, aiFetch } from "../_shared/aiClient.ts";
 
 const EXTRACTION_PROMPT = `You are a HYROX race result extraction AI. Given a screenshot from the ROX Fit app or a HYROX results page, extract the race split data.
 
@@ -84,8 +85,7 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    if (!aiConfigured()) throw new Error("AI provider not configured (GEMINI_API_KEY or LOVABLE_API_KEY)");
 
     const { imageBase64, imageUrl } = await req.json();
     if (!imageBase64 && !imageUrl) throw new Error("Missing image data");
@@ -95,10 +95,9 @@ serve(async (req) => {
       ? { type: "image_url" as const, image_url: { url: `data:image/jpeg;base64,${imageBase64}` } }
       : { type: "image_url" as const, image_url: { url: imageUrl } };
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResponse = await aiFetch("parse-race-screenshot", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

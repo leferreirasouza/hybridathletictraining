@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { aiConfigured, aiFetch } from "../_shared/aiClient.ts";
 
 serve(async (req) => {
   const origin = req.headers.get("Origin") ?? "";
@@ -41,8 +42,7 @@ serve(async (req) => {
     }
 
     const { weekData, athleteName } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    if (!aiConfigured()) throw new Error("AI provider not configured (GEMINI_API_KEY or LOVABLE_API_KEY)");
 
     const prompt = `You are a HYROX training coach reviewing an athlete's weekly training report. Provide a brief, encouraging yet honest 3-4 sentence commentary.
 
@@ -57,10 +57,9 @@ ${weekData.missedDisciplines?.length ? `- Missed disciplines: ${weekData.missedD
 
 Give actionable advice for the upcoming week. If pain flags > 0, recommend caution. Be concise, use markdown formatting.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await aiFetch("weekly-report", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
