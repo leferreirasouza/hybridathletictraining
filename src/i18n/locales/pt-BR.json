@@ -254,7 +254,11 @@
     "deleteWarning": "Esta ação não pode ser desfeita",
     "delete": "Excluir",
     "confirmDelete": "Confirmar",
-    "deleteRequest": "Solicitação de exclusão de conta enviada. Entre em contato com o suporte para concluir.",
+    "deleteWord": "EXCLUIR",
+    "deleteDetails": "Seu perfil, planos de treino, sessões, treinos registrados, resultados de provas, triagem de saúde, mensagens ao coach de IA e conexão com o Strava são excluídos permanentemente, e o acesso ao Strava é revogado. Uma assinatura ativa é cancelada.",
+    "deleteTypeToConfirm": "Digite {{word}} para confirmar",
+    "deleteFailed": "Não foi possível excluir sua conta: {{message}}",
+    "deleted": "Sua conta foi excluída.",
     "notifEnabledToast": "Notificações ativadas!",
     "notifDenied": "Permissão de notificação negada. Verifique as configurações do navegador."
   },

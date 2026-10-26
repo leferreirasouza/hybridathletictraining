@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, Moon, Sun, Ruler, Bell, ShieldCheck, Trash2, BellRing, BellOff, Globe, CalendarPlus, Watch, Link2, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -56,6 +58,8 @@ export default function Settings() {
   const [units, setUnits] = useState<Units>(getStoredUnits);
   const [calendarPref, setCalendarPref] = useState<CalendarPref>(getStoredCalendar);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteText, setDeleteText] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const [garminConnected, setGarminConnected] = useState<boolean>(() => localStorage.getItem('ha-garmin-connected') === '1');
   const [garminLoading, setGarminLoading] = useState(false);
 
@@ -155,13 +159,25 @@ export default function Settings() {
     }
   }, [calendarPref]);
 
-  const handleDeleteAccount = () => {
+  const deleteWord = t('settings.deleteWord');
+  const handleDeleteAccount = async () => {
     if (!confirmDelete) {
       setConfirmDelete(true);
       return;
     }
-    toast.info(t('settings.deleteRequest'));
-    setConfirmDelete(false);
+    if (deleteText.trim().toUpperCase() !== deleteWord.toUpperCase()) return;
+    setDeleting(true);
+    // Server-side: delete-user removes the caller only (self: true), revokes
+    // Strava access, stops a subscription and deletes their data.
+    const { data, error } = await supabase.functions.invoke('delete-user', { body: { self: true } });
+    if (error || data?.error) {
+      setDeleting(false);
+      toast.error(t('settings.deleteFailed', { message: data?.error ?? error?.message ?? '' }));
+      return;
+    }
+    toast.success(t('settings.deleted'));
+    await signOut();
+    navigate('/auth', { replace: true });
   };
 
   return (
@@ -432,14 +448,47 @@ export default function Settings() {
                 </p>
                 <p className="text-xs text-muted-foreground">{t('settings.deleteWarning')}</p>
               </div>
-              <Button variant={confirmDelete ? 'destructive' : 'outline'} size="sm" onClick={handleDeleteAccount}>
-                {confirmDelete ? t('settings.confirmDelete') : t('settings.delete')}
-              </Button>
+              {!confirmDelete && (
+                <Button variant="outline" size="sm" onClick={handleDeleteAccount}>
+                  {t('settings.delete')}
+                </Button>
+              )}
             </div>
             {confirmDelete && (
-              <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={() => setConfirmDelete(false)}>
-                {t('profile.cancel')}
-              </Button>
+              <div className="space-y-2 rounded-md border border-destructive/40 p-3">
+                <p className="text-xs text-muted-foreground">{t('settings.deleteDetails')}</p>
+                <Label htmlFor="delete-confirm" className="text-xs">
+                  {t('settings.deleteTypeToConfirm', { word: deleteWord })}
+                </Label>
+                <Input
+                  id="delete-confirm"
+                  value={deleteText}
+                  onChange={(e) => setDeleteText(e.target.value)}
+                  autoComplete="off"
+                  disabled={deleting}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="flex-1"
+                    disabled={deleting || deleteText.trim().toUpperCase() !== deleteWord.toUpperCase()}
+                    onClick={handleDeleteAccount}
+                  >
+                    {deleting && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}
+                    {t('settings.confirmDelete')}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 text-muted-foreground"
+                    disabled={deleting}
+                    onClick={() => { setConfirmDelete(false); setDeleteText(''); }}
+                  >
+                    {t('profile.cancel')}
+                  </Button>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
