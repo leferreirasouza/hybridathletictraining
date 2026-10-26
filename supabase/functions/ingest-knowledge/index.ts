@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { aiConfigured, aiFetch } from "../_shared/aiClient.ts";
 
 const CHUNK_SIZE = 1500; // characters per chunk
 const CHUNK_OVERLAP = 200;
@@ -178,12 +179,10 @@ serve(async (req) => {
           .trim();
 
         // Use AI to clean and summarize the content for better quality
-        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-        if (LOVABLE_API_KEY && extractedText.length > 100) {
-          const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        if (aiConfigured() && extractedText.length > 100) {
+          const aiRes = await aiFetch("ingest-knowledge", {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
@@ -255,14 +254,12 @@ serve(async (req) => {
       const arrayBuffer = await fileData.arrayBuffer();
       const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
 
-      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-      if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+      if (!aiConfigured()) throw new Error("AI provider not configured (GEMINI_API_KEY or LOVABLE_API_KEY)");
 
       // Use Gemini to extract text from the PDF
-      const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const aiRes = await aiFetch("ingest-knowledge", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({

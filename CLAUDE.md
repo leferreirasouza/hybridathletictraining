@@ -162,6 +162,15 @@ When in doubt: if it's wrong and silently corrupts athlete safety data, it's han
 
 Owner reported a dark screen on the live app after the 2026-10-25 releases (5 republishes in a day). The app had **no React error boundary** and a PWA service worker precaching every chunk, so a stale cached version requesting deleted chunk files (or any render exception) unmounted the whole tree. The existing one-time `chunk-reload` in `App.tsx`'s `lazy()` reloaded into the same stale service-worker copy. Fixed: `src/components/AppErrorBoundary.tsx` (around `<App />` in `main.tsx` and, keyed by path, around the layout `<Outlet />`) shows the error text plus "Reload app"; `src/lib/appRecovery.ts` `hardReload()` unregisters service workers and clears Cache Storage before reloading, and `lazy()` now escalates soft reload → hard reload → boundary. Tests: `src/test/appResilience.test.tsx` (MaxHrCard rendered against the owner's real data shape, boundary, chunk-error detection). **Lesson: Lovable's post-publish check only loads the logged-out sign-in page — signed-in pages were never seen after the 2026-10-25 releases; ask the owner to open the dashboard after each release.**
 
+## Leaving Lovable (2026-10-26)
+
+`docs/MIGRATION_OFF_LOVABLE.md` is the approved plan to run the website and backend on our own Supabase project + Cloudflare Pages + GitHub Actions, then ship the iPhone app (Capacitor + HealthKit). Code is being made **dual-mode** so `main` stays deployable on Lovable until the cutover:
+- `_shared/aiClient.ts` — every AI call goes through `aiFetch(fnName, init)`. `GEMINI_API_KEY` set → Google's OpenAI-compatible endpoint (model `google/` prefix stripped); unset → Lovable gateway, i.e. today. One `[ai] fn=… provider=… model=… status=… ms=…` log line per call. Never add a direct `ai.gateway.lovable.dev` fetch again.
+- `src/lib/oauthSignIn.ts` — `VITE_AUTH_MODE=supabase` → plain Supabase OAuth; unset → Lovable broker (loaded lazily).
+- `/oauth/consent` route exists next to `/.lovable/oauth/consent`.
+- `.github/workflows/ci.yml` — tsc + vitest + build on every PR (installs from package.json; `package-lock.json` is out of sync and one lockfile gets picked at cutover).
+Owner step 0 (accounts, domain, keys) gates the rest.
+
 ## Lovable handover (2026-10-25)
 
 `docs/LOVABLE_HANDOVER.md` is the staged plan the owner runs directly in Lovable while Claude usage is paused (security rotation, AI usage logging/transparency, AI-provider decision, Stripe rollout, Lovable-safe product work, and a "wait for Claude" list). **When resuming, read its "For Claude on Friday" checklist and the GitHub commits on `main` since `a3e103e` first** — verify every stage Lovable reports as done against the live DB, and check nothing in the hand-coded list was modified.
