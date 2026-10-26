@@ -1,4 +1,5 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import AppErrorBoundary from '@/components/AppErrorBoundary';
 import { Home, Calendar, Dumbbell, Mail, User, Shield, Eye, Bell, MessageSquare, BookOpen, History, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
@@ -331,7 +332,10 @@ export default function AppLayout() {
         )}
 
         <main className="flex-1 pb-20 lg:pb-6">
-          <Outlet />
+          {/* Keyed by path so moving to another page clears a caught error. */}
+          <AppErrorBoundary inline key={location.pathname}>
+            <Outlet />
+          </AppErrorBoundary>
         </main>
 
         {/* Mobile bottom nav — hidden on desktop */}

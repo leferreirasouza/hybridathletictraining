@@ -755,5 +755,13 @@
     "enterOwn": "Informar a minha",
     "saved": "Frequência cardíaca máxima definida em {{bpm}} bpm",
     "saveFailed": "Não foi possível salvar sua frequência cardíaca máxima"
+  },
+  "appError": {
+    "title": "Algo deu errado",
+    "body": "Esta página encontrou um erro. Recarregar geralmente resolve. Se continuar acontecendo, envie para nós uma captura de tela desta mensagem.",
+    "staleTitle": "Há uma nova versão do app",
+    "staleBody": "Recarregue para usar a versão mais recente.",
+    "reload": "Recarregar app",
+    "home": "Ir para o painel"
   }
 }

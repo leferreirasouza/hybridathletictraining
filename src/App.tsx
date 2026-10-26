@@ -5,16 +5,26 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { lazy as reactLazy, Suspense, type ComponentType } from "react";
 
+import { clearRecoveryFlags, hardReload, hardReloadAlreadyTried } from "@/lib/appRecovery";
+
 // A page chunk can go stale after an update ("Importing a module script failed").
-// Reload once to fetch the fresh version instead of leaving a blank screen.
+// Reload once to fetch the fresh version; if the reload is answered by the same
+// stale offline (service-worker) copy, drop that copy and reload again. Past
+// that, the error reaches AppErrorBoundary instead of leaving a dark screen.
 function lazy<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>) {
   return reactLazy(() =>
     factory().then(
-      (m) => { sessionStorage.removeItem("chunk-reload"); return m; },
+      (m) => { clearRecoveryFlags(); return m; },
       (err) => {
-        if (!sessionStorage.getItem("chunk-reload")) {
-          sessionStorage.setItem("chunk-reload", "1");
+        let softTried = true;
+        try { softTried = !!sessionStorage.getItem("chunk-reload"); } catch { /* storage blocked */ }
+        if (!softTried) {
+          try { sessionStorage.setItem("chunk-reload", "1"); } catch { /* storage blocked */ }
           window.location.reload();
+          return new Promise<{ default: T }>(() => {});
+        }
+        if (!hardReloadAlreadyTried()) {
+          void hardReload();
           return new Promise<{ default: T }>(() => {});
         }
         throw err;
