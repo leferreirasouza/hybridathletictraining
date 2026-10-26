@@ -254,7 +254,11 @@
     "deleteWarning": "This action cannot be undone",
     "delete": "Delete",
     "confirmDelete": "Confirm",
-    "deleteRequest": "Account deletion request sent. Contact support to complete this process.",
+    "deleteWord": "DELETE",
+    "deleteDetails": "Your profile, training plans, sessions, logged workouts, race results, health screening, AI coach messages and Strava connection are permanently deleted, and Strava access is revoked. An active subscription is cancelled.",
+    "deleteTypeToConfirm": "Type {{word}} to confirm",
+    "deleteFailed": "Couldn't delete your account: {{message}}",
+    "deleted": "Your account has been deleted.",
     "notifEnabledToast": "Notifications enabled!",
     "notifDenied": "Notification permission denied. Check your browser settings."
   },
