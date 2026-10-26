@@ -755,5 +755,13 @@
     "enterOwn": "Enter my own",
     "saved": "Max heart rate set to {{bpm}} bpm",
     "saveFailed": "Couldn't save your max heart rate"
+  },
+  "appError": {
+    "title": "Something went wrong",
+    "body": "This page hit an error. Reloading usually fixes it. If it keeps happening, send us a screenshot of this message.",
+    "staleTitle": "A new version of the app is available",
+    "staleBody": "Reload to get the latest version.",
+    "reload": "Reload app",
+    "home": "Go to dashboard"
   }
 }
