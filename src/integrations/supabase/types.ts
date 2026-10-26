@@ -1050,7 +1050,7 @@ export type Database = {
       plan_versions: {
         Row: {
           created_at: string
-          created_by: string
+          created_by: string | null
           id: string
           notes: string | null
           plan_id: string
@@ -1058,7 +1058,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by: string
+          created_by?: string | null
           id?: string
           notes?: string | null
           plan_id: string
@@ -1066,7 +1066,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           id?: string
           notes?: string | null
           plan_id?: string
@@ -1891,7 +1891,7 @@ export type Database = {
         Row: {
           archived_at: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           description: string | null
           id: string
           is_template: boolean
@@ -1903,7 +1903,7 @@ export type Database = {
         Insert: {
           archived_at?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           description?: string | null
           id?: string
           is_template?: boolean
@@ -1915,7 +1915,7 @@ export type Database = {
         Update: {
           archived_at?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           description?: string | null
           id?: string
           is_template?: boolean
@@ -2164,6 +2164,10 @@ export type Database = {
       assign_onboarding_role: {
         Args: { _org_id: string; _role: string }
         Returns: undefined
+      }
+      can_view_plan: {
+        Args: { _plan_id: string; _user_id: string }
+        Returns: boolean
       }
       has_org_role: {
         Args: {
